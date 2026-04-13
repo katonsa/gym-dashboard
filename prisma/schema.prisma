@@ -1,0 +1,251 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id            String    @id
+  name          String
+  email         String
+  emailVerified Boolean   @default(false)
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  role          String?
+  banned        Boolean?  @default(false)
+  banReason     String?
+  banExpires    DateTime?
+  sessions      Session[]
+  accounts      Account[]
+  gyms          Gym[]
+
+  @@unique([email])
+  @@map("user")
+}
+
+model Session {
+  id             String   @id
+  expiresAt      DateTime
+  token          String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  ipAddress      String?
+  userAgent      String?
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  impersonatedBy String?
+
+  @@unique([token])
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+enum BillingInterval {
+  MONTHLY
+  ANNUAL
+}
+
+enum MemberStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum MembershipStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  EXPIRED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  OVERDUE
+  VOID
+}
+
+enum AttendanceSource {
+  MANUAL
+  DROP_IN
+}
+
+model Gym {
+  id                     String              @id @default(cuid())
+  name                   String
+  timezone               String
+  currencyCode           String
+  defaultDropInFeeAmount Int
+  ownerId                String
+  owner                  User                @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  planTiers              PlanTier[]
+  members                Member[]
+  membershipPayments     MembershipPayment[]
+  attendanceRecords      AttendanceRecord[]
+  dropInVisits           DropInVisit[]
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
+
+  @@index([ownerId])
+}
+
+model PlanTier {
+  id                 String       @id @default(cuid())
+  gymId              String
+  gym                Gym          @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  name               String
+  description        String?
+  monthlyPriceAmount Int
+  annualPriceAmount  Int
+  isActive           Boolean      @default(true)
+  sortOrder          Int          @default(0)
+  memberships        Membership[]
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  @@unique([gymId, name])
+  @@index([gymId, isActive])
+}
+
+model Member {
+  id                String              @id @default(cuid())
+  gymId             String
+  gym               Gym                 @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  firstName         String
+  lastName          String
+  email             String?
+  phone             String?
+  status            MemberStatus        @default(ACTIVE)
+  joinDate          DateTime            @default(now())
+  lastAttendedAt    DateTime?
+  notes             String?
+  memberships       Membership[]
+  payments          MembershipPayment[]
+  attendanceRecords AttendanceRecord[]
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  @@index([gymId, status])
+  @@index([gymId, lastName, firstName])
+  @@index([gymId, joinDate])
+  @@index([gymId, lastAttendedAt])
+}
+
+model Membership {
+  id                  String              @id @default(cuid())
+  memberId            String
+  member              Member              @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  planTierId          String
+  planTier            PlanTier            @relation(fields: [planTierId], references: [id], onDelete: Restrict)
+  billingInterval     BillingInterval     @default(MONTHLY)
+  status              MembershipStatus    @default(ACTIVE)
+  priceAmount         Int
+  startedAt           DateTime            @default(now())
+  currentPeriodEndsAt DateTime
+  nextBillingDate     DateTime
+  canceledAt          DateTime?
+  payments            MembershipPayment[]
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  @@index([memberId, status])
+  @@index([planTierId, status])
+  @@index([status, nextBillingDate])
+  @@index([status, currentPeriodEndsAt])
+}
+
+model MembershipPayment {
+  id           String        @id @default(cuid())
+  gymId        String
+  gym          Gym           @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  memberId     String
+  member       Member        @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  membershipId String
+  membership   Membership    @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  amount       Int
+  status       PaymentStatus @default(PENDING)
+  dueAt        DateTime
+  paidAt       DateTime?
+  notes        String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([gymId, status, dueAt])
+  @@index([membershipId, dueAt])
+  @@index([memberId, dueAt])
+  @@index([paidAt])
+}
+
+model AttendanceRecord {
+  id         String           @id @default(cuid())
+  gymId      String
+  gym        Gym              @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  memberId   String
+  member     Member           @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  attendedAt DateTime         @default(now())
+  source     AttendanceSource @default(MANUAL)
+  notes      String?
+  createdAt  DateTime         @default(now())
+
+  @@index([gymId, attendedAt])
+  @@index([memberId, attendedAt])
+}
+
+model DropInVisit {
+  id             String   @id @default(cuid())
+  gymId          String
+  gym            Gym      @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  visitorName    String?
+  visitorContact String?
+  visitCount     Int      @default(1)
+  amount         Int
+  visitedAt      DateTime @default(now())
+  notes          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([gymId, visitedAt])
+  @@index([gymId, visitorName, visitedAt])
+  @@index([gymId, visitorContact, visitedAt])
+}
