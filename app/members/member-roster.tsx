@@ -406,7 +406,7 @@ function QuickActions({
           type="button"
           variant={action === "Suspend account" ? "destructive" : "outline"}
           size="sm"
-          className={cn(compact ? "min-h-8" : "min-h-11")}
+          className="min-h-11"
           onClick={() => onPlaceholderAction(action, member.name)}
         >
           {action}

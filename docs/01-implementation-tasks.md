@@ -128,24 +128,24 @@ This backlog turns the project brief into small, verifiable tasks. Each task sho
 
 ## Phase 7: Quality Pass
 
-- [ ] Verify responsive layouts
-  - Check mobile width first.
-  - Check tablet and desktop widths.
-  - Ensure touch targets are at least 44px.
-  - Ensure member and drop-in lists remain usable with longer names.
+- [x] Verify responsive layouts
+  - [x] Check mobile width first.
+  - [x] Check tablet and desktop widths.
+  - [x] Ensure touch targets are at least 44px.
+  - [x] Ensure member and drop-in lists remain usable with longer names.
 
-- [ ] Add focused tests for calculations
-  - Test MRR normalization.
-  - Test current-month drop-in revenue.
-  - Test expiring membership detection.
-  - Test overdue payment detection.
-  - Test inactive member detection.
-  - Test drop-in conversion opportunity detection.
+- [x] Add focused tests for calculations
+  - [x] Test MRR normalization.
+  - [x] Test current-month drop-in revenue.
+  - [x] Test expiring membership detection.
+  - [x] Test overdue payment detection.
+  - [x] Test inactive member detection.
+  - [x] Test drop-in conversion opportunity detection.
 
-- [ ] Run project checks
-  - Run `npm run lint`.
-  - Run `npm run typecheck`.
-  - Run `npm run build`.
+- [x] Run project checks
+  - [x] Run `npm run lint`.
+  - [x] Run `npm run typecheck`.
+  - [x] Run `npm run build`.
 
 ## Suggested First Sprint
 

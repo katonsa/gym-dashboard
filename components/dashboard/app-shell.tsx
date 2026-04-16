@@ -70,7 +70,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="sticky top-0 z-30 border-b border-border bg-background/95 px-4 py-3 backdrop-blur lg:px-8">
             <div className="mx-auto flex max-w-7xl items-center justify-between gap-3">
-              <Link href="/" className="flex min-w-0 items-center gap-3 lg:hidden">
+              <Link
+                href="/"
+                className="flex min-w-0 items-center gap-3 lg:hidden"
+              >
                 <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
                   <Dumbbell className="size-5" />
                 </span>
@@ -85,7 +88,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </Link>
 
               <div className="hidden min-w-0 lg:block">
-                <p className="text-xs font-medium uppercase text-muted-foreground">
+                <p className="text-xs font-medium text-muted-foreground uppercase">
                   Gym dashboard
                 </p>
                 <p className="truncate text-sm text-foreground/85">
@@ -97,7 +100,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </div>
           </header>
 
-          <main className="mx-auto w-full max-w-7xl flex-1 px-4 pb-28 pt-5 lg:px-8 lg:pb-10 lg:pt-7">
+          <main className="mx-auto w-full max-w-7xl flex-1 px-4 pt-5 pb-28 lg:px-8 lg:pt-7 lg:pb-10">
             {children}
           </main>
         </div>
@@ -105,7 +108,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       <nav
         aria-label="Primary"
-        className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur lg:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 px-2 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur lg:hidden"
       >
         <div className="grid grid-cols-4 gap-1">
           {dashboardRoutes.map((route) => (
@@ -140,12 +143,14 @@ function NavItem({
       href={href}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "group flex min-h-14 items-center justify-center rounded-lg border border-transparent px-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+        "group flex min-h-14 items-center justify-center rounded-lg border border-transparent px-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
         active &&
           "border-primary/30 bg-primary/12 text-foreground shadow-[inset_0_1px_0_var(--color-shell-highlight)]",
         desktop &&
           "min-h-11 justify-start gap-3 px-3 text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-        desktop && active && "bg-sidebar-primary text-sidebar-primary-foreground"
+        desktop &&
+          active &&
+          "bg-sidebar-primary text-sidebar-primary-foreground"
       )}
     >
       <Icon
@@ -184,6 +189,7 @@ function ThemeToggle({ compact = false }: { compact?: boolean }) {
       aria-label={label}
       className={cn(
         "min-h-11 border-border bg-background/70",
+        compact && "min-w-11",
         !compact && "w-full justify-start gap-2"
       )}
       onClick={() => setTheme(isDark ? "light" : "dark")}
