@@ -91,20 +91,20 @@ This backlog turns the project brief into small, verifiable tasks. Each task sho
 
 ## Phase 5: Subscription And Revenue Views
 
-- [ ] Build subscription breakdown
+- [x] Build subscription breakdown
   - Show member distribution by Basic, Pro, and Elite.
   - Show revenue contribution per tier.
   - Include monthly and annual plan handling.
 
-- [ ] Add Recharts dependency if missing
+- [x] Add Recharts dependency if missing
   - Install Recharts.
   - Verify it works with the current Next and React versions.
 
-- [ ] Build plan comparison chart
+- [x] Build plan comparison chart
   - Compare plan count and monthly-equivalent revenue.
   - Keep the chart touch-friendly on mobile.
 
-- [ ] Build 6-month revenue trend chart
+- [x] Build 6-month revenue trend chart
   - Show membership revenue and drop-in revenue as separate streams.
   - Show total trend.
   - Surface month-over-month movement.
