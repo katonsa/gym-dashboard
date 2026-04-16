@@ -1,6 +1,8 @@
 # Gym Dashboard Implementation Tasks
 
-This backlog turns the project brief into small, verifiable tasks. Each task should be small enough to complete in one focused pass.
+Status: Complete.
+
+This backlog turned the project brief into small, verifiable tasks. All listed implementation tasks have been completed.
 
 ## Phase 1: Foundation
 
@@ -147,7 +149,7 @@ This backlog turns the project brief into small, verifiable tasks. Each task sho
   - [x] Run `npm run typecheck`.
   - [x] Run `npm run build`.
 
-## Suggested First Sprint
+## Completed First Sprint
 
 1. Establish dashboard data contracts.
 2. Add mock dashboard data.
@@ -155,4 +157,4 @@ This backlog turns the project brief into small, verifiable tasks. Each task sho
 4. Replace starter page with the dashboard shell.
 5. Build pinned alerts and overview stats.
 
-This first sprint creates the foundation for every visible feature and gives the app a useful first screen quickly.
+This sprint created the foundation for every visible feature and gave the app a useful first screen.
