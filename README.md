@@ -19,3 +19,36 @@ To use the components in your app, import them as follows:
 ```tsx
 import { Button } from "@/components/ui/button";
 ```
+
+## Auth & Account Provisioning
+
+Owner accounts are **not** created through a public sign-up page. For local development, the seed script creates a demo owner:
+
+| Field | Value |
+|-------|-------|
+| Email | `owner@jkt-strength.local` |
+| Password | `owner-password-123` |
+
+See [docs/03-auth-assumptions.md](docs/03-auth-assumptions.md) for full details on account provisioning, member records, and what is out of scope.
+
+## Local Development
+
+```bash
+# Start Postgres
+docker compose up -d
+
+# Apply migrations
+npx prisma migrate deploy
+
+# Seed demo data
+npm run db:seed
+
+# Start dev server
+npm run dev
+```
+
+To reset all data and re-seed:
+
+```bash
+npx prisma migrate reset
+```

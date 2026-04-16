@@ -80,7 +80,7 @@ The first version should remain read-only except for explicitly scoped owner/adm
   - Show a clear state when the database is unavailable.
   - Keep copy temporary and operational, not promotional.
 
-- [ ] Document account creation assumption
+- [x] Document account creation assumption
   - Owner accounts are provisioned outside the public UI for now.
   - Local/demo owner accounts are created through seed or admin provisioning.
   - Member self-registration is out of scope.
