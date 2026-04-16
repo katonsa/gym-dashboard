@@ -72,18 +72,18 @@ This backlog turns the project brief into small, verifiable tasks. Each task sho
 
 ## Phase 4: Members
 
-- [ ] Build member list for mobile and desktop
+- [x] Build member list for mobile and desktop
   - Use compact member cards on mobile.
   - Use a table layout on desktop.
   - Include name, plan, status, join date, next billing date, and sessions attended.
 
-- [ ] Add member search and filters
+- [x] Add member search and filters
   - Search by name, email, or phone.
   - Filter by status.
   - Filter by plan tier.
   - Filter by billing risk, such as overdue or expiring.
 
-- [ ] Add member quick actions
+- [x] Add member quick actions
   - Add view profile action placeholder.
   - Add edit plan action placeholder.
   - Add suspend account action placeholder.
