@@ -50,14 +50,14 @@ This backlog turns the project brief into small, verifiable tasks. Each task sho
 
 ## Phase 3: Dashboard Overview
 
-- [ ] Build pinned alerts summary
+- [x] Build pinned alerts summary
   - Show expiring memberships.
   - Show overdue payments.
   - Show inactive members at churn risk.
   - Show frequent drop-in conversion opportunities.
   - Keep alerts visible above the fold on mobile.
 
-- [ ] Build overview stats panel
+- [x] Build overview stats panel
   - Total members with active/inactive breakdown.
   - New sign-ups this month.
   - MRR.
@@ -65,7 +65,7 @@ This backlog turns the project brief into small, verifiable tasks. Each task sho
   - Total revenue.
   - Expiring subscriptions count.
 
-- [ ] Add responsive dashboard composition
+- [x] Add responsive dashboard composition
   - Use a 2-column stat grid on mobile.
   - Expand to wider grid on desktop.
   - Verify all primary metrics fit without truncation.
