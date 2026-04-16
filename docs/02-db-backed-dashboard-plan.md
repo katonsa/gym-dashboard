@@ -64,7 +64,7 @@ The first version should remain read-only except for explicitly scoped owner/adm
   - Keep touch targets at least 44px.
   - On successful sign-in, return the owner to the validated `next` path or `/`.
 
-- [ ] Add authenticated shell behavior
+- [x] Add authenticated shell behavior
   - Show sign-out access in the dashboard shell.
   - Keep the theme toggle available on auth pages and dashboard pages.
   - Avoid querying owner gym data from the shell until a session is confirmed.
