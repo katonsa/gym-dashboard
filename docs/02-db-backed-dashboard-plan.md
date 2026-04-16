@@ -38,26 +38,26 @@ The first version should remain read-only except for explicitly scoped owner/adm
 
 ## Phase 1: Auth Foundation
 
-- [ ] Create the Better Auth API route handler
+- [x] Create the Better Auth API route handler
   - Add `app/api/auth/[...all]/route.ts` as the catch-all handler for Better Auth.
   - Export GET and POST handlers that delegate to the `auth` instance from `lib/auth`.
   - This must exist before any sign-in form can function.
 
-- [ ] Split auth and dashboard layouts with route groups
+- [x] Split auth and dashboard layouts with route groups
   - Create an `(auth)` route group with its own layout that does not include `AppShell`.
   - Create a `(dashboard)` route group with the current `AppShell` layout.
   - Move existing pages (`/`, `/members`, `/subscriptions`, `/drop-ins`) into `(dashboard)`.
   - Place `/sign-in` inside `(auth)`.
   - Keep `ThemeProvider` in the root layout so the theme toggle works on all pages.
 
-- [ ] Confirm auth route model
+- [x] Confirm auth route model
   - Use first-party app routes instead of hosted auth screens.
   - Add `/sign-in` inside the `(auth)` route group.
   - Use a dashboard shell sign-out button action.
   - Do not add a dedicated `/sign-out` page in this milestone.
   - Ensure auth pages render without the dashboard navigation shell.
 
-- [ ] Build sign-in page
+- [x] Build sign-in page
   - Use the existing Better Auth email/password setup.
   - Include email and password fields.
   - Include loading and error states.
@@ -69,13 +69,13 @@ The first version should remain read-only except for explicitly scoped owner/adm
   - Keep the theme toggle available on auth pages and dashboard pages.
   - Avoid querying owner gym data from the shell until a session is confirmed.
 
-- [ ] Add auth form validation
+- [x] Add auth form validation
   - Validate required fields before submitting.
   - Use email keyboard/input behavior on mobile.
   - Show server-side auth errors in plain language.
   - Avoid exposing low-level auth or database details in user-facing copy.
 
-- [ ] Add auth page empty/fallback states
+- [x] Add auth page empty/fallback states
   - Show a clear state when auth configuration is missing.
   - Show a clear state when the database is unavailable.
   - Keep copy temporary and operational, not promotional.

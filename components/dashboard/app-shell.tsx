@@ -2,18 +2,20 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { useTheme } from "next-themes"
 import {
   BadgeDollarSign,
   CircleDollarSign,
   Dumbbell,
+  LogOut,
   Moon,
   Sun,
   Users,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { authClient } from "@/lib/auth/client"
 import { dashboardRoutes, type DashboardRouteHref } from "@/lib/dashboard"
 import { cn } from "@/lib/utils"
 
@@ -29,6 +31,32 @@ const routeIcons: Record<
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  const router = useRouter()
+  const [isSigningOut, setIsSigningOut] = React.useState(false)
+
+  async function handleSignOut() {
+    if (isSigningOut) {
+      return
+    }
+
+    setIsSigningOut(true)
+
+    try {
+      await authClient.signOut({
+        fetchOptions: {
+          onSuccess: () => {
+            router.replace("/sign-in")
+            router.refresh()
+          },
+          onError: () => {
+            setIsSigningOut(false)
+          },
+        },
+      })
+    } catch {
+      setIsSigningOut(false)
+    }
+  }
 
   return (
     <div className="min-h-svh bg-background text-foreground">
@@ -62,8 +90,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             ))}
           </nav>
 
-          <div className="border-t border-sidebar-border pt-4">
+          <div className="grid gap-2 border-t border-sidebar-border pt-4">
             <ThemeToggle />
+            <SignOutButton
+              isSigningOut={isSigningOut}
+              onSignOut={handleSignOut}
+            />
           </div>
         </aside>
 
@@ -96,7 +128,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 </p>
               </div>
 
-              <ThemeToggle compact />
+              <div className="flex items-center gap-2">
+                <ThemeToggle compact />
+                <SignOutButton
+                  compact
+                  isSigningOut={isSigningOut}
+                  onSignOut={handleSignOut}
+                />
+              </div>
             </div>
           </header>
 
@@ -122,6 +161,39 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </nav>
     </div>
+  )
+}
+
+function SignOutButton({
+  compact = false,
+  isSigningOut,
+  onSignOut,
+}: {
+  compact?: boolean
+  isSigningOut: boolean
+  onSignOut: () => Promise<void>
+}) {
+  const label = isSigningOut ? "Signing out" : "Sign out"
+
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size={compact ? "icon-lg" : "lg"}
+      aria-label={label}
+      disabled={isSigningOut}
+      className={cn(
+        "min-h-11 border-border bg-background/70",
+        compact && "min-w-11",
+        !compact && "w-full justify-start gap-2"
+      )}
+      onClick={() => {
+        void onSignOut()
+      }}
+    >
+      <LogOut className="size-4" />
+      {!compact ? <span>{label}</span> : null}
+    </Button>
   )
 }
 
