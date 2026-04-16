@@ -31,19 +31,19 @@ This backlog turns the project brief into small, verifiable tasks. Each task sho
 
 ## Phase 2: App Shell And Theme
 
-- [ ] Replace starter page with dashboard shell
+- [x] Replace starter page with dashboard shell
   - Add mobile-first app layout.
   - Add desktop sidebar.
   - Add mobile bottom tab bar.
   - Keep content dense and scannable.
 
-- [ ] Implement persistent light/dark theme toggle
+- [x] Implement persistent light/dark theme toggle
   - Use the existing theme provider.
   - Default to dark mode.
   - Persist the selected theme.
   - Ensure the toggle is reachable on mobile.
 
-- [ ] Define visual system tokens
+- [x] Define visual system tokens
   - Tune global styles for the dark industrial direction.
   - Define chart, status, alert, and revenue colors.
   - Keep electric yellow/lime as accent, not the only visible color family.
