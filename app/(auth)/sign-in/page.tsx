@@ -1,6 +1,8 @@
 import { connection } from "next/server"
+import { redirect } from "next/navigation"
 
 import { getSafeDashboardNextPath } from "@/lib/auth/next-path"
+import { getCurrentUserSession } from "@/lib/auth/server"
 import { SignInForm } from "./sign-in-form"
 
 type SignInPageProps = {
@@ -14,6 +16,12 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
 
   const { next } = await searchParams
   const nextPath = getSafeDashboardNextPath(next)
+  const session = await getCurrentUserSession().catch(() => null)
+
+  if (session) {
+    redirect(nextPath)
+  }
+
   const authPageState = await getAuthPageState()
 
   return (

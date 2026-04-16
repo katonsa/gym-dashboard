@@ -87,7 +87,7 @@ The first version should remain read-only except for explicitly scoped owner/adm
   - Member records are added manually by the authenticated owner/admin.
   - Do not expose `/sign-up` until a future member or owner onboarding flow is scoped.
 
-- [ ] Add server-side auth helpers
+- [x] Add server-side auth helpers
   - Get the current user session server-side.
   - Redirect unauthenticated dashboard users to `/sign-in`.
   - Preserve the attempted dashboard path in a safe `next` query param when practical.

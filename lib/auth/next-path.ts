@@ -1,4 +1,4 @@
-import { dashboardRoutes } from "@/lib/dashboard"
+import { dashboardRoutes } from "../dashboard/types.ts"
 
 const dashboardRouteHrefs = new Set<string>(
   dashboardRoutes.map((route) => route.href)
@@ -24,4 +24,10 @@ export function getSafeDashboardNextPath(
   } catch {
     return "/"
   }
+}
+
+export function getDashboardSignInPath(next: string | string[] | undefined) {
+  const nextPath = getSafeDashboardNextPath(next)
+
+  return `/sign-in?next=${encodeURIComponent(nextPath)}`
 }
