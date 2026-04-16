@@ -111,17 +111,17 @@ This backlog turns the project brief into small, verifiable tasks. Each task sho
 
 ## Phase 6: Drop-In Log
 
-- [ ] Build drop-in log table/cards
+- [x] Build drop-in log table/cards
   - Show date, visitor name or anonymous label, contact when present, visit count, and amount paid.
   - Use cards on mobile.
   - Use table layout on desktop.
 
-- [ ] Add drop-in summary
+- [x] Add drop-in summary
   - Daily drop-in total.
   - Current-month drop-in total.
   - Frequent identified drop-ins with 5 or more visits this month.
 
-- [ ] Add drop-in entry UI placeholder
+- [x] Add drop-in entry UI placeholder
   - Include fields for visitor name, contact, amount, visit count, and notes.
   - Default amount to the gym drop-in fee.
   - Keep submission mocked until persistence work is scoped.
