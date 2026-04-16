@@ -38,14 +38,24 @@ The first version should remain read-only except for explicitly scoped owner/adm
 
 ## Phase 1: Auth Foundation
 
+- [ ] Create the Better Auth API route handler
+  - Add `app/api/auth/[...all]/route.ts` as the catch-all handler for Better Auth.
+  - Export GET and POST handlers that delegate to the `auth` instance from `lib/auth`.
+  - This must exist before any sign-in form can function.
+
+- [ ] Split auth and dashboard layouts with route groups
+  - Create an `(auth)` route group with its own layout that does not include `AppShell`.
+  - Create a `(dashboard)` route group with the current `AppShell` layout.
+  - Move existing pages (`/`, `/members`, `/subscriptions`, `/drop-ins`) into `(dashboard)`.
+  - Place `/sign-in` inside `(auth)`.
+  - Keep `ThemeProvider` in the root layout so the theme toggle works on all pages.
+
 - [ ] Confirm auth route model
   - Use first-party app routes instead of hosted auth screens.
-  - Add `/sign-in`.
+  - Add `/sign-in` inside the `(auth)` route group.
   - Use a dashboard shell sign-out button action.
   - Do not add a dedicated `/sign-out` page in this milestone.
   - Ensure auth pages render without the dashboard navigation shell.
-  - Split auth and dashboard layouts if needed, likely with route groups.
-  - Confirm the Better Auth API route handler exists before wiring forms.
 
 - [ ] Build sign-in page
   - Use the existing Better Auth email/password setup.
@@ -81,6 +91,7 @@ The first version should remain read-only except for explicitly scoped owner/adm
   - Get the current user session server-side.
   - Redirect unauthenticated dashboard users to `/sign-in`.
   - Preserve the attempted dashboard path in a safe `next` query param when practical.
+  - Validate the `next` param: allow only relative paths starting with `/`, reject external URLs and protocol-relative URLs (`//`), reject paths that do not match known dashboard routes, and fall back to `/`.
   - Fall back to `/` after login when no safe return path is present.
   - Do not query gym-owned dashboard data without a session.
 
@@ -95,8 +106,9 @@ The first version should remain read-only except for explicitly scoped owner/adm
 - [ ] Define database-to-dashboard mapping
   - Map Prisma `Gym` to `GymProfile`.
   - Map Prisma `PlanTier` to dashboard plan tier type.
+  - Widen `PlanTierName` from `"Basic" | "Pro" | "Elite"` to `string` so the dashboard types accept any plan name stored in the database. The current hardcoded union will break silently if a plan with a different name is created.
   - Map Prisma `Member` to dashboard member type.
-  - Map Prisma `Membership` to dashboard membership type.
+  - Map Prisma `Membership` to dashboard membership type. Note that `Membership` has no direct `gymId` field; owner-scoping requires joining through `Member.gymId`. Loaders that fetch memberships must filter through the member's gym relationship.
   - Map Prisma `MembershipPayment` to dashboard payment type.
   - Map Prisma `AttendanceRecord` to dashboard attendance type.
   - Map Prisma `DropInVisit` to dashboard drop-in type.
@@ -111,8 +123,7 @@ The first version should remain read-only except for explicitly scoped owner/adm
 ## Phase 3: Seed And Local Data
 
 - [ ] Add a Prisma seed script
-  - Create one demo owner user.
-  - Create Better Auth-compatible account/password records for email/password sign-in.
+  - Create the demo owner account using Better Auth's own signup API or SDK rather than inserting raw account/password records. This avoids depending on internal password hashing details. If programmatic signup is not feasible, pin the Better Auth version and document the assumed hash format.
   - Document the local demo owner email and password.
   - Create one gym.
   - Create Basic, Pro, and Elite plan tiers.
@@ -136,6 +147,12 @@ The first version should remain read-only except for explicitly scoped owner/adm
   - Confirm seeded data appears in the app.
 
 ## Phase 4: Wire Overview Page
+
+- [ ] Refactor page components from module-scope to async Server Components
+  - The current overview, members, subscriptions, and drop-ins pages compute data at module level (outside the component body). This pattern only evaluates once at build/startup and will not work with per-request database reads.
+  - Convert each page to an `async` function component that fetches data inside the function body.
+  - Replace `mockDashboardAsOf` with `new Date()` so calculations reflect the current time.
+  - Replace the hardcoded date string in the overview header ("Thursday, Apr 16") with a dynamically formatted date.
 
 - [ ] Replace overview mock imports
   - Load dashboard data from the server-side data access layer.
@@ -175,12 +192,13 @@ The first version should remain read-only except for explicitly scoped owner/adm
   - Capture first name, last name, optional email, optional phone, status, join date, plan tier, billing interval, and notes.
   - Create the member under the authenticated owner's gym.
   - Create the initial membership when a plan is selected.
-  - Derive `priceAmount` from the selected plan tier and billing interval.
+  - Derive `priceAmount` from the selected plan tier and billing interval. Store the full interval amount (monthly price for monthly plans, annual price for annual plans). MRR calculations divide annual amounts by 12 at display time. This matches the existing `calculateMembershipMrr` behavior.
   - Derive `currentPeriodEndsAt` and `nextBillingDate` from the join/start date and billing interval.
   - Create the first membership payment record when an initial membership is created.
   - Ensure created members participate in MRR, expiring alerts, overdue/payment logic, and subscription breakdowns.
   - Validate required fields and billing fields before submit.
-  - Revalidate or refresh the members page after submit.
+  - Use `revalidatePath` to refresh the members page after submit. Prefer `revalidatePath` over `router.refresh()` for server actions because it clears the server-side cache for the path.
+  - Return a consistent result shape from server actions: `{ success: boolean, error?: string }`. Map Prisma and validation errors to plain-language messages. Do not expose raw database or auth error details to the client.
 
 - [ ] Keep member self-service out of scope
   - Do not add public member registration.
@@ -214,11 +232,15 @@ The first version should remain read-only except for explicitly scoped owner/adm
 
 - [ ] Implement drop-in form behavior
   - Add a server action to create drop-in visits.
+  - Return a consistent result shape: `{ success: boolean, error?: string }`.
 
 - [ ] Add drop-in creation
-  - Validate amount, visit count, and optional visitor fields.
+  - Validate amount: must be a positive integer, minimum 0, maximum bounded by a reasonable upper limit.
+  - Default `visitCount` to 1 when not explicitly provided.
+  - Validate `visitorContact` as free text (no format enforcement); contacts may be email, phone, or other identifiers.
+  - Guard against duplicate submissions (disable submit button while pending).
   - Use gym default fee when amount is omitted.
-  - Revalidate or refresh the drop-in page after submit.
+  - Use `revalidatePath` to refresh the drop-in page after submit.
   - Keep anonymous visits supported.
   - Scope created visits to the authenticated owner's gym.
 
@@ -227,10 +249,12 @@ The first version should remain read-only except for explicitly scoped owner/adm
 - [ ] Run data-layer checks
   - `npm run typecheck`
   - `npm run lint`
-  - Existing calculation tests
+  - Existing calculation tests.
+  - Add basic tests for the data access layer: verify owner-scoped queries return only the authenticated owner's gym data, verify mappers produce valid dashboard types.
 
 - [ ] Run app checks
   - `npm run build`
+  - Verify `compose.yaml` starts Postgres correctly and `.env` has a working `DATABASE_URL`.
   - Load `/sign-in`
   - Load `/`
   - Load `/members`
@@ -278,12 +302,18 @@ The first version should remain read-only except for explicitly scoped owner/adm
 - Dashboard pages should use route-specific database loaders backed by shared auth, ownership, and mapping helpers.
 - Sign-out should be a button action in the dashboard shell, not a standalone page.
 - Auth pages should render without the dashboard navigation shell.
-- Auth and dashboard pages may need separate layouts or route groups.
+- Auth and dashboard pages use separate route groups: `(auth)` without `AppShell`, `(dashboard)` with `AppShell`.
 - DB-backed v1 should include write support for manual member entry and drop-in entries.
 - Manual member entry should create consistent membership and payment records when a plan is selected.
+- `priceAmount` on `Membership` stores the full interval amount (monthly or annual). MRR calculations divide annual amounts by 12 at display time.
 - Seed data must include a usable demo owner login for local development.
+- Seed accounts should be created through Better Auth's API when possible, not by inserting raw password hashes.
 - Mock data should remain available for tests only, not as runtime fallback.
 - Seed data should cover the same scenarios as the current mock data, but does not need to exactly mirror it.
+- `PlanTierName` should be widened to `string` so the dashboard accepts any plan name from the database.
+- Server actions return `{ success: boolean, error?: string }` and map internal errors to plain-language messages.
+- Use `revalidatePath` (not `router.refresh()`) after server action mutations to clear the server-side cache.
+- The `next` query param on `/sign-in` must be validated: relative paths only, no external URLs, no protocol-relative URLs, must match a known dashboard route.
 
 ## Suggested First Task
 
