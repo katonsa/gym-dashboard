@@ -36,7 +36,7 @@ export const dashboardNavigationModel: DashboardNavigationModel = {
   routes: dashboardRoutes,
 }
 
-export type CurrencyCode = "IDR" | "USD"
+export type CurrencyCode = string
 export type DateString = string
 
 export type BillingInterval = "MONTHLY" | "ANNUAL"
@@ -44,7 +44,7 @@ export type MemberStatus = "ACTIVE" | "INACTIVE" | "SUSPENDED"
 export type MembershipStatus = "ACTIVE" | "PAST_DUE" | "CANCELED" | "EXPIRED"
 export type PaymentStatus = "PENDING" | "PAID" | "OVERDUE" | "VOID"
 export type AttendanceSource = "MANUAL" | "DROP_IN"
-export type PlanTierName = "Basic" | "Pro" | "Elite"
+export type PlanTierName = string
 
 export type MoneyAmount = {
   amount: number

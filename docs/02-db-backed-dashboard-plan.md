@@ -103,7 +103,7 @@ The first version should remain read-only except for explicitly scoped owner/adm
   - Show an empty/setup state when an authenticated user has no gym.
   - Keep role-based staff permissions out of scope.
 
-- [ ] Define database-to-dashboard mapping
+- [x] Define database-to-dashboard mapping
   - Map Prisma `Gym` to `GymProfile`.
   - Map Prisma `PlanTier` to dashboard plan tier type.
   - Widen `PlanTierName` from `"Basic" | "Pro" | "Elite"` to `string` so the dashboard types accept any plan name stored in the database. The current hardcoded union will break silently if a plan with a different name is created.
