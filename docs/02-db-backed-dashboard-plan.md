@@ -224,17 +224,17 @@ The first version should remain read-only except for explicitly scoped owner/adm
 
 ## Phase 7: Wire Drop-Ins Page And Creation
 
-- [ ] Replace drop-in mock imports
+- [x] Replace drop-in mock imports
   - Load drop-in visits from the database.
   - Load default drop-in fee from the gym record.
   - Preserve daily and monthly totals.
   - Preserve frequent visitor conversion logic.
 
-- [ ] Implement drop-in form behavior
+- [x] Implement drop-in form behavior
   - Add a server action to create drop-in visits.
   - Return a consistent result shape: `{ success: boolean, error?: string }`.
 
-- [ ] Add drop-in creation
+- [x] Add drop-in creation
   - Validate amount: must be a positive integer, minimum 0, maximum bounded by a reasonable upper limit.
   - Default `visitCount` to 1 when not explicitly provided.
   - Validate `visitorContact` as free text (no format enforcement); contacts may be email, phone, or other identifiers.

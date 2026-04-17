@@ -1,9 +1,11 @@
 import {
   getDropInConversionOpportunities,
-  mockDashboardData,
-  type DashboardData,
   type DropInVisit,
 } from "@/lib/dashboard"
+import {
+  loadDropInsDashboardData,
+  type DropInsDashboardData,
+} from "@/lib/dashboard/loaders"
 import { DropInEntryForm } from "./drop-in-entry-form"
 
 const numberFormatter = new Intl.NumberFormat("en")
@@ -24,19 +26,39 @@ const toneClasses: Record<string, string> = {
 }
 
 export default async function DropInsPage() {
+  const dropInsData = await loadDropInsDashboardData()
+
+  if (!dropInsData) {
+    return (
+      <DropInsEmptyState
+        title="No gym is connected to this owner account."
+        detail="Create or assign a gym for this owner before drop-in records can appear."
+      />
+    )
+  }
+
   const asOf = new Date()
   const moneyFormatter = new Intl.NumberFormat("en", {
     style: "currency",
-    currency: mockDashboardData.gym.currencyCode,
+    currency: dropInsData.gym.currencyCode,
     maximumFractionDigits: 0,
   })
-  const dropInRows = getDropInRows(mockDashboardData, asOf, moneyFormatter)
-  const dailyDropIns = getDropInsForDay(mockDashboardData.dropIns, asOf)
-  const monthlyDropIns = getDropInsForMonth(mockDashboardData.dropIns, asOf)
+  const dropInRows = getDropInRows(dropInsData, asOf, moneyFormatter)
+  const dailyDropIns = getDropInsForDay(dropInsData.dropIns, asOf)
+  const monthlyDropIns = getDropInsForMonth(dropInsData.dropIns, asOf)
   const frequentDropIns = getDropInConversionOpportunities(
-    mockDashboardData.dropIns,
+    dropInsData.dropIns,
     { asOf, conversionVisitThreshold: 5 }
   ).toSorted((left, right) => right.visitCount - left.visitCount)
+  const setupGaps = [
+    dropInsData.dropIns.length === 0
+      ? {
+          title: "No drop-ins yet.",
+          detail:
+            "Log walk-in visits to start tracking cash and follow-up leads.",
+        }
+      : null,
+  ].filter((gap): gap is { title: string; detail: string } => Boolean(gap))
   const summaryStats = [
     {
       label: "Today",
@@ -63,7 +85,7 @@ export default async function DropInsPage() {
       <section className="grid gap-4 lg:grid-cols-[1fr_20rem] lg:items-end">
         <div className="min-w-0">
           <p className="text-xs font-semibold text-primary uppercase">
-            {formatDashboardDate(asOf, mockDashboardData.gym.timezone)}
+            {formatDashboardDate(asOf, dropInsData.gym.timezone)}
           </p>
           <h1 className="mt-2 text-2xl font-semibold tracking-normal text-balance sm:text-3xl">
             Drop-ins
@@ -77,13 +99,35 @@ export default async function DropInsPage() {
             Default fee
           </p>
           <p className="mt-1 text-2xl font-semibold">
-            {moneyFormatter.format(mockDashboardData.gym.defaultDropInFeeAmount)}
+            {moneyFormatter.format(dropInsData.gym.defaultDropInFeeAmount)}
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
             New entries start from the gym day-pass price
           </p>
         </div>
       </section>
+
+      {setupGaps.length > 0 ? (
+        <section aria-labelledby="drop-in-setup" className="grid gap-3">
+          <div>
+            <h2 id="drop-in-setup" className="text-base font-semibold">
+              Setup status
+            </h2>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Drop-ins will fill this view after records are saved.
+            </p>
+          </div>
+          <div className="grid gap-3 md:grid-cols-3">
+            {setupGaps.map((gap) => (
+              <DropInsEmptyState
+                key={gap.title}
+                title={gap.title}
+                detail={gap.detail}
+              />
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       <section aria-labelledby="drop-in-summary" className="grid gap-3">
         <div>
@@ -167,36 +211,52 @@ export default async function DropInsPage() {
           </div>
 
           <div className="grid gap-3 md:hidden">
-            {dropInRows.map((dropIn) => (
-              <DropInCard key={dropIn.id} dropIn={dropIn} />
-            ))}
+            {dropInRows.length > 0 ? (
+              dropInRows.map((dropIn) => (
+                <DropInCard key={dropIn.id} dropIn={dropIn} />
+              ))
+            ) : (
+              <DropInsEmptyState
+                title="No drop-ins yet."
+                detail="Saved walk-ins will appear in this log."
+              />
+            )}
           </div>
 
-          <div className="hidden overflow-hidden rounded-lg border border-border bg-card text-card-foreground md:block">
-            <table className="w-full table-fixed text-left text-sm">
-              <thead className="border-b border-border bg-muted/60 text-xs text-muted-foreground uppercase">
-                <tr>
-                  <th className="w-[17%] px-4 py-3 font-medium">Date</th>
-                  <th className="w-[21%] px-4 py-3 font-medium">Visitor</th>
-                  <th className="w-[24%] px-4 py-3 font-medium">Contact</th>
-                  <th className="w-[12%] px-4 py-3 font-medium">Visits</th>
-                  <th className="w-[14%] px-4 py-3 font-medium">Paid</th>
-                  <th className="w-[12%] px-4 py-3 font-medium">Notes</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {dropInRows.map((dropIn) => (
-                  <DropInTableRow key={dropIn.id} dropIn={dropIn} />
-                ))}
-              </tbody>
-            </table>
-          </div>
+          {dropInRows.length > 0 ? (
+            <div className="hidden overflow-hidden rounded-lg border border-border bg-card text-card-foreground md:block">
+              <table className="w-full table-fixed text-left text-sm">
+                <thead className="border-b border-border bg-muted/60 text-xs text-muted-foreground uppercase">
+                  <tr>
+                    <th className="w-[17%] px-4 py-3 font-medium">Date</th>
+                    <th className="w-[21%] px-4 py-3 font-medium">Visitor</th>
+                    <th className="w-[24%] px-4 py-3 font-medium">Contact</th>
+                    <th className="w-[12%] px-4 py-3 font-medium">Visits</th>
+                    <th className="w-[14%] px-4 py-3 font-medium">Paid</th>
+                    <th className="w-[12%] px-4 py-3 font-medium">Notes</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {dropInRows.map((dropIn) => (
+                    <DropInTableRow key={dropIn.id} dropIn={dropIn} />
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="hidden md:block">
+              <DropInsEmptyState
+                title="No drop-ins yet."
+                detail="Saved walk-ins will appear in this log."
+              />
+            </div>
+          )}
         </section>
 
         <DropInEntryForm
-          defaultAmount={mockDashboardData.gym.defaultDropInFeeAmount}
+          defaultAmount={dropInsData.gym.defaultDropInFeeAmount}
           formattedDefaultAmount={moneyFormatter.format(
-            mockDashboardData.gym.defaultDropInFeeAmount
+            dropInsData.gym.defaultDropInFeeAmount
           )}
         />
       </section>
@@ -252,9 +312,7 @@ function DropInTableRow({ dropIn }: { dropIn: DropInRow }) {
     <tr>
       <td className="px-4 py-3 align-top">
         <p className="font-medium">{dropIn.dateLabel}</p>
-        <p className="mt-1 text-xs text-muted-foreground">
-          {dropIn.timeLabel}
-        </p>
+        <p className="mt-1 text-xs text-muted-foreground">{dropIn.timeLabel}</p>
       </td>
       <td className="px-4 py-3 align-top">
         <p className="truncate font-medium">{dropIn.visitorLabel}</p>
@@ -289,8 +347,23 @@ function DropInField({ label, value }: { label: string; value: string }) {
   )
 }
 
+function DropInsEmptyState({
+  title,
+  detail,
+}: {
+  title: string
+  detail: string
+}) {
+  return (
+    <div className="rounded-lg border border-border bg-card p-5 text-card-foreground">
+      <p className="text-sm font-medium">{title}</p>
+      <p className="mt-1 text-xs leading-5 text-muted-foreground">{detail}</p>
+    </div>
+  )
+}
+
 function getDropInRows(
-  data: DashboardData,
+  data: DropInsDashboardData,
   currentDate: Date,
   moneyFormatter: Intl.NumberFormat
 ): DropInRow[] {
