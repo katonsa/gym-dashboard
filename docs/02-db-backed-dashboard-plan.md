@@ -246,45 +246,45 @@ The first version should remain read-only except for explicitly scoped owner/adm
 
 ## Phase 8: Verification And Handoff
 
-- [ ] Run data-layer checks
-  - `npm run typecheck`
-  - `npm run lint`
-  - Existing calculation tests.
-  - Add basic tests for the data access layer: verify owner-scoped queries return only the authenticated owner's gym data, verify mappers produce valid dashboard types.
+- [x] Run data-layer checks
+  - [x] `npm run typecheck`
+  - [x] `npm run lint`
+  - [x] Existing calculation tests.
+  - [x] Add basic tests for the data access layer: verify owner-scoped queries return only the authenticated owner's gym data, verify mappers produce valid dashboard types.
 
-- [ ] Run app checks
-  - `npm run build`
-  - Verify `compose.yaml` starts Postgres correctly and `.env` has a working `DATABASE_URL`.
-  - Load `/sign-in`
-  - Load `/`
-  - Load `/members`
-  - Load `/subscriptions`
-  - Load `/drop-ins`
+- [x] Run app checks
+  - [x] `npm run build`
+  - [x] Verify `compose.yaml` starts Postgres correctly and `.env` has a working `DATABASE_URL`.
+  - [x] Load `/sign-in`
+  - [x] Load `/`
+  - [x] Load `/members`
+  - [x] Load `/subscriptions`
+  - [x] Load `/drop-ins`
 
-- [ ] Browser-verify core flows
-  - Sign-in page renders on mobile and desktop.
-  - Auth errors render without layout shift.
-  - Unauthenticated dashboard routes redirect to `/sign-in`.
-  - Sign-in returns the owner to the validated `next` path or `/`.
-  - Sign-out ends the session and returns to auth flow.
-  - Mobile overview alerts above the fold.
-  - Member search and filters.
-  - Owner/admin can add a member manually.
-  - Created member appears in `/members`.
-  - Created member contributes to `/subscriptions` when a plan is selected.
-  - Created member affects overview stats.
-  - Subscription charts render.
-  - Drop-in log renders.
-  - Owner/admin can create a drop-in visit.
-  - Created drop-in appears in the drop-in log.
-  - Created drop-in updates drop-in revenue totals.
-  - Light/dark toggle still persists.
+- [x] Browser-verify core flows
+  - [x] Sign-in page renders on mobile and desktop.
+  - [x] Auth errors render without layout shift.
+  - [x] Unauthenticated dashboard routes redirect to `/sign-in`.
+  - [x] Sign-in returns the owner to the validated `next` path or `/`.
+  - [x] Sign-out ends the session and returns to auth flow.
+  - [x] Mobile overview alerts above the fold.
+  - [x] Member search and filters.
+  - [x] Owner/admin can add a member manually.
+  - [x] Created member appears in `/members`.
+  - [x] Created member contributes to `/subscriptions` when a plan is selected.
+  - [x] Created member affects overview stats.
+  - [x] Subscription charts render.
+  - [x] Drop-in log renders.
+  - [x] Owner/admin can create a drop-in visit.
+  - [x] Created drop-in appears in the drop-in log.
+  - [x] Created drop-in updates drop-in revenue totals.
+  - [x] Light/dark toggle still persists.
 
-- [ ] Update handoff notes
-  - Document auth assumptions.
-  - Document owner account provisioning.
-  - Document seed data coverage.
-  - Document runtime data source and test-only mock data.
+- [x] Update handoff notes
+  - [x] Document auth assumptions.
+  - [x] Document owner account provisioning.
+  - [x] Document seed data coverage.
+  - [x] Document runtime data source and test-only mock data.
 
 ## Resolved Decisions
 

@@ -17,17 +17,17 @@ This will place the ui components in the `components` directory.
 To use the components in your app, import them as follows:
 
 ```tsx
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/button"
 ```
 
 ## Auth & Account Provisioning
 
 Owner accounts are **not** created through a public sign-up page. For local development, the seed script creates a demo owner:
 
-| Field | Value |
-|-------|-------|
-| Email | `owner@jkt-strength.local` |
-| Password | `owner-password-123` |
+| Field    | Value                      |
+| -------- | -------------------------- |
+| Email    | `owner@jkt-strength.local` |
+| Password | `owner-password-123`       |
 
 See [docs/03-auth-assumptions.md](docs/03-auth-assumptions.md) for full details on account provisioning, member records, and what is out of scope.
 
@@ -54,3 +54,12 @@ npx prisma migrate reset
 ```
 
 See [docs/04-local-database-and-seed.md](docs/04-local-database-and-seed.md) for the expected local `DATABASE_URL`, seed data coverage, and safe reset notes.
+
+## Dashboard Data Source
+
+Runtime dashboard pages read owner-scoped data from Prisma through authenticated
+server loaders. Mock dashboard data is retained for tests only and is not a
+runtime fallback.
+
+See [docs/05-runtime-data-source.md](docs/05-runtime-data-source.md) for the
+loader, mapper, mutation, and mock-data handoff notes.

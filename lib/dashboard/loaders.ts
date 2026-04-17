@@ -12,6 +12,18 @@ import {
   mapPlanTier,
 } from "@/lib/dashboard/mappers"
 import { getOwnerGym } from "@/lib/dashboard/owner-gym"
+import {
+  getAttendanceRecordsQuery,
+  getDropInVisitsQuery,
+  getMembersQuery,
+  getMembershipPaymentsQuery,
+  getMembershipsQuery,
+  getOverviewMembersQuery,
+  getOverviewMembershipPaymentsQuery,
+  getOverviewMembershipsQuery,
+  getPlanTiersQuery,
+  getSubscriptionMembershipsQuery,
+} from "@/lib/dashboard/query-scopes"
 import type {
   DashboardData,
   DashboardRouteHref,
@@ -35,75 +47,6 @@ export type SubscriptionsDashboardData = Pick<
 
 export type DropInsDashboardData = Pick<DashboardData, "gym" | "dropIns">
 
-const planTierSelect = {
-  id: true,
-  gymId: true,
-  name: true,
-  description: true,
-  monthlyPriceAmount: true,
-  annualPriceAmount: true,
-  isActive: true,
-  sortOrder: true,
-}
-
-const memberSelect = {
-  id: true,
-  gymId: true,
-  firstName: true,
-  lastName: true,
-  email: true,
-  phone: true,
-  status: true,
-  joinDate: true,
-  lastAttendedAt: true,
-  notes: true,
-}
-
-const membershipSelect = {
-  id: true,
-  memberId: true,
-  planTierId: true,
-  billingInterval: true,
-  status: true,
-  priceAmount: true,
-  startedAt: true,
-  currentPeriodEndsAt: true,
-  nextBillingDate: true,
-  canceledAt: true,
-}
-
-const membershipPaymentSelect = {
-  id: true,
-  gymId: true,
-  memberId: true,
-  membershipId: true,
-  amount: true,
-  status: true,
-  dueAt: true,
-  paidAt: true,
-  notes: true,
-}
-
-const attendanceRecordSelect = {
-  id: true,
-  gymId: true,
-  memberId: true,
-  attendedAt: true,
-  source: true,
-  notes: true,
-}
-
-const dropInVisitSelect = {
-  id: true,
-  gymId: true,
-  visitorName: true,
-  visitorContact: true,
-  visitCount: true,
-  amount: true,
-  visitedAt: true,
-  notes: true,
-}
-
 export const loadOverviewDashboardData = cache(async () => {
   const gym = await requireOwnerGym("/")
 
@@ -112,26 +55,10 @@ export const loadOverviewDashboardData = cache(async () => {
   }
 
   const [members, memberships, payments, dropIns] = await Promise.all([
-    db.member.findMany({
-      where: { gymId: gym.id },
-      orderBy: [{ status: "asc" }, { lastName: "asc" }, { firstName: "asc" }],
-      select: memberSelect,
-    }),
-    db.membership.findMany({
-      where: { member: { gymId: gym.id } },
-      orderBy: [{ status: "asc" }, { currentPeriodEndsAt: "asc" }],
-      select: membershipSelect,
-    }),
-    db.membershipPayment.findMany({
-      where: { gymId: gym.id },
-      orderBy: [{ dueAt: "asc" }],
-      select: membershipPaymentSelect,
-    }),
-    db.dropInVisit.findMany({
-      where: { gymId: gym.id },
-      orderBy: [{ visitedAt: "desc" }],
-      select: dropInVisitSelect,
-    }),
+    db.member.findMany(getOverviewMembersQuery(gym.id)),
+    db.membership.findMany(getOverviewMembershipsQuery(gym.id)),
+    db.membershipPayment.findMany(getOverviewMembershipPaymentsQuery(gym.id)),
+    db.dropInVisit.findMany(getDropInVisitsQuery(gym.id)),
   ])
 
   return {
@@ -152,31 +79,11 @@ export const loadMembersDashboardData = cache(async () => {
 
   const [planTiers, members, memberships, payments, attendance] =
     await Promise.all([
-      db.planTier.findMany({
-        where: { gymId: gym.id },
-        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-        select: planTierSelect,
-      }),
-      db.member.findMany({
-        where: { gymId: gym.id },
-        orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
-        select: memberSelect,
-      }),
-      db.membership.findMany({
-        where: { member: { gymId: gym.id } },
-        orderBy: [{ status: "asc" }, { nextBillingDate: "asc" }],
-        select: membershipSelect,
-      }),
-      db.membershipPayment.findMany({
-        where: { gymId: gym.id },
-        orderBy: [{ dueAt: "desc" }],
-        select: membershipPaymentSelect,
-      }),
-      db.attendanceRecord.findMany({
-        where: { gymId: gym.id },
-        orderBy: [{ attendedAt: "desc" }],
-        select: attendanceRecordSelect,
-      }),
+      db.planTier.findMany(getPlanTiersQuery(gym.id)),
+      db.member.findMany(getMembersQuery(gym.id)),
+      db.membership.findMany(getMembershipsQuery(gym.id)),
+      db.membershipPayment.findMany(getMembershipPaymentsQuery(gym.id)),
+      db.attendanceRecord.findMany(getAttendanceRecordsQuery(gym.id)),
     ])
 
   return {
@@ -197,26 +104,10 @@ export const loadSubscriptionsDashboardData = cache(async () => {
   }
 
   const [planTiers, memberships, payments, dropIns] = await Promise.all([
-    db.planTier.findMany({
-      where: { gymId: gym.id },
-      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-      select: planTierSelect,
-    }),
-    db.membership.findMany({
-      where: { member: { gymId: gym.id } },
-      orderBy: [{ status: "asc" }, { startedAt: "desc" }],
-      select: membershipSelect,
-    }),
-    db.membershipPayment.findMany({
-      where: { gymId: gym.id },
-      orderBy: [{ dueAt: "desc" }],
-      select: membershipPaymentSelect,
-    }),
-    db.dropInVisit.findMany({
-      where: { gymId: gym.id },
-      orderBy: [{ visitedAt: "desc" }],
-      select: dropInVisitSelect,
-    }),
+    db.planTier.findMany(getPlanTiersQuery(gym.id)),
+    db.membership.findMany(getSubscriptionMembershipsQuery(gym.id)),
+    db.membershipPayment.findMany(getMembershipPaymentsQuery(gym.id)),
+    db.dropInVisit.findMany(getDropInVisitsQuery(gym.id)),
   ])
 
   return {
@@ -235,11 +126,7 @@ export const loadDropInsDashboardData = cache(async () => {
     return null
   }
 
-  const dropIns = await db.dropInVisit.findMany({
-    where: { gymId: gym.id },
-    orderBy: [{ visitedAt: "desc" }],
-    select: dropInVisitSelect,
-  })
+  const dropIns = await db.dropInVisit.findMany(getDropInVisitsQuery(gym.id))
 
   return {
     gym,
