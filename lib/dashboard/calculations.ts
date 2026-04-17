@@ -10,7 +10,6 @@ import type {
 } from "@/lib/dashboard/types"
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000
-const ACTIVE_REVENUE_MEMBERSHIP_STATUSES = new Set(["ACTIVE", "PAST_DUE"])
 
 export type DashboardCalculationOptions = {
   asOf?: Date
@@ -57,7 +56,7 @@ export function getMemberCounts(members: Member[]) {
 
 export function calculateMembershipMrr(memberships: Membership[]) {
   return memberships.reduce((total, membership) => {
-    if (!ACTIVE_REVENUE_MEMBERSHIP_STATUSES.has(membership.status)) {
+    if (membership.status !== "ACTIVE") {
       return total
     }
 

@@ -22,7 +22,7 @@ import type {
 
 const asOf = new Date("2026-04-16T09:00:00.000+07:00")
 
-test("normalizes active monthly and annual memberships into MRR", () => {
+test("normalizes active memberships into MRR and ignores paused memberships", () => {
   const memberships: Membership[] = [
     membership({
       id: "monthly-active",
@@ -50,7 +50,7 @@ test("normalizes active monthly and annual memberships into MRR", () => {
     }),
   ]
 
-  assert.equal(calculateMembershipMrr(memberships), 700000)
+  assert.equal(calculateMembershipMrr(memberships), 450000)
 })
 
 test("calculates drop-in revenue for the current month only", () => {

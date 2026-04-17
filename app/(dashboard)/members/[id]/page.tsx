@@ -19,6 +19,7 @@ import {
   type MemberDetailMembership,
 } from "@/lib/dashboard/loaders"
 import { cn } from "@/lib/utils"
+import { MemberStatusAction } from "../member-status-action"
 
 type MemberDetailPageProps = {
   params: Promise<{
@@ -105,6 +106,11 @@ export default async function MemberDetailPage({
         <div className="flex flex-wrap gap-2 sm:justify-end">
           <StatusBadge status={member.status} />
           <RiskBadge risk={billingRisk} />
+          <MemberStatusAction
+            memberId={member.id}
+            memberName={memberName}
+            status={member.status}
+          />
         </div>
       </header>
 

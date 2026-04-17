@@ -1,6 +1,6 @@
 # Member Actions Plan
 
-Status: Phase 1 complete.
+Status: Phase 2 complete.
 
 Replace the three placeholder quick actions on the members roster — View profile, Suspend account, and Edit plan — with working implementations.
 
@@ -79,7 +79,7 @@ Add a server action to toggle a member between ACTIVE and SUSPENDED, replacing t
 
 ### Server action
 
-- [ ] Add `updateMemberStatus` to `app/(dashboard)/members/actions.ts`
+- [x] Add `updateMemberStatus` to `app/(dashboard)/members/actions.ts`
   - Signature: `(values: { memberId: string, status: "ACTIVE" | "SUSPENDED" }) => Promise<ActionResult>`
   - Validate with Zod: `memberId` must be a non-empty string; `status` must be `"ACTIVE"` or `"SUSPENDED"`.
   - Authenticate via `requireDashboardSession("/members")`.
@@ -93,7 +93,7 @@ Add a server action to toggle a member between ACTIVE and SUSPENDED, replacing t
 
 ### UI changes
 
-- [ ] Replace the "Suspend account" placeholder button
+- [x] Replace the "Suspend account" placeholder button
   - Show "Suspend" for ACTIVE members, "Unsuspend" for SUSPENDED members.
   - Do not show the action for INACTIVE members (they should be reactivated through a different workflow or manually).
   - On click, show a brief inline confirmation: "Suspend [name]? Active memberships will be paused." / "Unsuspend [name]? You can assign a new plan afterward."
@@ -102,21 +102,21 @@ Add a server action to toggle a member between ACTIVE and SUSPENDED, replacing t
 
 ### Wire into member detail page
 
-- [ ] Add the suspend/unsuspend button on the member detail page header as well.
+- [x] Add the suspend/unsuspend button on the member detail page header as well.
   - Same confirmation pattern.
   - Page revalidates after action.
 
 ### Verification
 
-- [ ] Suspending an ACTIVE member sets status to SUSPENDED.
-- [ ] Suspending moves active memberships to PAST_DUE.
-- [ ] Unsuspending a SUSPENDED member sets status to ACTIVE.
-- [ ] Unsuspending does not reactivate memberships.
-- [ ] Overview stats update after suspend/unsuspend.
-- [ ] Member roster reflects the new status.
-- [ ] Member detail page reflects the new status.
-- [ ] Action is scoped to the owner's gym.
-- [ ] `npm run typecheck`, `npm run lint`, `npm run build`.
+- [x] Suspending an ACTIVE member sets status to SUSPENDED.
+- [x] Suspending moves active memberships to PAST_DUE.
+- [x] Unsuspending a SUSPENDED member sets status to ACTIVE.
+- [x] Unsuspending does not reactivate memberships.
+- [x] Overview stats update after suspend/unsuspend.
+- [x] Member roster reflects the new status.
+- [x] Member detail page reflects the new status.
+- [x] Action is scoped to the owner's gym.
+- [x] `npm run typecheck`, `npm run lint`, `npm run build`.
 
 ---
 
@@ -127,6 +127,7 @@ Add a server action and form to change a member's plan, replacing the "Edit plan
 ### Data model behavior
 
 A plan change means:
+
 1. Expire or cancel the current active membership (if one exists).
 2. Create a new membership with the selected plan tier and billing interval.
 3. Create the first payment record on the new membership.

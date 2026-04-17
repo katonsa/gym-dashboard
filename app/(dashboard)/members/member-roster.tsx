@@ -17,6 +17,7 @@ import type {
 } from "@/lib/dashboard/member-roster"
 import { cn } from "@/lib/utils"
 import { MemberCreateForm } from "./member-create-form"
+import { MemberStatusAction } from "./member-status-action"
 
 type StatusFilter = "all" | MemberStatus
 type PlanFilter = "all" | PlanTierName
@@ -80,14 +81,9 @@ export function MemberRoster({
     setRisk("all")
   }, [])
 
-  const handlePlaceholderAction = React.useCallback(
-    (action: string, memberName: string) => {
-      setActionMessage(
-        `${action} for ${memberName} is ready for the mutation flow.`
-      )
-    },
-    []
-  )
+  const handleActionMessage = React.useCallback((message: string) => {
+    setActionMessage(message)
+  }, [])
 
   const activeFiltersCount = [
     query.trim().length > 0,
@@ -218,7 +214,7 @@ export function MemberRoster({
                 <MemberCard
                   key={member.id}
                   member={member}
-                  onPlaceholderAction={handlePlaceholderAction}
+                  onActionMessage={handleActionMessage}
                 />
               ))}
             </div>
@@ -241,7 +237,7 @@ export function MemberRoster({
                     <MemberTableRow
                       key={member.id}
                       member={member}
-                      onPlaceholderAction={handlePlaceholderAction}
+                      onActionMessage={handleActionMessage}
                     />
                   ))}
                 </tbody>
@@ -324,10 +320,10 @@ function FilterSelect({
 
 function MemberCard({
   member,
-  onPlaceholderAction,
+  onActionMessage,
 }: {
   member: MemberRosterRow
-  onPlaceholderAction: (action: string, memberName: string) => void
+  onActionMessage: (message: string) => void
 }) {
   return (
     <article className="rounded-lg border border-border bg-card p-4 text-card-foreground">
@@ -360,10 +356,7 @@ function MemberCard({
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <RiskBadge risk={member.billingRisk} />
-        <QuickActions
-          member={member}
-          onPlaceholderAction={onPlaceholderAction}
-        />
+        <QuickActions member={member} onActionMessage={onActionMessage} />
       </div>
     </article>
   )
@@ -371,10 +364,10 @@ function MemberCard({
 
 function MemberTableRow({
   member,
-  onPlaceholderAction,
+  onActionMessage,
 }: {
   member: MemberRosterRow
-  onPlaceholderAction: (action: string, memberName: string) => void
+  onActionMessage: (message: string) => void
 }) {
   return (
     <tr>
@@ -413,7 +406,7 @@ function MemberTableRow({
       <td className="px-4 py-3 align-top">
         <QuickActions
           member={member}
-          onPlaceholderAction={onPlaceholderAction}
+          onActionMessage={onActionMessage}
           compact
         />
       </td>
@@ -434,32 +427,28 @@ function MemberField({ label, value }: { label: string; value: string }) {
 
 function QuickActions({
   member,
-  onPlaceholderAction,
+  onActionMessage,
   compact = false,
 }: {
   member: MemberRosterRow
-  onPlaceholderAction: (action: string, memberName: string) => void
+  onActionMessage: (message: string) => void
   compact?: boolean
 }) {
-  const actions = ["Edit plan", "Suspend account"]
-
   return (
     <div className={cn("flex flex-wrap gap-2", compact && "grid")}>
       <Button asChild variant="outline" size="sm" className="min-h-11">
         <Link href={`/members/${member.id}`}>View profile</Link>
       </Button>
-      {actions.map((action) => (
-        <Button
-          key={action}
-          type="button"
-          variant={action === "Suspend account" ? "destructive" : "outline"}
-          size="sm"
-          className="min-h-11"
-          onClick={() => onPlaceholderAction(action, member.name)}
-        >
-          {action}
-        </Button>
-      ))}
+      <Button asChild variant="outline" size="sm" className="min-h-11">
+        <Link href={`/members/${member.id}`}>Edit plan</Link>
+      </Button>
+      <MemberStatusAction
+        memberId={member.id}
+        memberName={member.name}
+        status={member.status}
+        compact={compact}
+        onResult={onActionMessage}
+      />
     </div>
   )
 }
