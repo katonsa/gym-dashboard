@@ -1,5 +1,4 @@
 import {
-  mockDashboardAsOf,
   mockDashboardData,
   type BillingInterval,
   type DashboardData,
@@ -12,17 +11,10 @@ import {
   type RevenueTrendChartRow,
 } from "./subscription-charts"
 
-const asOf = new Date(mockDashboardAsOf)
 const activeRevenueStatuses = new Set<Membership["status"]>([
   "ACTIVE",
   "PAST_DUE",
 ])
-
-const moneyFormatter = new Intl.NumberFormat("en", {
-  style: "currency",
-  currency: mockDashboardData.gym.currencyCode,
-  maximumFractionDigits: 0,
-})
 
 const numberFormatter = new Intl.NumberFormat("en")
 const percentFormatter = new Intl.NumberFormat("en", {
@@ -30,30 +22,37 @@ const percentFormatter = new Intl.NumberFormat("en", {
   maximumFractionDigits: 1,
 })
 
-const planBreakdown = getPlanBreakdown(mockDashboardData)
-const planChartData: PlanComparisonChartRow[] = planBreakdown.map((plan) => ({
-  plan: plan.name,
-  members: plan.memberCount,
-  revenueMillions: plan.monthlyEquivalentRevenue / 1_000_000,
-}))
-const revenueTrend = getRevenueTrend(mockDashboardData, asOf)
-const latestRevenue = revenueTrend.at(-1)
-const previousRevenue = revenueTrend.at(-2)
-const monthOverMonthAmount = latestRevenue && previousRevenue
-  ? latestRevenue.total - previousRevenue.total
-  : 0
-const monthOverMonthPercent =
-  previousRevenue && previousRevenue.total > 0
-    ? monthOverMonthAmount / previousRevenue.total
-    : 0
+export default async function SubscriptionsPage() {
+  const asOf = new Date()
+  const moneyFormatter = new Intl.NumberFormat("en", {
+    style: "currency",
+    currency: mockDashboardData.gym.currencyCode,
+    maximumFractionDigits: 0,
+  })
+  const planBreakdown = getPlanBreakdown(mockDashboardData)
+  const planChartData: PlanComparisonChartRow[] = planBreakdown.map((plan) => ({
+    plan: plan.name,
+    members: plan.memberCount,
+    revenueMillions: plan.monthlyEquivalentRevenue / 1_000_000,
+  }))
+  const revenueTrend = getRevenueTrend(mockDashboardData, asOf)
+  const latestRevenue = revenueTrend.at(-1)
+  const previousRevenue = revenueTrend.at(-2)
+  const monthOverMonthAmount =
+    latestRevenue && previousRevenue
+      ? latestRevenue.total - previousRevenue.total
+      : 0
+  const monthOverMonthPercent =
+    previousRevenue && previousRevenue.total > 0
+      ? monthOverMonthAmount / previousRevenue.total
+      : 0
 
-export default function SubscriptionsPage() {
   return (
     <div className="grid gap-5 lg:gap-6">
       <section className="grid gap-4 lg:grid-cols-[1fr_20rem] lg:items-end">
         <div className="min-w-0">
           <p className="text-xs font-semibold text-primary uppercase">
-            Thursday, Apr 16
+            {formatDashboardDate(asOf, mockDashboardData.gym.timezone)}
           </p>
           <h1 className="mt-2 text-2xl font-semibold tracking-normal text-balance sm:text-3xl">
             Subscriptions
@@ -67,7 +66,7 @@ export default function SubscriptionsPage() {
             Month movement
           </p>
           <p className="mt-1 text-2xl font-semibold">
-            {formatSignedMoney(monthOverMonthAmount)}
+            {formatSignedMoney(monthOverMonthAmount, moneyFormatter)}
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
             {formatSignedPercent(monthOverMonthPercent)} from prior month
@@ -297,14 +296,23 @@ function isSameChartMonth(date: string, month: Date) {
   )
 }
 
-function formatSignedMoney(amount: number) {
+function formatSignedMoney(amount: number, formatter: Intl.NumberFormat) {
   const sign = amount > 0 ? "+" : ""
 
-  return `${sign}${moneyFormatter.format(amount)}`
+  return `${sign}${formatter.format(amount)}`
 }
 
 function formatSignedPercent(value: number) {
   const sign = value > 0 ? "+" : ""
 
   return `${sign}${percentFormatter.format(value)}`
+}
+
+function formatDashboardDate(date: Date, timeZone: string) {
+  return new Intl.DateTimeFormat("en", {
+    weekday: "long",
+    month: "short",
+    day: "numeric",
+    timeZone,
+  }).format(date)
 }

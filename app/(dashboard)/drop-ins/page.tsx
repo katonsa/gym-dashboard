@@ -1,19 +1,10 @@
 import {
   getDropInConversionOpportunities,
-  mockDashboardAsOf,
   mockDashboardData,
   type DashboardData,
   type DropInVisit,
 } from "@/lib/dashboard"
 import { DropInEntryForm } from "./drop-in-entry-form"
-
-const asOf = new Date(mockDashboardAsOf)
-
-const moneyFormatter = new Intl.NumberFormat("en", {
-  style: "currency",
-  currency: mockDashboardData.gym.currencyCode,
-  maximumFractionDigits: 0,
-})
 
 const numberFormatter = new Intl.NumberFormat("en")
 const dateFormatter = new Intl.DateTimeFormat("en", {
@@ -26,48 +17,53 @@ const timeFormatter = new Intl.DateTimeFormat("en", {
   minute: "2-digit",
 })
 
-const dropInRows = getDropInRows(mockDashboardData, asOf)
-const dailyDropIns = getDropInsForDay(mockDashboardData.dropIns, asOf)
-const monthlyDropIns = getDropInsForMonth(mockDashboardData.dropIns, asOf)
-const frequentDropIns = getDropInConversionOpportunities(
-  mockDashboardData.dropIns,
-  { asOf, conversionVisitThreshold: 5 }
-).toSorted((left, right) => right.visitCount - left.visitCount)
-
-const summaryStats = [
-  {
-    label: "Today",
-    value: moneyFormatter.format(sumDropInAmount(dailyDropIns)),
-    detail: `${numberFormatter.format(sumVisitCount(dailyDropIns))} visits logged`,
-    tone: "status",
-  },
-  {
-    label: "This month",
-    value: moneyFormatter.format(sumDropInAmount(monthlyDropIns)),
-    detail: `${numberFormatter.format(sumVisitCount(monthlyDropIns))} visits collected`,
-    tone: "revenue",
-  },
-  {
-    label: "Frequent leads",
-    value: numberFormatter.format(frequentDropIns.length),
-    detail: "Identified visitors with 5+ visits",
-    tone: "opportunity",
-  },
-]
-
 const toneClasses: Record<string, string> = {
   opportunity: "bg-opportunity",
   revenue: "bg-revenue",
   status: "bg-status",
 }
 
-export default function DropInsPage() {
+export default async function DropInsPage() {
+  const asOf = new Date()
+  const moneyFormatter = new Intl.NumberFormat("en", {
+    style: "currency",
+    currency: mockDashboardData.gym.currencyCode,
+    maximumFractionDigits: 0,
+  })
+  const dropInRows = getDropInRows(mockDashboardData, asOf, moneyFormatter)
+  const dailyDropIns = getDropInsForDay(mockDashboardData.dropIns, asOf)
+  const monthlyDropIns = getDropInsForMonth(mockDashboardData.dropIns, asOf)
+  const frequentDropIns = getDropInConversionOpportunities(
+    mockDashboardData.dropIns,
+    { asOf, conversionVisitThreshold: 5 }
+  ).toSorted((left, right) => right.visitCount - left.visitCount)
+  const summaryStats = [
+    {
+      label: "Today",
+      value: moneyFormatter.format(sumDropInAmount(dailyDropIns)),
+      detail: `${numberFormatter.format(sumVisitCount(dailyDropIns))} visits logged`,
+      tone: "status",
+    },
+    {
+      label: "This month",
+      value: moneyFormatter.format(sumDropInAmount(monthlyDropIns)),
+      detail: `${numberFormatter.format(sumVisitCount(monthlyDropIns))} visits collected`,
+      tone: "revenue",
+    },
+    {
+      label: "Frequent leads",
+      value: numberFormatter.format(frequentDropIns.length),
+      detail: "Identified visitors with 5+ visits",
+      tone: "opportunity",
+    },
+  ]
+
   return (
     <div className="grid gap-5 lg:gap-6">
       <section className="grid gap-4 lg:grid-cols-[1fr_20rem] lg:items-end">
         <div className="min-w-0">
           <p className="text-xs font-semibold text-primary uppercase">
-            Thursday, Apr 16
+            {formatDashboardDate(asOf, mockDashboardData.gym.timezone)}
           </p>
           <h1 className="mt-2 text-2xl font-semibold tracking-normal text-balance sm:text-3xl">
             Drop-ins
@@ -293,7 +289,11 @@ function DropInField({ label, value }: { label: string; value: string }) {
   )
 }
 
-function getDropInRows(data: DashboardData, currentDate: Date): DropInRow[] {
+function getDropInRows(
+  data: DashboardData,
+  currentDate: Date,
+  moneyFormatter: Intl.NumberFormat
+): DropInRow[] {
   return data.dropIns
     .toSorted((left, right) => right.visitedAt.localeCompare(left.visitedAt))
     .map((dropIn) => {
@@ -353,4 +353,13 @@ function isSameMonth(date: string, month: Date) {
     value.getUTCFullYear() === month.getUTCFullYear() &&
     value.getUTCMonth() === month.getUTCMonth()
   )
+}
+
+function formatDashboardDate(date: Date, timeZone: string) {
+  return new Intl.DateTimeFormat("en", {
+    weekday: "long",
+    month: "short",
+    day: "numeric",
+    timeZone,
+  }).format(date)
 }

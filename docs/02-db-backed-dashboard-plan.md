@@ -148,25 +148,25 @@ The first version should remain read-only except for explicitly scoped owner/adm
 
 ## Phase 4: Wire Overview Page
 
-- [ ] Refactor page components from module-scope to async Server Components
+- [x] Refactor page components from module-scope to async Server Components
   - The current overview, members, subscriptions, and drop-ins pages compute data at module level (outside the component body). This pattern only evaluates once at build/startup and will not work with per-request database reads.
   - Convert each page to an `async` function component that fetches data inside the function body.
   - Replace `mockDashboardAsOf` with `new Date()` so calculations reflect the current time.
   - Replace the hardcoded date string in the overview header ("Thursday, Apr 16") with a dynamically formatted date.
 
-- [ ] Replace overview mock imports
+- [x] Replace overview mock imports
   - Load dashboard data from the server-side data access layer.
   - Calculate summary values from database-backed data.
   - Calculate alerts from database-backed data.
 
-- [ ] Add empty states
+- [x] Add empty states
   - No gym.
   - No members.
   - No memberships.
   - No drop-ins.
   - No alerts.
 
-- [ ] Remove mock labels from production UI
+- [x] Remove mock labels from production UI
   - Replace `Live mock data` with an accurate source/status label.
   - Keep copy focused on owner actions, not implementation details.
 
