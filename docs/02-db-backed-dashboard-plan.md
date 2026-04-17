@@ -113,7 +113,7 @@ The first version should remain read-only except for explicitly scoped owner/adm
   - Map Prisma `AttendanceRecord` to dashboard attendance type.
   - Map Prisma `DropInVisit` to dashboard drop-in type.
 
-- [ ] Add route-specific database loaders
+- [x] Add route-specific database loaders
   - Use shared auth, ownership, and mapping helpers.
   - Use route-specific database loaders to avoid overfetching.
   - Let the overview route load the combined data it needs for summary stats and alerts.

@@ -15,7 +15,82 @@ import type {
   PlanTier,
 } from "@/lib/dashboard/types"
 
-export function mapGymProfile(gym: GymModel): GymProfile {
+type GymProfileRow = Pick<
+  GymModel,
+  "id" | "name" | "timezone" | "currencyCode" | "defaultDropInFeeAmount"
+>
+
+type PlanTierRow = Pick<
+  PlanTierModel,
+  | "id"
+  | "gymId"
+  | "name"
+  | "description"
+  | "monthlyPriceAmount"
+  | "annualPriceAmount"
+  | "isActive"
+  | "sortOrder"
+>
+
+type MemberRow = Pick<
+  MemberModel,
+  | "id"
+  | "gymId"
+  | "firstName"
+  | "lastName"
+  | "email"
+  | "phone"
+  | "status"
+  | "joinDate"
+  | "lastAttendedAt"
+  | "notes"
+>
+
+type MembershipRow = Pick<
+  MembershipModel,
+  | "id"
+  | "memberId"
+  | "planTierId"
+  | "billingInterval"
+  | "status"
+  | "priceAmount"
+  | "startedAt"
+  | "currentPeriodEndsAt"
+  | "nextBillingDate"
+  | "canceledAt"
+>
+
+type MembershipPaymentRow = Pick<
+  MembershipPaymentModel,
+  | "id"
+  | "gymId"
+  | "memberId"
+  | "membershipId"
+  | "amount"
+  | "status"
+  | "dueAt"
+  | "paidAt"
+  | "notes"
+>
+
+type AttendanceRecordRow = Pick<
+  AttendanceRecordModel,
+  "id" | "gymId" | "memberId" | "attendedAt" | "source" | "notes"
+>
+
+type DropInVisitRow = Pick<
+  DropInVisitModel,
+  | "id"
+  | "gymId"
+  | "visitorName"
+  | "visitorContact"
+  | "visitCount"
+  | "amount"
+  | "visitedAt"
+  | "notes"
+>
+
+export function mapGymProfile(gym: GymProfileRow): GymProfile {
   return {
     id: gym.id,
     name: gym.name,
@@ -25,7 +100,7 @@ export function mapGymProfile(gym: GymModel): GymProfile {
   }
 }
 
-export function mapPlanTier(planTier: PlanTierModel): PlanTier {
+export function mapPlanTier(planTier: PlanTierRow): PlanTier {
   return {
     id: planTier.id,
     gymId: planTier.gymId,
@@ -38,7 +113,7 @@ export function mapPlanTier(planTier: PlanTierModel): PlanTier {
   }
 }
 
-export function mapMember(member: MemberModel): Member {
+export function mapMember(member: MemberRow): Member {
   return {
     id: member.id,
     gymId: member.gymId,
@@ -53,7 +128,7 @@ export function mapMember(member: MemberModel): Member {
   }
 }
 
-export function mapMembership(membership: MembershipModel): Membership {
+export function mapMembership(membership: MembershipRow): Membership {
   return {
     id: membership.id,
     memberId: membership.memberId,
@@ -69,7 +144,7 @@ export function mapMembership(membership: MembershipModel): Membership {
 }
 
 export function mapMembershipPayment(
-  payment: MembershipPaymentModel
+  payment: MembershipPaymentRow
 ): MembershipPayment {
   return {
     id: payment.id,
@@ -85,7 +160,7 @@ export function mapMembershipPayment(
 }
 
 export function mapAttendanceRecord(
-  attendanceRecord: AttendanceRecordModel
+  attendanceRecord: AttendanceRecordRow
 ): AttendanceRecord {
   return {
     id: attendanceRecord.id,
@@ -97,7 +172,7 @@ export function mapAttendanceRecord(
   }
 }
 
-export function mapDropInVisit(dropInVisit: DropInVisitModel): DropInVisit {
+export function mapDropInVisit(dropInVisit: DropInVisitRow): DropInVisit {
   return {
     id: dropInVisit.id,
     gymId: dropInVisit.gymId,
