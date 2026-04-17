@@ -5,35 +5,21 @@ import { Search } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import type {
-  BillingInterval,
   MemberStatus,
   MembershipStatus,
   PlanTierName,
 } from "@/lib/dashboard"
+import type {
+  BillingRisk,
+  MemberRosterRow,
+} from "@/lib/dashboard/member-roster"
 import { cn } from "@/lib/utils"
 
-type BillingRisk = "clear" | "expiring" | "overdue"
 type StatusFilter = "all" | MemberStatus
 type PlanFilter = "all" | PlanTierName
 type RiskFilter = "all" | BillingRisk
 
-export type MemberRosterRow = {
-  id: string
-  name: string
-  email: string
-  phone: string
-  status: MemberStatus
-  planName: PlanTierName | "No plan"
-  membershipStatus: MembershipStatus
-  billingInterval: BillingInterval | null
-  joinDateLabel: string
-  nextBillingDateLabel: string
-  sessionsAttended: number
-  billingRisk: BillingRisk
-}
-
 const statusOptions: StatusFilter[] = ["all", "ACTIVE", "INACTIVE", "SUSPENDED"]
-const planOptions: PlanFilter[] = ["all", "Basic", "Pro", "Elite"]
 const riskOptions: RiskFilter[] = ["all", "overdue", "expiring", "clear"]
 
 const statusClasses: Record<MemberStatus, string> = {
@@ -50,9 +36,11 @@ const riskClasses: Record<BillingRisk, string> = {
 
 export function MemberRoster({
   members,
+  planNames,
   asOfLabel,
 }: {
   members: MemberRosterRow[]
+  planNames: string[]
   asOfLabel: string
 }) {
   const [query, setQuery] = React.useState("")
@@ -100,6 +88,16 @@ export function MemberRoster({
     plan !== "all",
     risk !== "all",
   ].filter(Boolean).length
+  const planOptions = React.useMemo<PlanFilter[]>(
+    () => ["all", ...planNames],
+    [planNames]
+  )
+  const emptyState = getEmptyState({
+    totalMembers: members.length,
+    filteredMembers: filteredMembers.length,
+    hasSearch: query.trim().length > 0,
+    activeFiltersCount,
+  })
 
   return (
     <div className="grid gap-5 lg:gap-6">
@@ -239,16 +237,44 @@ export function MemberRoster({
             </div>
           </>
         ) : (
-          <div className="rounded-lg border border-border bg-card p-5 text-card-foreground">
-            <p className="text-sm font-medium">
-              No members match these filters.
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Clear a filter or search a different name, email, or phone.
-            </p>
-          </div>
+          <MemberRosterEmptyState
+            title={emptyState.title}
+            detail={emptyState.detail}
+            actionLabel={emptyState.canReset ? "Clear filters" : undefined}
+            onAction={emptyState.canReset ? resetFilters : undefined}
+          />
         )}
       </section>
+    </div>
+  )
+}
+
+function MemberRosterEmptyState({
+  title,
+  detail,
+  actionLabel,
+  onAction,
+}: {
+  title: string
+  detail: string
+  actionLabel?: string
+  onAction?: () => void
+}) {
+  return (
+    <div className="rounded-lg border border-border bg-card p-5 text-card-foreground">
+      <p className="text-sm font-medium">{title}</p>
+      <p className="mt-1 text-xs leading-5 text-muted-foreground">{detail}</p>
+      {actionLabel && onAction ? (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="mt-4 min-h-11"
+          onClick={onAction}
+        >
+          {actionLabel}
+        </Button>
+      ) : null}
     </div>
   )
 }
@@ -470,6 +496,57 @@ function formatPlan(member: MemberRosterRow) {
 
 function formatMembershipStatus(status: MembershipStatus) {
   return titleCase(status.replace("_", " "))
+}
+
+function getEmptyState({
+  totalMembers,
+  filteredMembers,
+  hasSearch,
+  activeFiltersCount,
+}: {
+  totalMembers: number
+  filteredMembers: number
+  hasSearch: boolean
+  activeFiltersCount: number
+}) {
+  if (totalMembers === 0) {
+    return {
+      title: "No members yet.",
+      detail:
+        "Add member records to start tracking plans, renewals, and visits.",
+      canReset: false,
+    }
+  }
+
+  if (filteredMembers > 0) {
+    return {
+      title: "",
+      detail: "",
+      canReset: false,
+    }
+  }
+
+  if (hasSearch) {
+    return {
+      title: "No search results.",
+      detail: "Search a different name, email, or phone.",
+      canReset: true,
+    }
+  }
+
+  if (activeFiltersCount > 0) {
+    return {
+      title: "No results for these filters.",
+      detail: "Clear a filter to widen the roster.",
+      canReset: true,
+    }
+  }
+
+  return {
+    title: "No members yet.",
+    detail: "Add member records to start tracking plans, renewals, and visits.",
+    canReset: false,
+  }
 }
 
 function titleCase(value: string) {

@@ -172,17 +172,17 @@ The first version should remain read-only except for explicitly scoped owner/adm
 
 ## Phase 5: Wire Members Page And Manual Entry
 
-- [ ] Replace member mock imports
+- [x] Replace member mock imports
   - Load members, memberships, plan tiers, payments, and attendance from the database.
   - Preserve existing search and filter behavior.
   - Preserve mobile cards and desktop table layouts.
 
-- [ ] Validate billing risk logic
+- [x] Validate billing risk logic
   - Overdue payment risk.
   - Expiring membership risk.
   - Clear billing state.
 
-- [ ] Add member empty states
+- [x] Add member empty states
   - No members yet.
   - No search results.
   - No results for selected filters.

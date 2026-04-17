@@ -1,67 +1,40 @@
-import {
-  getExpiringMemberships,
-  getMembersWithMemberships,
-  getOverduePayments,
-  mockDashboardData,
-} from "@/lib/dashboard"
-import { MemberRoster, type MemberRosterRow } from "./member-roster"
-
-const dateFormatter = new Intl.DateTimeFormat("en", {
-  month: "short",
-  day: "numeric",
-  year: "numeric",
-})
+import { buildMemberRosterRows } from "@/lib/dashboard/member-roster"
+import { loadMembersDashboardData } from "@/lib/dashboard/loaders"
+import type { DashboardData } from "@/lib/dashboard"
+import { MemberRoster } from "./member-roster"
 
 export default async function MembersPage() {
-  const asOf = new Date()
-  const overdueMemberIds = new Set(
-    getOverduePayments(mockDashboardData.payments, asOf).map(
-      (payment) => payment.memberId
-    )
-  )
-  const expiringMemberIds = new Set(
-    getExpiringMemberships(mockDashboardData.memberships, { asOf }).map(
-      (membership) => membership.memberId
-    )
-  )
-  const memberRows: MemberRosterRow[] = getMembersWithMemberships(
-    mockDashboardData
-  )
-    .map((member) => {
-      const fullName = `${member.firstName} ${member.lastName}`
-      const billingRisk: MemberRosterRow["billingRisk"] = overdueMemberIds.has(
-        member.id
-      )
-        ? "overdue"
-        : expiringMemberIds.has(member.id)
-          ? "expiring"
-          : "clear"
-      const planName: MemberRosterRow["planName"] =
-        member.planTier?.name ?? "No plan"
+  const membersData = await loadMembersDashboardData()
 
-      return {
-        id: member.id,
-        name: fullName,
-        email: member.email ?? "",
-        phone: member.phone ?? "",
-        status: member.status,
-        planName,
-        membershipStatus: member.membership?.status ?? "CANCELED",
-        billingInterval: member.membership?.billingInterval ?? null,
-        joinDateLabel: dateFormatter.format(new Date(member.joinDate)),
-        nextBillingDateLabel: member.membership
-          ? dateFormatter.format(new Date(member.membership.nextBillingDate))
-          : "Not scheduled",
-        sessionsAttended: member.sessionsAttended,
-        billingRisk,
-      }
-    })
-    .sort((left, right) => left.name.localeCompare(right.name))
+  if (!membersData) {
+    return (
+      <MembersEmptyState
+        title="No gym is connected to this owner account."
+        detail="Create or assign a gym for this owner before member records can appear."
+      />
+    )
+  }
+
+  const asOf = new Date()
+  const dashboardData = {
+    ...membersData,
+    dropIns: [],
+  } satisfies DashboardData
+  const memberRows = buildMemberRosterRows(dashboardData, asOf)
+  const planNames = Array.from(
+    new Set([
+      ...membersData.planTiers.map((plan) => plan.name),
+      ...memberRows.map((member) => member.planName),
+    ])
+  )
+    .filter((planName) => planName !== "No plan")
+    .sort((left, right) => left.localeCompare(right))
 
   return (
     <MemberRoster
       members={memberRows}
-      asOfLabel={formatDashboardDate(asOf, mockDashboardData.gym.timezone)}
+      planNames={planNames}
+      asOfLabel={formatDashboardDate(asOf, membersData.gym.timezone)}
     />
   )
 }
@@ -73,4 +46,19 @@ function formatDashboardDate(date: Date, timeZone: string) {
     day: "numeric",
     timeZone,
   }).format(date)
+}
+
+function MembersEmptyState({
+  title,
+  detail,
+}: {
+  title: string
+  detail: string
+}) {
+  return (
+    <div className="rounded-lg border border-border bg-card p-5 text-card-foreground">
+      <p className="text-sm font-medium">{title}</p>
+      <p className="mt-1 text-xs leading-5 text-muted-foreground">{detail}</p>
+    </div>
+  )
 }

@@ -9,11 +9,15 @@ import {
   getInactiveMembers,
   getOverduePayments,
 } from "../lib/dashboard/calculations.ts"
+import { buildMemberRosterRows } from "../lib/dashboard/member-roster.ts"
 import type {
+  DashboardData,
   DropInVisit,
+  GymProfile,
   Member,
   Membership,
   MembershipPayment,
+  PlanTier,
 } from "../lib/dashboard/types.ts"
 
 const asOf = new Date("2026-04-16T09:00:00.000+07:00")
@@ -129,6 +133,54 @@ test("detects explicit overdue payments and pending payments past due", () => {
   assert.deepEqual(
     getOverduePayments(payments, asOf).map((item) => item.id),
     ["explicit-overdue", "pending-past-due"]
+  )
+})
+
+test("builds member roster rows with overdue, expiring, and clear billing risk", () => {
+  const data = dashboardData({
+    members: [
+      member({ id: "overdue-member", firstName: "Ari", lastName: "Overdue" }),
+      member({
+        id: "expiring-member",
+        firstName: "Bima",
+        lastName: "Expiring",
+      }),
+      member({ id: "clear-member", firstName: "Citra", lastName: "Clear" }),
+    ],
+    memberships: [
+      membership({
+        id: "overdue-membership",
+        memberId: "overdue-member",
+        currentPeriodEndsAt: "2026-04-20T23:59:59.000+07:00",
+      }),
+      membership({
+        id: "expiring-membership",
+        memberId: "expiring-member",
+        currentPeriodEndsAt: "2026-04-20T23:59:59.000+07:00",
+      }),
+      membership({
+        id: "clear-membership",
+        memberId: "clear-member",
+        currentPeriodEndsAt: "2026-05-20T23:59:59.000+07:00",
+      }),
+    ],
+    payments: [
+      payment({
+        id: "overdue-payment",
+        memberId: "overdue-member",
+        membershipId: "overdue-membership",
+        status: "OVERDUE",
+      }),
+    ],
+  })
+
+  assert.deepEqual(
+    buildMemberRosterRows(data, asOf).map((row) => [row.id, row.billingRisk]),
+    [
+      ["overdue-member", "overdue"],
+      ["expiring-member", "expiring"],
+      ["clear-member", "clear"],
+    ]
   )
 })
 
@@ -260,6 +312,38 @@ function dropIn(overrides: Partial<DropInVisit> = {}): DropInVisit {
     visitCount: 1,
     amount: 75000,
     visitedAt: "2026-04-01T09:00:00.000+07:00",
+    ...overrides,
+  }
+}
+
+function dashboardData(overrides: Partial<DashboardData> = {}): DashboardData {
+  const gym: GymProfile = {
+    id: "gym",
+    name: "Demo Gym",
+    timezone: "Asia/Jakarta",
+    currencyCode: "IDR",
+    defaultDropInFeeAmount: 75000,
+  }
+  const planTiers: PlanTier[] = [
+    {
+      id: "plan-basic",
+      gymId: "gym",
+      name: "Basic",
+      monthlyPriceAmount: 350000,
+      annualPriceAmount: 3600000,
+      isActive: true,
+      sortOrder: 1,
+    },
+  ]
+
+  return {
+    gym,
+    planTiers,
+    members: [member()],
+    memberships: [membership()],
+    payments: [],
+    attendance: [],
+    dropIns: [],
     ...overrides,
   }
 }
