@@ -1,6 +1,6 @@
 # Member Actions Plan
 
-Status: Pending review.
+Status: Phase 1 complete.
 
 Replace the three placeholder quick actions on the members roster — View profile, Suspend account, and Edit plan — with working implementations.
 
@@ -29,7 +29,7 @@ Add `/members/[id]` as a read-only profile page that replaces the "View profile"
 
 ### Data loading
 
-- [ ] Add `loadMemberDetailData(memberId: string)` to `lib/dashboard/loaders.ts`
+- [x] Add `loadMemberDetailData(memberId: string)` to `lib/dashboard/loaders.ts`
   - Call `requireDashboardSession("/members")` for auth.
   - Load the member by id, scoped to the owner's gym (`Member.gymId` must match the owner's gym id).
   - Load all memberships for that member (not just the current one), ordered by `startedAt` descending.
@@ -40,7 +40,7 @@ Add `/members/[id]` as a read-only profile page that replaces the "View profile"
 
 ### Page layout
 
-- [ ] Build the member detail page
+- [x] Build the member detail page
   - Back link to `/members`.
   - Header: full name, status badge, billing risk badge.
   - Contact card: email, phone, join date, last attended date, notes.
@@ -51,25 +51,25 @@ Add `/members/[id]` as a read-only profile page that replaces the "View profile"
 
 ### Empty and error states
 
-- [ ] Member not found → "This member does not exist or belongs to a different gym." with a back link.
-- [ ] No memberships → "No memberships on record."
-- [ ] No payments → "No payment records."
-- [ ] No attendance → "No attendance recorded."
+- [x] Member not found → "This member does not exist or belongs to a different gym." with a back link.
+- [x] No memberships → "No memberships on record."
+- [x] No payments → "No payment records."
+- [x] No attendance → "No attendance recorded."
 
 ### Wire "View profile" button
 
-- [ ] Replace the placeholder `onClick` in `QuickActions` with a `Link` to `/members/${member.id}`.
-- [ ] On the mobile card layout, make the member name itself a link to the detail page as well.
+- [x] Replace the placeholder `onClick` in `QuickActions` with a `Link` to `/members/${member.id}`.
+- [x] On the mobile card layout, make the member name itself a link to the detail page as well.
 
 ### Verification
 
-- [ ] `npm run typecheck`
-- [ ] `npm run lint`
-- [ ] `npm run build`
-- [ ] Load `/members/[valid-id]` — page renders with member data.
-- [ ] Load `/members/[nonexistent-id]` — not-found state renders.
-- [ ] Back link returns to `/members`.
-- [ ] Page is mobile-usable.
+- [x] `npm run typecheck`
+- [x] `npm run lint`
+- [x] `npm run build`
+- [x] Load `/members/[valid-id]` — page renders with member data.
+- [x] Load `/members/[nonexistent-id]` — not-found state renders.
+- [x] Back link returns to `/members`.
+- [x] Page is mobile-usable.
 
 ---
 

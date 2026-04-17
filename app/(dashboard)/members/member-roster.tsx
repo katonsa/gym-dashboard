@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import * as React from "react"
 import { Search } from "lucide-react"
 
@@ -332,7 +333,14 @@ function MemberCard({
     <article className="rounded-lg border border-border bg-card p-4 text-card-foreground">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h3 className="truncate text-base font-semibold">{member.name}</h3>
+          <h3 className="truncate text-base font-semibold">
+            <Link
+              href={`/members/${member.id}`}
+              className="rounded-sm outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/40"
+            >
+              {member.name}
+            </Link>
+          </h3>
           <p className="mt-1 truncate text-xs text-muted-foreground">
             {member.email}
           </p>
@@ -433,10 +441,13 @@ function QuickActions({
   onPlaceholderAction: (action: string, memberName: string) => void
   compact?: boolean
 }) {
-  const actions = ["View profile", "Edit plan", "Suspend account"]
+  const actions = ["Edit plan", "Suspend account"]
 
   return (
     <div className={cn("flex flex-wrap gap-2", compact && "grid")}>
+      <Button asChild variant="outline" size="sm" className="min-h-11">
+        <Link href={`/members/${member.id}`}>View profile</Link>
+      </Button>
       {actions.map((action) => (
         <Button
           key={action}

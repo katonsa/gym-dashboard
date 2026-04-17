@@ -25,9 +25,14 @@ import {
   getSubscriptionMembershipsQuery,
 } from "@/lib/dashboard/query-scopes"
 import type {
+  AttendanceRecord,
   DashboardData,
   DashboardRouteHref,
   GymProfile,
+  Member,
+  Membership,
+  MembershipPayment,
+  PlanTier,
 } from "@/lib/dashboard/types"
 
 export type OverviewDashboardData = Pick<
@@ -46,6 +51,18 @@ export type SubscriptionsDashboardData = Pick<
 >
 
 export type DropInsDashboardData = Pick<DashboardData, "gym" | "dropIns">
+
+export type MemberDetailMembership = Membership & {
+  planTier: PlanTier
+}
+
+export type MemberDetailDashboardData = {
+  gym: GymProfile
+  member: Member
+  memberships: MemberDetailMembership[]
+  payments: MembershipPayment[]
+  attendance: AttendanceRecord[]
+}
 
 export const loadOverviewDashboardData = cache(async () => {
   const gym = await requireOwnerGym("/")
@@ -132,6 +149,117 @@ export const loadDropInsDashboardData = cache(async () => {
     gym,
     dropIns: dropIns.map(mapDropInVisit),
   } satisfies DropInsDashboardData
+})
+
+export const loadMemberDetailData = cache(async (memberId: string) => {
+  const session = await requireDashboardSession("/members")
+  const gym = await getOwnerGym(session.user.id)
+
+  if (!gym) {
+    return null
+  }
+
+  const [member, memberships, payments, attendance] = await Promise.all([
+    db.member.findFirst({
+      where: {
+        id: memberId,
+        gymId: gym.id,
+      },
+      select: {
+        id: true,
+        gymId: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        phone: true,
+        status: true,
+        joinDate: true,
+        lastAttendedAt: true,
+        notes: true,
+      },
+    }),
+    db.membership.findMany({
+      where: {
+        memberId,
+        member: {
+          gymId: gym.id,
+        },
+      },
+      orderBy: [{ startedAt: "desc" }],
+      select: {
+        id: true,
+        memberId: true,
+        planTierId: true,
+        billingInterval: true,
+        status: true,
+        priceAmount: true,
+        startedAt: true,
+        currentPeriodEndsAt: true,
+        nextBillingDate: true,
+        canceledAt: true,
+        planTier: {
+          select: {
+            id: true,
+            gymId: true,
+            name: true,
+            description: true,
+            monthlyPriceAmount: true,
+            annualPriceAmount: true,
+            isActive: true,
+            sortOrder: true,
+          },
+        },
+      },
+    }),
+    db.membershipPayment.findMany({
+      where: {
+        gymId: gym.id,
+        memberId,
+      },
+      orderBy: [{ dueAt: "desc" }],
+      select: {
+        id: true,
+        gymId: true,
+        memberId: true,
+        membershipId: true,
+        amount: true,
+        status: true,
+        dueAt: true,
+        paidAt: true,
+        notes: true,
+      },
+    }),
+    db.attendanceRecord.findMany({
+      where: {
+        gymId: gym.id,
+        memberId,
+      },
+      orderBy: [{ attendedAt: "desc" }],
+      select: {
+        id: true,
+        gymId: true,
+        memberId: true,
+        attendedAt: true,
+        source: true,
+        notes: true,
+      },
+    }),
+  ])
+
+  if (!member) {
+    return null
+  }
+
+  return {
+    gym: mapGymProfile(gym),
+    member: mapMember(member),
+    memberships: memberships.map((membership) => ({
+      ...mapMembership(membership),
+      planTier: mapPlanTier(membership.planTier),
+    })),
+    payments: payments.map(mapMembershipPayment),
+    attendance: attendance.map(mapAttendanceRecord),
+  } satisfies MemberDetailDashboardData
 })
 
 async function requireOwnerGym(
