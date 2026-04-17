@@ -2,18 +2,16 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { usePathname, useRouter } from "next/navigation"
+import { usePathname } from "next/navigation"
 import {
   BadgeDollarSign,
   CircleDollarSign,
   Dumbbell,
-  LogOut,
   Users,
 } from "lucide-react"
 
+import { SignOutButton } from "@/components/auth/sign-out-button"
 import { ThemeToggle } from "@/components/theme-toggle"
-import { Button } from "@/components/ui/button"
-import { authClient } from "@/lib/auth/client"
 import { dashboardRoutes, type DashboardRouteHref } from "@/lib/dashboard"
 import { cn } from "@/lib/utils"
 
@@ -27,34 +25,14 @@ const routeIcons: Record<
   "/drop-ins": BadgeDollarSign,
 }
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+export function AppShell({
+  children,
+  gymName,
+}: {
+  children: React.ReactNode
+  gymName: string
+}) {
   const pathname = usePathname()
-  const router = useRouter()
-  const [isSigningOut, setIsSigningOut] = React.useState(false)
-
-  async function handleSignOut() {
-    if (isSigningOut) {
-      return
-    }
-
-    setIsSigningOut(true)
-
-    try {
-      await authClient.signOut({
-        fetchOptions: {
-          onSuccess: () => {
-            router.replace("/sign-in")
-            router.refresh()
-          },
-          onError: () => {
-            setIsSigningOut(false)
-          },
-        },
-      })
-    } catch {
-      setIsSigningOut(false)
-    }
-  }
 
   return (
     <div className="min-h-svh bg-background text-foreground">
@@ -67,7 +45,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </span>
               <span className="min-w-0">
                 <span className="block truncate text-sm font-semibold tracking-normal">
-                  JKT Strength House
+                  {gymName}
                 </span>
                 <span className="block truncate text-xs text-sidebar-foreground/60">
                   Daily operations
@@ -90,10 +68,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
           <div className="grid gap-2 border-t border-sidebar-border pt-4">
             <ThemeToggle />
-            <SignOutButton
-              isSigningOut={isSigningOut}
-              onSignOut={handleSignOut}
-            />
+            <SignOutButton />
           </div>
         </aside>
 
@@ -109,7 +84,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 </span>
                 <span className="min-w-0">
                   <span className="block truncate text-sm font-semibold">
-                    JKT Strength House
+                    {gymName}
                   </span>
                   <span className="block truncate text-xs text-muted-foreground">
                     Daily operations
@@ -128,11 +103,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
               <div className="flex items-center gap-2">
                 <ThemeToggle compact />
-                <SignOutButton
-                  compact
-                  isSigningOut={isSigningOut}
-                  onSignOut={handleSignOut}
-                />
+                <SignOutButton compact />
               </div>
             </div>
           </header>
@@ -159,39 +130,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </nav>
     </div>
-  )
-}
-
-function SignOutButton({
-  compact = false,
-  isSigningOut,
-  onSignOut,
-}: {
-  compact?: boolean
-  isSigningOut: boolean
-  onSignOut: () => Promise<void>
-}) {
-  const label = isSigningOut ? "Signing out" : "Sign out"
-
-  return (
-    <Button
-      type="button"
-      variant="outline"
-      size={compact ? "icon-lg" : "lg"}
-      aria-label={label}
-      disabled={isSigningOut}
-      className={cn(
-        "min-h-11 border-border bg-background/70",
-        compact && "min-w-11",
-        !compact && "w-full justify-start gap-2"
-      )}
-      onClick={() => {
-        void onSignOut()
-      }}
-    >
-      <LogOut className="size-4" />
-      {!compact ? <span>{label}</span> : null}
-    </Button>
   )
 }
 

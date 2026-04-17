@@ -97,7 +97,7 @@ The first version should remain read-only except for explicitly scoped owner/adm
 
 ## Phase 2: Owner-Scoped Data Access
 
-- [ ] Add owner-scoped gym lookup
+- [x] Add owner-scoped gym lookup
   - Select the gym by the authenticated owner's user id.
   - Load only gyms where `Gym.ownerId` matches the current user id.
   - Show an empty/setup state when an authenticated user has no gym.
