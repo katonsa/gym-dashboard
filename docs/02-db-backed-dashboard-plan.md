@@ -207,17 +207,17 @@ The first version should remain read-only except for explicitly scoped owner/adm
 
 ## Phase 6: Wire Subscriptions Page
 
-- [ ] Replace subscription mock imports
+- [x] Replace subscription mock imports
   - Load plans, memberships, drop-ins, and payments from the database.
   - Preserve plan breakdown calculations.
   - Preserve monthly-equivalent annual revenue handling.
 
-- [ ] Validate chart data
+- [x] Validate chart data
   - Plan comparison chart uses real plan rows.
   - Six-month revenue trend uses real membership and drop-in data.
   - Months with no data render as zero instead of breaking charts.
 
-- [ ] Add subscription empty states
+- [x] Add subscription empty states
   - No plans configured.
   - No active memberships.
   - No revenue records.

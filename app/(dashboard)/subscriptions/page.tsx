@@ -1,9 +1,8 @@
+import { type BillingInterval, type Membership } from "@/lib/dashboard"
 import {
-  mockDashboardData,
-  type BillingInterval,
-  type DashboardData,
-  type Membership,
-} from "@/lib/dashboard"
+  loadSubscriptionsDashboardData,
+  type SubscriptionsDashboardData,
+} from "@/lib/dashboard/loaders"
 import {
   PlanComparisonChart,
   type PlanComparisonChartRow,
@@ -23,19 +22,30 @@ const percentFormatter = new Intl.NumberFormat("en", {
 })
 
 export default async function SubscriptionsPage() {
+  const subscriptionsData = await loadSubscriptionsDashboardData()
+
+  if (!subscriptionsData) {
+    return (
+      <SubscriptionEmptyState
+        title="No gym is connected to this owner account."
+        detail="Create or assign a gym for this owner before subscription data can appear."
+      />
+    )
+  }
+
   const asOf = new Date()
   const moneyFormatter = new Intl.NumberFormat("en", {
     style: "currency",
-    currency: mockDashboardData.gym.currencyCode,
+    currency: subscriptionsData.gym.currencyCode,
     maximumFractionDigits: 0,
   })
-  const planBreakdown = getPlanBreakdown(mockDashboardData)
+  const planBreakdown = getPlanBreakdown(subscriptionsData)
   const planChartData: PlanComparisonChartRow[] = planBreakdown.map((plan) => ({
     plan: plan.name,
     members: plan.memberCount,
     revenueMillions: plan.monthlyEquivalentRevenue / 1_000_000,
   }))
-  const revenueTrend = getRevenueTrend(mockDashboardData, asOf)
+  const revenueTrend = getRevenueTrend(subscriptionsData, asOf)
   const latestRevenue = revenueTrend.at(-1)
   const previousRevenue = revenueTrend.at(-2)
   const monthOverMonthAmount =
@@ -46,13 +56,38 @@ export default async function SubscriptionsPage() {
     previousRevenue && previousRevenue.total > 0
       ? monthOverMonthAmount / previousRevenue.total
       : 0
+  const activeRevenueMemberships = subscriptionsData.memberships.filter(
+    (membership) => activeRevenueStatuses.has(membership.status)
+  )
+  const setupGaps = [
+    subscriptionsData.planTiers.length === 0
+      ? {
+          title: "No plans configured.",
+          detail: "Add plan tiers before plan mix and pricing can be compared.",
+        }
+      : null,
+    activeRevenueMemberships.length === 0
+      ? {
+          title: "No active memberships.",
+          detail:
+            "Active and past-due memberships will populate subscription revenue.",
+        }
+      : null,
+    hasRevenueRecords(subscriptionsData)
+      ? null
+      : {
+          title: "No revenue records.",
+          detail:
+            "Membership billing and drop-in revenue will appear once records are created.",
+        },
+  ].filter((gap): gap is { title: string; detail: string } => Boolean(gap))
 
   return (
     <div className="grid gap-5 lg:gap-6">
       <section className="grid gap-4 lg:grid-cols-[1fr_20rem] lg:items-end">
         <div className="min-w-0">
           <p className="text-xs font-semibold text-primary uppercase">
-            {formatDashboardDate(asOf, mockDashboardData.gym.timezone)}
+            {formatDashboardDate(asOf, subscriptionsData.gym.timezone)}
           </p>
           <h1 className="mt-2 text-2xl font-semibold tracking-normal text-balance sm:text-3xl">
             Subscriptions
@@ -74,6 +109,28 @@ export default async function SubscriptionsPage() {
         </div>
       </section>
 
+      {setupGaps.length > 0 ? (
+        <section aria-labelledby="subscription-setup" className="grid gap-3">
+          <div>
+            <h2 id="subscription-setup" className="text-base font-semibold">
+              Setup status
+            </h2>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Complete these records to fill the subscription view.
+            </p>
+          </div>
+          <div className="grid gap-3 md:grid-cols-3">
+            {setupGaps.map((gap) => (
+              <SubscriptionEmptyState
+                key={gap.title}
+                title={gap.title}
+                detail={gap.detail}
+              />
+            ))}
+          </div>
+        </section>
+      ) : null}
+
       <section aria-labelledby="plan-breakdown" className="grid gap-3">
         <div>
           <h2 id="plan-breakdown" className="text-base font-semibold">
@@ -83,44 +140,51 @@ export default async function SubscriptionsPage() {
             Active and past-due memberships, normalized to monthly revenue.
           </p>
         </div>
-        <div className="grid gap-3 md:grid-cols-3">
-          {planBreakdown.map((plan) => (
-            <article
-              key={plan.id}
-              className="rounded-lg border border-border bg-card p-4 text-card-foreground"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <h3 className="text-lg font-semibold">{plan.name}</h3>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {plan.description}
-                  </p>
+        {planBreakdown.length > 0 ? (
+          <div className="grid gap-3 md:grid-cols-3">
+            {planBreakdown.map((plan) => (
+              <article
+                key={plan.id}
+                className="rounded-lg border border-border bg-card p-4 text-card-foreground"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="text-lg font-semibold">{plan.name}</h3>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {plan.description}
+                    </p>
+                  </div>
+                  <span className="rounded-lg bg-primary/12 px-2 py-1 text-xs font-medium text-primary">
+                    {numberFormatter.format(plan.memberCount)}
+                  </span>
                 </div>
-                <span className="rounded-lg bg-primary/12 px-2 py-1 text-xs font-medium text-primary">
-                  {numberFormatter.format(plan.memberCount)}
-                </span>
-              </div>
-              <dl className="mt-5 grid gap-3 text-sm">
-                <PlanMetric
-                  label="Monthly revenue"
-                  value={moneyFormatter.format(plan.monthlyEquivalentRevenue)}
-                />
-                <PlanMetric
-                  label="Member share"
-                  value={percentFormatter.format(plan.memberShare)}
-                />
-                <PlanMetric
-                  label="Monthly billing"
-                  value={`${plan.monthlyMemberships} members`}
-                />
-                <PlanMetric
-                  label="Annual billing"
-                  value={`${plan.annualMemberships} members`}
-                />
-              </dl>
-            </article>
-          ))}
-        </div>
+                <dl className="mt-5 grid gap-3 text-sm">
+                  <PlanMetric
+                    label="Monthly revenue"
+                    value={moneyFormatter.format(plan.monthlyEquivalentRevenue)}
+                  />
+                  <PlanMetric
+                    label="Member share"
+                    value={percentFormatter.format(plan.memberShare)}
+                  />
+                  <PlanMetric
+                    label="Monthly billing"
+                    value={`${plan.monthlyMemberships} members`}
+                  />
+                  <PlanMetric
+                    label="Annual billing"
+                    value={`${plan.annualMemberships} members`}
+                  />
+                </dl>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <SubscriptionEmptyState
+            title="No plans configured."
+            detail="Plan tiers will appear here after they are added to this gym."
+          />
+        )}
       </section>
 
       <section className="grid min-w-0 gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
@@ -131,7 +195,14 @@ export default async function SubscriptionsPage() {
               Members and monthly-equivalent revenue in millions.
             </p>
           </div>
-          <PlanComparisonChart data={planChartData} />
+          {planChartData.length > 0 ? (
+            <PlanComparisonChart data={planChartData} />
+          ) : (
+            <SubscriptionEmptyState
+              title="No plans configured."
+              detail="Plan comparison starts after plan tiers are added."
+            />
+          )}
         </article>
 
         <article className="min-w-0 overflow-hidden rounded-lg border border-border bg-card p-4 text-card-foreground">
@@ -141,7 +212,14 @@ export default async function SubscriptionsPage() {
               Membership, drop-in, and total revenue for six months.
             </p>
           </div>
-          <RevenueTrendChart data={revenueTrend} />
+          {hasRevenueRecords(subscriptionsData) ? (
+            <RevenueTrendChart data={revenueTrend} />
+          ) : (
+            <SubscriptionEmptyState
+              title="No revenue records."
+              detail="The six-month trend will start at zero until billing or drop-in records exist."
+            />
+          )}
         </article>
       </section>
 
@@ -178,6 +256,21 @@ export default async function SubscriptionsPage() {
   )
 }
 
+function SubscriptionEmptyState({
+  title,
+  detail,
+}: {
+  title: string
+  detail: string
+}) {
+  return (
+    <div className="rounded-lg border border-border bg-card p-5 text-card-foreground">
+      <p className="text-sm font-medium">{title}</p>
+      <p className="mt-1 text-xs leading-5 text-muted-foreground">{detail}</p>
+    </div>
+  )
+}
+
 function PlanMetric({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between gap-3 border-b border-border pb-3 last:border-b-0 last:pb-0">
@@ -187,7 +280,7 @@ function PlanMetric({ label, value }: { label: string; value: string }) {
   )
 }
 
-function getPlanBreakdown(data: DashboardData) {
+function getPlanBreakdown(data: SubscriptionsDashboardData) {
   const totalRevenueMemberships = data.memberships.filter((membership) =>
     activeRevenueStatuses.has(membership.status)
   ).length
@@ -222,7 +315,7 @@ function getPlanBreakdown(data: DashboardData) {
 }
 
 function getRevenueTrend(
-  data: DashboardData,
+  data: SubscriptionsDashboardData,
   currentMonth: Date
 ): RevenueTrendChartRow[] {
   return Array.from({ length: 6 }, (_, index) => {
@@ -293,6 +386,14 @@ function isSameChartMonth(date: string, month: Date) {
   return (
     value.getUTCFullYear() === month.getUTCFullYear() &&
     value.getUTCMonth() === month.getUTCMonth()
+  )
+}
+
+function hasRevenueRecords(data: SubscriptionsDashboardData) {
+  return (
+    data.memberships.length > 0 ||
+    data.dropIns.length > 0 ||
+    data.payments.length > 0
   )
 }
 
