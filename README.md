@@ -52,3 +52,5 @@ To reset all data and re-seed:
 ```bash
 npx prisma migrate reset
 ```
+
+See [docs/04-local-database-and-seed.md](docs/04-local-database-and-seed.md) for the expected local `DATABASE_URL`, seed data coverage, and safe reset notes.

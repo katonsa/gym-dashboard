@@ -1,6 +1,6 @@
 # Database-Backed Dashboard Plan
 
-Status: Planned.
+Status: In progress.
 
 The current dashboard UI is mostly built, but the visible data still comes from `mockDashboardData`. The next milestone is to connect the existing pages to the Prisma schema and database behind authentication.
 
@@ -122,7 +122,7 @@ The first version should remain read-only except for explicitly scoped owner/adm
 
 ## Phase 3: Seed And Local Data
 
-- [ ] Add a Prisma seed script
+- [x] Add a Prisma seed script
   - Create the demo owner account using Better Auth's own signup API or SDK rather than inserting raw account/password records. This avoids depending on internal password hashing details. If programmatic signup is not feasible, pin the Better Auth version and document the assumed hash format.
   - Document the local demo owner email and password.
   - Create one gym.
@@ -134,13 +134,13 @@ The first version should remain read-only except for explicitly scoped owner/adm
   - Create identified and anonymous drop-in visits.
   - Cover the same business scenarios as the mock data without requiring exact names, ids, or dates.
 
-- [ ] Add seed command documentation
+- [x] Add seed command documentation
   - Document how to run Postgres with `compose.yaml`.
   - Document how to run migrations.
   - Document how to run the seed script.
   - Document how to reset local data safely.
 
-- [ ] Verify local database startup
+- [x] Verify local database startup
   - Confirm `.env` has a working `DATABASE_URL`.
   - Confirm Prisma client generation works.
   - Confirm migrations apply cleanly.
