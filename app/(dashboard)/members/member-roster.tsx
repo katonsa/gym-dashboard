@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import type {
   MemberStatus,
   MembershipStatus,
+  PlanTier,
   PlanTierName,
 } from "@/lib/dashboard"
 import type {
@@ -14,6 +15,7 @@ import type {
   MemberRosterRow,
 } from "@/lib/dashboard/member-roster"
 import { cn } from "@/lib/utils"
+import { MemberCreateForm } from "./member-create-form"
 
 type StatusFilter = "all" | MemberStatus
 type PlanFilter = "all" | PlanTierName
@@ -36,12 +38,16 @@ const riskClasses: Record<BillingRisk, string> = {
 
 export function MemberRoster({
   members,
+  planTiers,
   planNames,
   asOfLabel,
+  initialJoinDate,
 }: {
   members: MemberRosterRow[]
+  planTiers: PlanTier[]
   planNames: string[]
   asOfLabel: string
+  initialJoinDate: string
 }) {
   const [query, setQuery] = React.useState("")
   const [status, setStatus] = React.useState<StatusFilter>("all")
@@ -125,6 +131,11 @@ export function MemberRoster({
           </p>
         </div>
       </section>
+
+      <MemberCreateForm
+        planTiers={planTiers}
+        initialJoinDate={initialJoinDate}
+      />
 
       <section
         aria-labelledby="member-filters"

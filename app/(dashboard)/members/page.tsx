@@ -33,8 +33,10 @@ export default async function MembersPage() {
   return (
     <MemberRoster
       members={memberRows}
+      planTiers={membersData.planTiers}
       planNames={planNames}
       asOfLabel={formatDashboardDate(asOf, membersData.gym.timezone)}
+      initialJoinDate={formatDateInput(asOf, membersData.gym.timezone)}
     />
   )
 }
@@ -46,6 +48,19 @@ function formatDashboardDate(date: Date, timeZone: string) {
     day: "numeric",
     timeZone,
   }).format(date)
+}
+
+function formatDateInput(date: Date, timeZone: string) {
+  const dateParts = new Intl.DateTimeFormat("en", {
+    day: "2-digit",
+    month: "2-digit",
+    timeZone,
+    year: "numeric",
+  }).formatToParts(date)
+  const partValue = (type: Intl.DateTimeFormatPartTypes) =>
+    dateParts.find((part) => part.type === type)?.value ?? ""
+
+  return `${partValue("year")}-${partValue("month")}-${partValue("day")}`
 }
 
 function MembersEmptyState({

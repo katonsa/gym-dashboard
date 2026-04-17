@@ -187,7 +187,7 @@ The first version should remain read-only except for explicitly scoped owner/adm
   - No search results.
   - No results for selected filters.
 
-- [ ] Add manual member creation
+- [x] Add manual member creation
   - Add an owner/admin-facing create member form.
   - Capture first name, last name, optional email, optional phone, status, join date, plan tier, billing interval, and notes.
   - Create the member under the authenticated owner's gym.
@@ -200,7 +200,7 @@ The first version should remain read-only except for explicitly scoped owner/adm
   - Use `revalidatePath` to refresh the members page after submit. Prefer `revalidatePath` over `router.refresh()` for server actions because it clears the server-side cache for the path.
   - Return a consistent result shape from server actions: `{ success: boolean, error?: string }`. Map Prisma and validation errors to plain-language messages. Do not expose raw database or auth error details to the client.
 
-- [ ] Keep member self-service out of scope
+- [x] Keep member self-service out of scope
   - Do not add public member registration.
   - Do not create member login accounts.
   - Do not expose a member portal.
