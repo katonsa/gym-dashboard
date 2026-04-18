@@ -59,7 +59,7 @@ Use `?page=1` (and filter params like `?status=ACTIVE&plan=Pro`) as query params
 
 ### Shared pagination helper
 
-- [ ] Create `lib/dashboard/pagination.ts`
+- [x] Create `lib/dashboard/pagination.ts`
   - Export a `PaginationParams` type: `{ page: number, pageSize: number }`.
   - Export a `PaginatedResult<T>` type: `{ rows: T[], total: number, page: number, pageSize: number, pageCount: number }`.
   - Export `parsePaginationParams(searchParams, defaults?)` to extract and validate `page` from the Next.js `searchParams` promise. Clamp `page` to >= 1. Default `pageSize` to 25.
@@ -67,7 +67,7 @@ Use `?page=1` (and filter params like `?status=ACTIVE&plan=Pro`) as query params
 
 ### Shared pagination UI component
 
-- [ ] Create `components/ui/pagination-nav.tsx`
+- [x] Create `components/ui/pagination-nav.tsx`
   - A server-friendly component that renders Previous / page numbers / Next links using `<Link>` with updated `?page=` search params.
   - Props: `page`, `pageCount`, `basePath`, and optionally preserved search params (for filters).
   - Show at most 5 page number links with ellipsis for larger ranges.
