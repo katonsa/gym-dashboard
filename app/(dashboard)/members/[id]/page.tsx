@@ -19,6 +19,7 @@ import {
   type MemberDetailMembership,
 } from "@/lib/dashboard/loaders"
 import { cn } from "@/lib/utils"
+import { MemberPlanChangeForm } from "../member-plan-change-form"
 import { MemberStatusAction } from "../member-status-action"
 
 type MemberDetailPageProps = {
@@ -79,7 +80,7 @@ export default async function MemberDetailPage({
     )
   }
 
-  const { gym, member, memberships, payments, attendance } = data
+  const { gym, member, planTiers, memberships, payments, attendance } = data
   const memberName = formatMemberName(member)
   const currentMembership = memberships.find(
     (membership) => membership.status === "ACTIVE"
@@ -151,6 +152,22 @@ export default async function MemberDetailPage({
           )}
         </InfoCard>
       </section>
+
+      <MemberPlanChangeForm
+        memberId={member.id}
+        planTiers={planTiers}
+        currentPlan={
+          currentMembership
+            ? {
+                planName: currentMembership.planTier.name,
+                billingInterval: currentMembership.billingInterval,
+                priceAmount: currentMembership.priceAmount,
+              }
+            : null
+        }
+        currencyCode={gym.currencyCode}
+        initialEffectiveDate={formatDateInput(new Date(), gym.timezone)}
+      />
 
       <section className="grid gap-4 xl:grid-cols-2">
         <InfoCard title="Membership history">
@@ -440,6 +457,19 @@ function formatDate(date: string, timeZone: string) {
     timeZone,
     year: "numeric",
   }).format(new Date(date))
+}
+
+function formatDateInput(date: Date, timeZone: string) {
+  const dateParts = new Intl.DateTimeFormat("en", {
+    day: "2-digit",
+    month: "2-digit",
+    timeZone,
+    year: "numeric",
+  }).formatToParts(date)
+  const partValue = (type: Intl.DateTimeFormatPartTypes) =>
+    dateParts.find((part) => part.type === type)?.value ?? ""
+
+  return `${partValue("year")}-${partValue("month")}-${partValue("day")}`
 }
 
 function formatCurrency(amount: number, currencyCode: string) {

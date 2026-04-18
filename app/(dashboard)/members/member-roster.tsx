@@ -440,7 +440,7 @@ function QuickActions({
         <Link href={`/members/${member.id}`}>View profile</Link>
       </Button>
       <Button asChild variant="outline" size="sm" className="min-h-11">
-        <Link href={`/members/${member.id}`}>Edit plan</Link>
+        <Link href={`/members/${member.id}#plan-change`}>Edit plan</Link>
       </Button>
       <MemberStatusAction
         memberId={member.id}

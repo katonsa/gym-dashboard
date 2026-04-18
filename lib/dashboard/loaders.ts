@@ -59,6 +59,7 @@ export type MemberDetailMembership = Membership & {
 export type MemberDetailDashboardData = {
   gym: GymProfile
   member: Member
+  planTiers: PlanTier[]
   memberships: MemberDetailMembership[]
   payments: MembershipPayment[]
   attendance: AttendanceRecord[]
@@ -159,92 +160,94 @@ export const loadMemberDetailData = cache(async (memberId: string) => {
     return null
   }
 
-  const [member, memberships, payments, attendance] = await Promise.all([
-    db.member.findFirst({
-      where: {
-        id: memberId,
-        gymId: gym.id,
-      },
-      select: {
-        id: true,
-        gymId: true,
-        firstName: true,
-        lastName: true,
-        email: true,
-        phone: true,
-        status: true,
-        joinDate: true,
-        lastAttendedAt: true,
-        notes: true,
-      },
-    }),
-    db.membership.findMany({
-      where: {
-        memberId,
-        member: {
+  const [member, planTiers, memberships, payments, attendance] =
+    await Promise.all([
+      db.member.findFirst({
+        where: {
+          id: memberId,
           gymId: gym.id,
         },
-      },
-      orderBy: [{ startedAt: "desc" }],
-      select: {
-        id: true,
-        memberId: true,
-        planTierId: true,
-        billingInterval: true,
-        status: true,
-        priceAmount: true,
-        startedAt: true,
-        currentPeriodEndsAt: true,
-        nextBillingDate: true,
-        canceledAt: true,
-        planTier: {
-          select: {
-            id: true,
-            gymId: true,
-            name: true,
-            description: true,
-            monthlyPriceAmount: true,
-            annualPriceAmount: true,
-            isActive: true,
-            sortOrder: true,
+        select: {
+          id: true,
+          gymId: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          phone: true,
+          status: true,
+          joinDate: true,
+          lastAttendedAt: true,
+          notes: true,
+        },
+      }),
+      db.planTier.findMany(getPlanTiersQuery(gym.id)),
+      db.membership.findMany({
+        where: {
+          memberId,
+          member: {
+            gymId: gym.id,
           },
         },
-      },
-    }),
-    db.membershipPayment.findMany({
-      where: {
-        gymId: gym.id,
-        memberId,
-      },
-      orderBy: [{ dueAt: "desc" }],
-      select: {
-        id: true,
-        gymId: true,
-        memberId: true,
-        membershipId: true,
-        amount: true,
-        status: true,
-        dueAt: true,
-        paidAt: true,
-        notes: true,
-      },
-    }),
-    db.attendanceRecord.findMany({
-      where: {
-        gymId: gym.id,
-        memberId,
-      },
-      orderBy: [{ attendedAt: "desc" }],
-      select: {
-        id: true,
-        gymId: true,
-        memberId: true,
-        attendedAt: true,
-        source: true,
-        notes: true,
-      },
-    }),
-  ])
+        orderBy: [{ startedAt: "desc" }],
+        select: {
+          id: true,
+          memberId: true,
+          planTierId: true,
+          billingInterval: true,
+          status: true,
+          priceAmount: true,
+          startedAt: true,
+          currentPeriodEndsAt: true,
+          nextBillingDate: true,
+          canceledAt: true,
+          planTier: {
+            select: {
+              id: true,
+              gymId: true,
+              name: true,
+              description: true,
+              monthlyPriceAmount: true,
+              annualPriceAmount: true,
+              isActive: true,
+              sortOrder: true,
+            },
+          },
+        },
+      }),
+      db.membershipPayment.findMany({
+        where: {
+          gymId: gym.id,
+          memberId,
+        },
+        orderBy: [{ dueAt: "desc" }],
+        select: {
+          id: true,
+          gymId: true,
+          memberId: true,
+          membershipId: true,
+          amount: true,
+          status: true,
+          dueAt: true,
+          paidAt: true,
+          notes: true,
+        },
+      }),
+      db.attendanceRecord.findMany({
+        where: {
+          gymId: gym.id,
+          memberId,
+        },
+        orderBy: [{ attendedAt: "desc" }],
+        select: {
+          id: true,
+          gymId: true,
+          memberId: true,
+          attendedAt: true,
+          source: true,
+          notes: true,
+        },
+      }),
+    ])
 
   if (!member) {
     return null
@@ -253,6 +256,7 @@ export const loadMemberDetailData = cache(async (memberId: string) => {
   return {
     gym: mapGymProfile(gym),
     member: mapMember(member),
+    planTiers: planTiers.map(mapPlanTier),
     memberships: memberships.map((membership) => ({
       ...mapMembership(membership),
       planTier: mapPlanTier(membership.planTier),

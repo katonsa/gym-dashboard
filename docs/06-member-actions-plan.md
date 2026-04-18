@@ -1,6 +1,6 @@
 # Member Actions Plan
 
-Status: Phase 2 complete.
+Status: Phase 3 complete.
 
 Replace the three placeholder quick actions on the members roster — View profile, Suspend account, and Edit plan — with working implementations.
 
@@ -136,7 +136,7 @@ This is the same create-membership logic used in `createMember`, but applied to 
 
 ### Server action
 
-- [ ] Add `changeMemberPlan` to `app/(dashboard)/members/actions.ts`
+- [x] Add `changeMemberPlan` to `app/(dashboard)/members/actions.ts`
   - Signature: `(values: ChangeMemberPlanValues) => Promise<ActionResult>`
   - Input values:
     - `memberId: string` — required.
@@ -154,7 +154,7 @@ This is the same create-membership logic used in `createMember`, but applied to 
 
 ### Validation schema
 
-- [ ] Add `change-plan-schema.ts` in `app/(dashboard)/members/`
+- [x] Add `change-plan-schema.ts` in `app/(dashboard)/members/`
   - `memberId`: non-empty string.
   - `planTierId`: non-empty string.
   - `billingInterval`: `"MONTHLY" | "ANNUAL"`.
@@ -163,7 +163,7 @@ This is the same create-membership logic used in `createMember`, but applied to 
 
 ### UI changes
 
-- [ ] Replace the "Edit plan" placeholder button with a trigger that opens an inline plan change form
+- [x] Replace the "Edit plan" placeholder button with a trigger that opens an inline plan change form
   - The form appears inline on the member detail page (Phase 1 must be done first).
   - Fields: plan tier select, billing interval select, effective date input (default today).
   - Show the current plan and interval as context above the form.
@@ -173,29 +173,29 @@ This is the same create-membership logic used in `createMember`, but applied to 
   - Error feedback: standard `{ error }` rendering.
   - Disable submit while pending.
 
-- [ ] On the roster view, change the "Edit plan" button to link to the member detail page
+- [x] On the roster view, change the "Edit plan" button to link to the member detail page
   - The plan change form lives on the detail page, not inline in the roster.
   - Button label: "Edit plan" → links to `/members/[id]` (same as "View profile" but scrolled or focused on the plan section).
 
 ### Verification
 
-- [ ] Changing a plan expires the old membership and creates a new one.
-- [ ] New membership has correct price, period end, and billing date.
-- [ ] First payment record is created.
-- [ ] Old membership appears in the membership history on the detail page.
-- [ ] Subscription breakdown page reflects the new plan distribution.
-- [ ] MRR updates correctly.
-- [ ] Overview stats update.
-- [ ] Member with no current plan can be assigned one (same flow, no membership to expire).
-- [ ] Validation rejects missing plan, missing interval, invalid date.
-- [ ] Action is scoped to the owner's gym.
-- [ ] `npm run typecheck`, `npm run lint`, `npm run build`.
+- [x] Changing a plan expires the old membership and creates a new one.
+- [x] New membership has correct price, period end, and billing date.
+- [x] First payment record is created.
+- [x] Old membership appears in the membership history on the detail page.
+- [x] Subscription breakdown page reflects the new plan distribution.
+- [x] MRR updates correctly.
+- [x] Overview stats update.
+- [x] Member with no current plan can be assigned one (same flow, no membership to expire).
+- [x] Validation rejects missing plan, missing interval, invalid date.
+- [x] Action is scoped to the owner's gym.
+- [x] `npm run typecheck`, `npm run lint`, `npm run build`.
 
 ---
 
 ## Shared helpers to extract
 
-- [ ] Extract `addBillingPeriod` and `addMonthsClamped` from `members/actions.ts` into `lib/dashboard/billing.ts`
+- [x] Extract `addBillingPeriod` and `addMonthsClamped` from `members/actions.ts` into `lib/dashboard/billing.ts`
   - These are reused by both `createMember` and `changeMemberPlan`.
   - Update `createMember` to import from the shared location.
   - Add tests for `addBillingPeriod` edge cases (month-end clamping, leap years).

@@ -4,8 +4,14 @@ import { revalidatePath } from "next/cache"
 import * as z from "zod"
 
 import { requireDashboardSession } from "@/lib/auth/server"
+import { addBillingPeriod } from "@/lib/dashboard/billing"
 import { db } from "@/lib/db"
 import type { BillingInterval, MemberStatus } from "@/lib/dashboard"
+import {
+  changePlanSchema,
+  type ChangeMemberPlanValues,
+  type ChangePlanActionResult,
+} from "./change-plan-schema"
 import {
   createMemberSchema,
   parseDateInput,
@@ -232,20 +238,143 @@ export async function updateMemberStatus(
   return { success: true }
 }
 
-function addBillingPeriod(date: Date, billingInterval: BillingInterval) {
-  return addMonthsClamped(date, billingInterval === "ANNUAL" ? 12 : 1)
-}
+export async function changeMemberPlan(
+  values: ChangeMemberPlanValues
+): Promise<ChangePlanActionResult> {
+  const session = await requireDashboardSession("/members")
+  const parsed = changePlanSchema.safeParse(values)
 
-function addMonthsClamped(date: Date, monthCount: number) {
-  const year = date.getUTCFullYear()
-  const month = date.getUTCMonth()
-  const targetMonth = month + monthCount
-  const targetYear = year + Math.floor(targetMonth / 12)
-  const normalizedTargetMonth = ((targetMonth % 12) + 12) % 12
-  const lastDayOfTargetMonth = new Date(
-    Date.UTC(targetYear, normalizedTargetMonth + 1, 0)
-  ).getUTCDate()
-  const day = Math.min(date.getUTCDate(), lastDayOfTargetMonth)
+  if (!parsed.success) {
+    return {
+      success: false,
+      error:
+        parsed.error.issues[0]?.message ??
+        "Check the plan change and try again.",
+    }
+  }
 
-  return new Date(Date.UTC(targetYear, normalizedTargetMonth, day))
+  const gym = await db.gym.findFirst({
+    where: { ownerId: session.user.id },
+    select: { id: true },
+    orderBy: { createdAt: "asc" },
+  })
+
+  if (!gym) {
+    return {
+      success: false,
+      error: "Connect a gym to this owner account before changing plans.",
+    }
+  }
+
+  const effectiveDate = parseDateInput(parsed.data.effectiveDate)
+  if (!effectiveDate) {
+    return { success: false, error: "Choose a valid effective date." }
+  }
+
+  try {
+    const result = await db.$transaction(async (tx) => {
+      const member = await tx.member.findFirst({
+        where: {
+          id: parsed.data.memberId,
+          gymId: gym.id,
+        },
+        select: { id: true },
+      })
+
+      if (!member) {
+        return { status: "member-not-found" as const }
+      }
+
+      const planTier = await tx.planTier.findFirst({
+        where: {
+          id: parsed.data.planTierId,
+          gymId: gym.id,
+          isActive: true,
+        },
+        select: {
+          id: true,
+          monthlyPriceAmount: true,
+          annualPriceAmount: true,
+        },
+      })
+
+      if (!planTier) {
+        return { status: "plan-not-found" as const }
+      }
+
+      await tx.membership.updateMany({
+        where: {
+          memberId: member.id,
+          status: "ACTIVE",
+        },
+        data: {
+          status: "EXPIRED",
+          canceledAt: effectiveDate,
+          currentPeriodEndsAt: effectiveDate,
+          nextBillingDate: effectiveDate,
+        },
+      })
+
+      const billingInterval = parsed.data.billingInterval as BillingInterval
+      const priceAmount =
+        billingInterval === "ANNUAL"
+          ? planTier.annualPriceAmount
+          : planTier.monthlyPriceAmount
+      const nextBillingDate = addBillingPeriod(effectiveDate, billingInterval)
+
+      const membership = await tx.membership.create({
+        data: {
+          memberId: member.id,
+          planTierId: planTier.id,
+          billingInterval,
+          status: "ACTIVE",
+          priceAmount,
+          startedAt: effectiveDate,
+          currentPeriodEndsAt: nextBillingDate,
+          nextBillingDate,
+        },
+        select: { id: true },
+      })
+
+      await tx.membershipPayment.create({
+        data: {
+          gymId: gym.id,
+          memberId: member.id,
+          membershipId: membership.id,
+          amount: priceAmount,
+          status: "PENDING",
+          dueAt: effectiveDate,
+          notes: "First payment after plan change.",
+        },
+      })
+
+      return { status: "changed" as const }
+    })
+
+    if (result.status === "member-not-found") {
+      return {
+        success: false,
+        error: "This member does not exist or belongs to a different gym.",
+      }
+    }
+
+    if (result.status === "plan-not-found") {
+      return {
+        success: false,
+        error: "Choose an active plan for this gym.",
+      }
+    }
+  } catch {
+    return {
+      success: false,
+      error: "The plan could not be changed. Check the details and try again.",
+    }
+  }
+
+  revalidatePath("/members")
+  revalidatePath(`/members/${parsed.data.memberId}`)
+  revalidatePath("/subscriptions")
+  revalidatePath("/")
+
+  return { success: true }
 }
