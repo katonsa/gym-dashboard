@@ -1,13 +1,5 @@
-import {
-  getDropInConversionOpportunities,
-  parsePaginationParams,
-  type DropInVisit,
-} from "@/lib/dashboard"
-import {
-  loadDropInLogPage,
-  loadDropInsDashboardData,
-  type DropInsDashboardData,
-} from "@/lib/dashboard/loaders"
+import { parsePaginationParams, type DashboardData } from "@/lib/dashboard"
+import { loadDropInSummary, loadDropInLogPage } from "@/lib/dashboard/loaders"
 import { PaginationNav } from "@/components/ui/pagination-nav"
 import { DropInEntryForm } from "./drop-in-entry-form"
 
@@ -36,8 +28,9 @@ type DropInsPageProps = {
 
 export default async function DropInsPage({ searchParams }: DropInsPageProps) {
   const pagination = await parsePaginationParams(searchParams)
+  const asOf = new Date()
   const [dropInsData, dropInLogPage] = await Promise.all([
-    loadDropInsDashboardData(),
+    loadDropInSummary({ asOf, conversionVisitThreshold: 5 }),
     loadDropInLogPage(pagination),
   ])
 
@@ -50,21 +43,16 @@ export default async function DropInsPage({ searchParams }: DropInsPageProps) {
     )
   }
 
-  const asOf = new Date()
   const moneyFormatter = new Intl.NumberFormat("en", {
     style: "currency",
     currency: dropInsData.gym.currencyCode,
     maximumFractionDigits: 0,
   })
   const dropInRows = getDropInRows(dropInLogPage.rows, asOf, moneyFormatter)
-  const dailyDropIns = getDropInsForDay(dropInsData.dropIns, asOf)
-  const monthlyDropIns = getDropInsForMonth(dropInsData.dropIns, asOf)
-  const frequentDropIns = getDropInConversionOpportunities(
-    dropInsData.dropIns,
-    { asOf, conversionVisitThreshold: 5 }
-  ).toSorted((left, right) => right.visitCount - left.visitCount)
+  const { dropInSummary } = dropInsData
+  const frequentDropIns = dropInSummary.conversionLeads
   const setupGaps = [
-    dropInsData.dropIns.length === 0
+    !dropInSummary.hasDropIns
       ? {
           title: "No drop-ins yet.",
           detail:
@@ -75,14 +63,14 @@ export default async function DropInsPage({ searchParams }: DropInsPageProps) {
   const summaryStats = [
     {
       label: "Today",
-      value: moneyFormatter.format(sumDropInAmount(dailyDropIns)),
-      detail: `${numberFormatter.format(sumVisitCount(dailyDropIns))} visits logged`,
+      value: moneyFormatter.format(dropInSummary.dailyTotal.revenueAmount),
+      detail: `${numberFormatter.format(dropInSummary.dailyTotal.visitCount)} visits logged`,
       tone: "status",
     },
     {
       label: "This month",
-      value: moneyFormatter.format(sumDropInAmount(monthlyDropIns)),
-      detail: `${numberFormatter.format(sumVisitCount(monthlyDropIns))} visits collected`,
+      value: moneyFormatter.format(dropInSummary.monthlyTotal.revenueAmount),
+      detail: `${numberFormatter.format(dropInSummary.monthlyTotal.visitCount)} visits collected`,
       tone: "revenue",
     },
     {
@@ -389,7 +377,7 @@ function DropInsEmptyState({
 }
 
 function getDropInRows(
-  dropIns: DropInsDashboardData["dropIns"],
+  dropIns: DashboardData["dropIns"],
   currentDate: Date,
   moneyFormatter: Intl.NumberFormat
 ): DropInRow[] {
@@ -432,32 +420,6 @@ function getPageRangeLabel({
   const end = Math.min(total, page * pageSize)
 
   return `${numberFormatter.format(start)}-${numberFormatter.format(end)} of ${numberFormatter.format(total)}`
-}
-
-function getDropInsForDay(dropIns: DropInVisit[], day: Date) {
-  return dropIns.filter((dropIn) => isSameDay(dropIn.visitedAt, day))
-}
-
-function getDropInsForMonth(dropIns: DropInVisit[], month: Date) {
-  return dropIns.filter((dropIn) => isSameMonth(dropIn.visitedAt, month))
-}
-
-function sumDropInAmount(dropIns: DropInVisit[]) {
-  return dropIns.reduce((total, dropIn) => total + dropIn.amount, 0)
-}
-
-function sumVisitCount(dropIns: DropInVisit[]) {
-  return dropIns.reduce((total, dropIn) => total + dropIn.visitCount, 0)
-}
-
-function isSameDay(date: string, day: Date) {
-  const value = new Date(date)
-
-  return (
-    value.getUTCFullYear() === day.getUTCFullYear() &&
-    value.getUTCMonth() === day.getUTCMonth() &&
-    value.getUTCDate() === day.getUTCDate()
-  )
 }
 
 function isSameMonth(date: string, month: Date) {

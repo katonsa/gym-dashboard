@@ -3,11 +3,15 @@ import { cache } from "react"
 import { requireDashboardSession } from "@/lib/auth/server"
 import { db } from "@/lib/db"
 import {
+  getDropInSummary,
   getOverviewAlerts,
   getOverviewSummary,
+  getSubscriptionSummary,
   type DashboardDb,
+  type DropInSummary,
   type OverviewAggregateOptions,
   type OverviewSetupState,
+  type SubscriptionSummary,
 } from "@/lib/dashboard/aggregates"
 import {
   mapAttendanceRecord,
@@ -44,7 +48,6 @@ import {
   getOverviewMembershipPaymentsQuery,
   getOverviewMembershipsQuery,
   getPlanTiersQuery,
-  getSubscriptionMembershipsQuery,
 } from "@/lib/dashboard/query-scopes"
 import type {
   AttendanceRecord,
@@ -84,12 +87,15 @@ export type MemberRosterPageData = {
   totalMembers: number
 }
 
-export type SubscriptionsDashboardData = Pick<
-  DashboardData,
-  "gym" | "planTiers" | "memberships" | "payments" | "dropIns"
->
+export type SubscriptionsSummaryDashboardData = {
+  gym: GymProfile
+  subscriptionSummary: SubscriptionSummary
+}
 
-export type DropInsDashboardData = Pick<DashboardData, "gym" | "dropIns">
+export type DropInsSummaryDashboardData = {
+  gym: GymProfile
+  dropInSummary: DropInSummary
+}
 
 export type MemberDetailMembership = Membership & {
   planTier: PlanTier
@@ -239,43 +245,43 @@ export const loadMemberRosterPage = cache(
   }
 )
 
-export const loadSubscriptionsDashboardData = cache(async () => {
+export const loadSubscriptionSummary = cache(async (asOf = new Date()) => {
   const gym = await requireOwnerGym("/subscriptions")
 
   if (!gym) {
     return null
   }
 
-  const [planTiers, memberships, payments, dropIns] = await Promise.all([
-    db.planTier.findMany(getPlanTiersQuery(gym.id)),
-    db.membership.findMany(getSubscriptionMembershipsQuery(gym.id)),
-    db.membershipPayment.findMany(getMembershipPaymentsQuery(gym.id)),
-    db.dropInVisit.findMany(getDropInVisitsQuery(gym.id)),
-  ])
+  const planTiers = await db.planTier.findMany(getPlanTiersQuery(gym.id))
+  const mappedPlanTiers = planTiers.map(mapPlanTier)
 
   return {
     gym,
-    planTiers: planTiers.map(mapPlanTier),
-    memberships: memberships.map(mapMembership),
-    payments: payments.map(mapMembershipPayment),
-    dropIns: dropIns.map(mapDropInVisit),
-  } satisfies SubscriptionsDashboardData
+    subscriptionSummary: await getSubscriptionSummary(
+      gym.id,
+      mappedPlanTiers,
+      asOf,
+      aggregateDb
+    ),
+  } satisfies SubscriptionsSummaryDashboardData
 })
 
-export const loadDropInsDashboardData = cache(async () => {
-  const gym = await requireOwnerGym("/drop-ins")
+export const loadDropInSummary = cache(
+  async (
+    options: OverviewAggregateOptions = {}
+  ): Promise<DropInsSummaryDashboardData | null> => {
+    const gym = await requireOwnerGym("/drop-ins")
 
-  if (!gym) {
-    return null
+    if (!gym) {
+      return null
+    }
+
+    return {
+      gym,
+      dropInSummary: await getDropInSummary(gym.id, options, aggregateDb),
+    }
   }
-
-  const dropIns = await db.dropInVisit.findMany(getDropInVisitsQuery(gym.id))
-
-  return {
-    gym,
-    dropIns: dropIns.map(mapDropInVisit),
-  } satisfies DropInsDashboardData
-})
+)
 
 export const loadDropInLogPage = cache(
   async (

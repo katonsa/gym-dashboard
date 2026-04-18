@@ -3,13 +3,17 @@ import test from "node:test"
 
 import {
   getConversionLeads,
+  getDropInTotal,
   getExpiringMembershipsCount,
   getInactiveMembersCount,
   getMemberCountsByStatus,
   getMembershipMrr,
   getNewSignUpsThisMonth,
   getOverduePaymentsCount,
+  getPlanBreakdownAggregates,
+  getRevenueTrend,
 } from "../lib/dashboard/aggregates.ts"
+import type { PlanTier } from "../lib/dashboard/types.ts"
 
 test("groups member counts by status for one gym", async () => {
   const db = mockDb({
@@ -172,10 +176,7 @@ test("counts overdue payments and stale inactive members with scoped filters", a
   assert.deepEqual(paymentCalls[0], {
     where: {
       gymId: "gym-1",
-      OR: [
-        { status: "OVERDUE" },
-        { status: "PENDING", dueAt: { lt: now } },
-      ],
+      OR: [{ status: "OVERDUE" }, { status: "PENDING", dueAt: { lt: now } }],
     },
   })
   assert.deepEqual(memberCalls[0], {
@@ -228,9 +229,136 @@ test("loads conversion leads with case-insensitive raw SQL parameters", async ()
   assert.match(rawCalls[0]?.strings.join(" "), /GROUP BY LOWER/)
 })
 
+test("aggregates drop-in totals for a scoped date window", async () => {
+  const calls: unknown[] = []
+  const db = mockDb({
+    dropInVisit: {
+      aggregate: async (args: unknown) => {
+        calls.push(args)
+
+        return { _sum: { amount: 225000, visitCount: 3 } }
+      },
+    },
+  })
+  const dayStart = new Date("2026-04-16T00:00:00.000Z")
+  const nextDayStart = new Date("2026-04-17T00:00:00.000Z")
+
+  assert.deepEqual(await getDropInTotal("gym-1", dayStart, nextDayStart, db), {
+    revenueAmount: 225000,
+    visitCount: 3,
+  })
+  assert.deepEqual(calls[0], {
+    where: {
+      gymId: "gym-1",
+      visitedAt: { gte: dayStart, lt: nextDayStart },
+    },
+    _sum: { amount: true, visitCount: true },
+  })
+})
+
+test("maps plan breakdown aggregate rows onto sorted plan tiers", async () => {
+  const rawCalls: { strings: readonly string[]; values: unknown[] }[] = []
+  const db = mockDb({
+    $queryRaw: async (strings: TemplateStringsArray, ...values: unknown[]) => {
+      rawCalls.push({ strings: Array.from(strings), values })
+
+      return [
+        {
+          planTierId: "plan-pro",
+          memberCount: 3,
+          monthlyMemberships: 2,
+          annualMemberships: 1,
+          monthlyEquivalentRevenue: 800000,
+        },
+      ]
+    },
+  })
+  const plans: PlanTier[] = [
+    planTier({ id: "plan-pro", name: "Pro", sortOrder: 2 }),
+    planTier({ id: "plan-basic", name: "Basic", sortOrder: 1 }),
+  ]
+
+  assert.deepEqual(await getPlanBreakdownAggregates("gym-1", plans, db), [
+    {
+      id: "plan-basic",
+      name: "Basic",
+      description: undefined,
+      memberCount: 0,
+      memberShare: 0,
+      monthlyMemberships: 0,
+      annualMemberships: 0,
+      monthlyEquivalentRevenue: 0,
+    },
+    {
+      id: "plan-pro",
+      name: "Pro",
+      description: undefined,
+      memberCount: 3,
+      memberShare: 1,
+      monthlyMemberships: 2,
+      annualMemberships: 1,
+      monthlyEquivalentRevenue: 800000,
+    },
+  ])
+  assert.equal(rawCalls[0]?.values[0], "gym-1")
+  assert.match(rawCalls[0]?.strings.join(" "), /"status" IN/)
+})
+
+test("combines membership and drop-in raw rows into revenue trend", async () => {
+  const rawCalls: { strings: readonly string[]; values: unknown[] }[] = []
+  const db = mockDb({
+    $queryRaw: async (strings: TemplateStringsArray, ...values: unknown[]) => {
+      rawCalls.push({ strings: Array.from(strings), values })
+
+      if (rawCalls.length === 1) {
+        return [
+          {
+            month: "2026-03-01T00:00:00.000Z",
+            membershipRevenue: 350000,
+          },
+          {
+            month: "2026-04-01T00:00:00.000Z",
+            membershipRevenue: 450000,
+          },
+        ]
+      }
+
+      return [
+        {
+          month: "2026-04-01T00:00:00.000Z",
+          dropInRevenue: 225000,
+        },
+      ]
+    },
+  })
+  const startMonth = new Date("2026-03-01T00:00:00.000Z")
+  const endMonth = new Date("2026-04-01T00:00:00.000Z")
+  const nextMonthAfterTrend = new Date("2026-05-01T00:00:00.000Z")
+
+  assert.deepEqual(
+    await getRevenueTrend(
+      "gym-1",
+      startMonth,
+      endMonth,
+      nextMonthAfterTrend,
+      db
+    ),
+    [
+      { month: "Mar", membership: 350000, dropIns: 0, total: 350000 },
+      { month: "Apr", membership: 450000, dropIns: 225000, total: 675000 },
+    ]
+  )
+  assert.deepEqual(rawCalls[0]?.values, [startMonth, endMonth, "gym-1"])
+  assert.deepEqual(rawCalls[1]?.values, [
+    "gym-1",
+    startMonth,
+    nextMonthAfterTrend,
+  ])
+})
+
 type MockDbOverrides = Partial<
   Record<
-    "member" | "membership" | "membershipPayment" | "dropInVisit",
+    "member" | "membership" | "membershipPayment" | "dropInVisit" | "planTier",
     Record<string, unknown>
   >
 > & {
@@ -260,7 +388,24 @@ function mockDb(overrides: MockDbOverrides) {
       aggregate: async () => ({ _sum: { amount: null, visitCount: null } }),
       ...overrides.dropInVisit,
     },
+    planTier: {
+      findMany: async () => [],
+      ...overrides.planTier,
+    },
     $queryRaw: async () => [],
     ...overrides,
   } as never
+}
+
+function planTier(overrides: Partial<PlanTier> = {}): PlanTier {
+  return {
+    id: "plan-basic",
+    gymId: "gym-1",
+    name: "Basic",
+    monthlyPriceAmount: 350000,
+    annualPriceAmount: 3600000,
+    isActive: true,
+    sortOrder: 1,
+    ...overrides,
+  }
 }

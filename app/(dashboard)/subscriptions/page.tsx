@@ -1,19 +1,9 @@
-import { type BillingInterval, type Membership } from "@/lib/dashboard"
-import {
-  loadSubscriptionsDashboardData,
-  type SubscriptionsDashboardData,
-} from "@/lib/dashboard/loaders"
+import { loadSubscriptionSummary } from "@/lib/dashboard/loaders"
 import {
   PlanComparisonChart,
   type PlanComparisonChartRow,
   RevenueTrendChart,
-  type RevenueTrendChartRow,
 } from "./subscription-charts"
-
-const activeRevenueStatuses = new Set<Membership["status"]>([
-  "ACTIVE",
-  "PAST_DUE",
-])
 
 const numberFormatter = new Intl.NumberFormat("en")
 const percentFormatter = new Intl.NumberFormat("en", {
@@ -22,7 +12,8 @@ const percentFormatter = new Intl.NumberFormat("en", {
 })
 
 export default async function SubscriptionsPage() {
-  const subscriptionsData = await loadSubscriptionsDashboardData()
+  const asOf = new Date()
+  const subscriptionsData = await loadSubscriptionSummary(asOf)
 
   if (!subscriptionsData) {
     return (
@@ -33,19 +24,18 @@ export default async function SubscriptionsPage() {
     )
   }
 
-  const asOf = new Date()
   const moneyFormatter = new Intl.NumberFormat("en", {
     style: "currency",
     currency: subscriptionsData.gym.currencyCode,
     maximumFractionDigits: 0,
   })
-  const planBreakdown = getPlanBreakdown(subscriptionsData)
+  const { subscriptionSummary } = subscriptionsData
+  const { planBreakdown, revenueTrend, setupState } = subscriptionSummary
   const planChartData: PlanComparisonChartRow[] = planBreakdown.map((plan) => ({
     plan: plan.name,
     members: plan.memberCount,
     revenueMillions: plan.monthlyEquivalentRevenue / 1_000_000,
   }))
-  const revenueTrend = getRevenueTrend(subscriptionsData, asOf)
   const latestRevenue = revenueTrend.at(-1)
   const previousRevenue = revenueTrend.at(-2)
   const monthOverMonthAmount =
@@ -56,24 +46,21 @@ export default async function SubscriptionsPage() {
     previousRevenue && previousRevenue.total > 0
       ? monthOverMonthAmount / previousRevenue.total
       : 0
-  const activeRevenueMemberships = subscriptionsData.memberships.filter(
-    (membership) => activeRevenueStatuses.has(membership.status)
-  )
   const setupGaps = [
-    subscriptionsData.planTiers.length === 0
+    !setupState.hasPlanTiers
       ? {
           title: "No plans configured.",
           detail: "Add plan tiers before plan mix and pricing can be compared.",
         }
       : null,
-    activeRevenueMemberships.length === 0
+    !setupState.hasActiveRevenueMemberships
       ? {
           title: "No active memberships.",
           detail:
             "Active and past-due memberships will populate subscription revenue.",
         }
       : null,
-    hasRevenueRecords(subscriptionsData)
+    setupState.hasRevenueRecords
       ? null
       : {
           title: "No revenue records.",
@@ -212,7 +199,7 @@ export default async function SubscriptionsPage() {
               Membership, drop-in, and total revenue for six months.
             </p>
           </div>
-          {hasRevenueRecords(subscriptionsData) ? (
+          {setupState.hasRevenueRecords ? (
             <RevenueTrendChart data={revenueTrend} />
           ) : (
             <SubscriptionEmptyState
@@ -277,123 +264,6 @@ function PlanMetric({ label, value }: { label: string; value: string }) {
       <dt className="text-muted-foreground">{label}</dt>
       <dd className="text-right font-semibold">{value}</dd>
     </div>
-  )
-}
-
-function getPlanBreakdown(data: SubscriptionsDashboardData) {
-  const totalRevenueMemberships = data.memberships.filter((membership) =>
-    activeRevenueStatuses.has(membership.status)
-  ).length
-
-  return data.planTiers
-    .toSorted((left, right) => left.sortOrder - right.sortOrder)
-    .map((plan) => {
-      const memberships = data.memberships.filter(
-        (membership) =>
-          membership.planTierId === plan.id &&
-          activeRevenueStatuses.has(membership.status)
-      )
-
-      return {
-        id: plan.id,
-        name: plan.name,
-        description: plan.description,
-        memberCount: memberships.length,
-        memberShare:
-          totalRevenueMemberships > 0
-            ? memberships.length / totalRevenueMemberships
-            : 0,
-        monthlyMemberships: countBillingInterval(memberships, "MONTHLY"),
-        annualMemberships: countBillingInterval(memberships, "ANNUAL"),
-        monthlyEquivalentRevenue: memberships.reduce(
-          (total, membership) =>
-            total + getMonthlyEquivalentRevenue(membership),
-          0
-        ),
-      }
-    })
-}
-
-function getRevenueTrend(
-  data: SubscriptionsDashboardData,
-  currentMonth: Date
-): RevenueTrendChartRow[] {
-  return Array.from({ length: 6 }, (_, index) => {
-    const month = new Date(
-      Date.UTC(
-        currentMonth.getUTCFullYear(),
-        currentMonth.getUTCMonth() - (5 - index),
-        1
-      )
-    )
-    const monthStart = month.getTime()
-    const monthEnd = new Date(
-      Date.UTC(month.getUTCFullYear(), month.getUTCMonth() + 1, 0, 23, 59, 59)
-    ).getTime()
-    const membership = data.memberships.reduce((total, membership) => {
-      if (!wasMembershipLiveDuringMonth(membership, monthStart, monthEnd)) {
-        return total
-      }
-
-      return total + getMonthlyEquivalentRevenue(membership)
-    }, 0)
-    const dropIns = data.dropIns.reduce((total, dropIn) => {
-      return isSameChartMonth(dropIn.visitedAt, month)
-        ? total + dropIn.amount
-        : total
-    }, 0)
-
-    return {
-      month: new Intl.DateTimeFormat("en", { month: "short" }).format(month),
-      membership,
-      dropIns,
-      total: membership + dropIns,
-    }
-  })
-}
-
-function countBillingInterval(
-  memberships: Membership[],
-  billingInterval: BillingInterval
-) {
-  return memberships.filter(
-    (membership) => membership.billingInterval === billingInterval
-  ).length
-}
-
-function getMonthlyEquivalentRevenue(membership: Membership) {
-  return membership.billingInterval === "ANNUAL"
-    ? membership.priceAmount / 12
-    : membership.priceAmount
-}
-
-function wasMembershipLiveDuringMonth(
-  membership: Membership,
-  monthStart: number,
-  monthEnd: number
-) {
-  const startedAt = new Date(membership.startedAt).getTime()
-  const endedAt = membership.canceledAt
-    ? new Date(membership.canceledAt).getTime()
-    : new Date(membership.currentPeriodEndsAt).getTime()
-
-  return startedAt <= monthEnd && endedAt >= monthStart
-}
-
-function isSameChartMonth(date: string, month: Date) {
-  const value = new Date(date)
-
-  return (
-    value.getUTCFullYear() === month.getUTCFullYear() &&
-    value.getUTCMonth() === month.getUTCMonth()
-  )
-}
-
-function hasRevenueRecords(data: SubscriptionsDashboardData) {
-  return (
-    data.memberships.length > 0 ||
-    data.dropIns.length > 0 ||
-    data.payments.length > 0
   )
 }
 
