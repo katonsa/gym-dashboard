@@ -1,8 +1,12 @@
 # Database Aggregation Plan
 
-Status: Pending.
+Status: Runtime summary aggregation complete.
 
-Replace the in-memory JavaScript aggregation functions with database-level queries (`COUNT`, `SUM`, `GROUP BY`). The current approach loads every row of every table into JS arrays and reduces them. This works at low volume but becomes the main bottleneck as data scales.
+Replace the in-memory JavaScript aggregation functions with database-level
+queries (`COUNT`, `SUM`, `GROUP BY`). The overview, subscriptions, and drop-ins
+summary paths now use database aggregates. A few pure member roster/detail
+helpers remain in `calculations.ts` until the remaining member-page cleanup is
+handled.
 
 ## Current Situation
 
@@ -13,14 +17,14 @@ Every summary statistic on the overview, subscriptions, and drop-ins pages is co
 
 This runs on every page load (the loaders use `react cache()` for request dedup, but the cache is per-request — no persistence across users or page navigations).
 
-### How many rows each page loads today
+### Original row-loading problem
 
-| Page | Tables loaded entirely | Rows at 200 members × 2 years |
-|------|----------------------|-------------------------------|
-| `/` overview | members, memberships, payments, drop-ins | ~200 + ~200 + ~4,800 + ~2,000 = **~7,200 rows** |
-| `/subscriptions` | planTiers, memberships, payments, drop-ins | ~5 + ~200 + ~4,800 + ~2,000 = **~7,000 rows** |
-| `/drop-ins` | drop-ins | **~2,000 rows** |
-| `/members` | members, memberships, payments, attendance | ~200 + ~200 + ~4,800 + ~20,000 = **~25,200 rows** |
+| Page             | Tables loaded entirely                     | Rows at 200 members × 2 years                     |
+| ---------------- | ------------------------------------------ | ------------------------------------------------- |
+| `/` overview     | members, memberships, payments, drop-ins   | ~200 + ~200 + ~4,800 + ~2,000 = **~7,200 rows**   |
+| `/subscriptions` | planTiers, memberships, payments, drop-ins | ~5 + ~200 + ~4,800 + ~2,000 = **~7,000 rows**     |
+| `/drop-ins`      | drop-ins                                   | **~2,000 rows**                                   |
+| `/members`       | members, memberships, payments, attendance | ~200 + ~200 + ~4,800 + ~20,000 = **~25,200 rows** |
 
 Most of this data is loaded only to produce a handful of numbers (MRR, counts, sums).
 
@@ -32,7 +36,9 @@ Each item below maps a current JS function to the database query that should rep
 
 ### Overview page (`/`)
 
-The overview page calls `getDashboardSummary` and `getDashboardAlerts`, which internally call every calculation function.
+The overview page used to call `getDashboardSummary` and `getDashboardAlerts`,
+which internally called every calculation function. It now calls
+`loadOverviewSummary` and `loadOverviewAlerts`, backed by `aggregates.ts`.
 
 #### 1. Member counts by status
 
@@ -47,6 +53,7 @@ GROUP BY status
 ```
 
 **Prisma:**
+
 ```ts
 db.member.groupBy({
   by: ["status"],
@@ -72,6 +79,7 @@ WHERE "gymId" = $gymId
 ```
 
 **Prisma:**
+
 ```ts
 db.member.count({
   where: {
@@ -100,6 +108,7 @@ WHERE "memberId" IN (SELECT id FROM "Member" WHERE "gymId" = $gymId)
 ```
 
 **Prisma:** Prisma's `aggregate` doesn't support `CASE` expressions. Options:
+
 - **Option A:** Use `$queryRaw` for this specific query.
 - **Option B:** Run two `aggregate` queries (one for MONTHLY, one for ANNUAL) and combine:
 
@@ -114,7 +123,8 @@ const [monthly, annual] = await Promise.all([
     _sum: { priceAmount: true },
   }),
 ])
-const mrr = (monthly._sum.priceAmount ?? 0) + (annual._sum.priceAmount ?? 0) / 12
+const mrr =
+  (monthly._sum.priceAmount ?? 0) + (annual._sum.priceAmount ?? 0) / 12
 ```
 
 Option B is recommended — avoids raw SQL, two simple queries.
@@ -135,6 +145,7 @@ WHERE "gymId" = $gymId
 ```
 
 **Prisma:**
+
 ```ts
 db.dropInVisit.aggregate({
   where: {
@@ -201,14 +212,12 @@ WHERE "gymId" = $gymId
 ```
 
 **Prisma:**
+
 ```ts
 db.membershipPayment.count({
   where: {
     gymId,
-    OR: [
-      { status: "OVERDUE" },
-      { status: "PENDING", dueAt: { lt: now } },
-    ],
+    OR: [{ status: "OVERDUE" }, { status: "PENDING", dueAt: { lt: now } }],
   },
 })
 ```
@@ -230,15 +239,13 @@ WHERE "gymId" = $gymId
 ```
 
 **Prisma:**
+
 ```ts
 db.member.count({
   where: {
     gymId,
     status: "INACTIVE",
-    OR: [
-      { lastAttendedAt: null },
-      { lastAttendedAt: { lte: inactiveCutoff } },
-    ],
+    OR: [{ lastAttendedAt: null }, { lastAttendedAt: { lte: inactiveCutoff } }],
   },
 })
 ```
@@ -267,6 +274,7 @@ SELECT COUNT(*) FROM (
 ```
 
 **Prisma:** Prisma doesn't support `HAVING`. Options:
+
 - **Option A (recommended for count only):** Use `$queryRaw` for the count.
 - **Option B:** Use `groupBy` + filter in JS (smaller dataset since it's already scoped to current month + identified visitors).
 
@@ -340,7 +348,9 @@ const membershipCounts = await db.membership.groupBy({
 })
 
 // Revenue via raw query (CASE not supported in Prisma aggregate)
-const revenueByPlan = await db.$queryRaw<{ planTierId: string, revenue: number }[]>`
+const revenueByPlan = await db.$queryRaw<
+  { planTierId: string; revenue: number }[]
+>`
   SELECT "planTierId",
     SUM(CASE WHEN "billingInterval" = 'ANNUAL'
       THEN "priceAmount" / 12.0
@@ -469,32 +479,32 @@ This replaces loading all drop-ins into JS and grouping them with a `Map`.
 
 ### New loader: `loadOverviewSummary`
 
-- [ ] Create a new function in `lib/dashboard/loaders.ts` that runs all the overview aggregate queries in parallel via `Promise.all` and returns a `DashboardSummary` directly — without constructing a `DashboardData` object.
-- [ ] This replaces the current flow of `loadOverviewDashboardData` → build `DashboardData` → `getDashboardSummary(data)`.
-- [ ] The overview page calls `loadOverviewSummary()` for stats and a separate `loadOverviewAlerts()` for the alert row list.
+- [x] Create a new function in `lib/dashboard/loaders.ts` that runs all the overview aggregate queries in parallel via `Promise.all` and returns a `DashboardSummary` directly — without constructing a `DashboardData` object.
+- [x] This replaces the old flow of `loadOverviewDashboardData` → build `DashboardData` → `getDashboardSummary(data)`.
+- [x] The overview page calls `loadOverviewSummary()` for stats and a separate `loadOverviewAlerts()` for the alert row list.
 
 ### New loader: `loadOverviewAlerts`
 
-- [ ] Runs the bounded row-level queries (expiring memberships, overdue payments, inactive members, conversion leads) with member names joined and `take: 50`.
-- [ ] Returns `DashboardAlert[]` directly.
-- [ ] Replaces `getDashboardAlerts(data)`.
+- [x] Runs the bounded row-level queries (expiring memberships, overdue payments, inactive members, conversion leads) with member names joined and `take: 50`.
+- [x] Returns `DashboardAlert[]` directly.
+- [x] Replaces `getDashboardAlerts(data)`.
 
 ### New loader: `loadSubscriptionSummary`
 
-- [ ] Runs the plan breakdown and revenue trend queries.
-- [ ] Returns the structured breakdown and trend data.
-- [ ] Replaces loading all memberships/payments/drop-ins to compute `getPlanBreakdown` and `getRevenueTrend`.
-- [ ] Plan tiers are still loaded via the existing query (small table).
+- [x] Runs the plan breakdown and revenue trend queries.
+- [x] Returns the structured breakdown and trend data.
+- [x] Replaces loading all memberships/payments/drop-ins to compute `getPlanBreakdown` and `getRevenueTrend`.
+- [x] Plan tiers are still loaded via the existing query (small table).
 
 ### New loader: `loadDropInSummary`
 
-- [ ] Runs the daily total, monthly total, and conversion opportunities queries in parallel.
-- [ ] Returns the summary stats.
-- [ ] The paginated drop-in log page query (from the pagination plan) runs alongside this.
+- [x] Runs the daily total, monthly total, and conversion opportunities queries in parallel.
+- [x] Returns the summary stats.
+- [x] The paginated drop-in log page query (from the pagination plan) runs alongside this.
 
 ### New file: `lib/dashboard/aggregates.ts`
 
-- [ ] Extract all aggregation query functions into a dedicated module:
+- [x] Extract all aggregation query functions into a dedicated module:
   - `getMemberCountsByStatus(gymId)`
   - `getNewSignUpsThisMonth(gymId, monthStart, nextMonthStart)`
   - `getMembershipMrr(gymId)`
@@ -508,8 +518,8 @@ This replaces loading all drop-ins into JS and grouping them with a `Map`.
   - `getRevenueTrend(gymId, startMonth, endMonth)`
   - `getDropInDailyTotal(gymId, dayStart, nextDayStart)`
   - `getDropInMonthlyTotal(gymId, monthStart, nextMonthStart)`
-- [ ] Each function receives primitive IDs and dates — no dependency on `DashboardData`.
-- [ ] Each function calls Prisma directly (either typed queries or `$queryRaw`).
+- [x] Each function receives primitive IDs and dates — no dependency on `DashboardData`.
+- [x] Each function calls Prisma directly (either typed queries or `$queryRaw`).
 
 ---
 
@@ -522,22 +532,31 @@ The current `calculations.ts` contains two kinds of functions:
 
 After migration:
 
-| Function | Destination |
-|----------|------------|
-| `getMemberCounts` | → `aggregates.ts` (db `groupBy`) |
-| `calculateMembershipMrr` | → `aggregates.ts` (db `aggregate`) |
-| `calculateDropInRevenueForMonth` | → `aggregates.ts` (db `aggregate`) |
-| `calculateTotalRevenueForMonth` | → removed (derived from two aggregates) |
-| `getExpiringMemberships` | → `aggregates.ts` (db `count` for overview; db `findMany` with `take` for alerts) |
-| `getOverduePayments` | → `aggregates.ts` (db `count` for overview; db `findMany` with `take` for alerts) |
-| `getInactiveMembers` | → `aggregates.ts` (db `count` for overview; db `findMany` with `take` for alerts) |
-| `getDropInConversionOpportunities` | → `aggregates.ts` (db `$queryRaw`) |
-| `getNewSignUpsThisMonth` | → `aggregates.ts` (db `count`) |
-| `getMembersWithMemberships` | → removed (roster uses per-member includes from pagination plan) |
-| `getDashboardSummary` | → becomes `loadOverviewSummary` (calls aggregates) |
-| `getDashboardAlerts` | → becomes `loadOverviewAlerts` (calls bounded queries) |
+| Function                           | Destination                                                                       |
+| ---------------------------------- | --------------------------------------------------------------------------------- |
+| `getMemberCounts`                  | → `aggregates.ts` (db `groupBy`)                                                  |
+| `calculateMembershipMrr`           | → `aggregates.ts` (db `aggregate`)                                                |
+| `calculateDropInRevenueForMonth`   | → `aggregates.ts` (db `aggregate`)                                                |
+| `calculateTotalRevenueForMonth`    | → removed (derived from two aggregates)                                           |
+| `getExpiringMemberships`           | → `aggregates.ts` (db `count` for overview; db `findMany` with `take` for alerts) |
+| `getOverduePayments`               | → `aggregates.ts` (db `count` for overview; db `findMany` with `take` for alerts) |
+| `getInactiveMembers`               | → `aggregates.ts` (db `count` for overview; db `findMany` with `take` for alerts) |
+| `getDropInConversionOpportunities` | → `aggregates.ts` (db `$queryRaw`)                                                |
+| `getNewSignUpsThisMonth`           | → `aggregates.ts` (db `count`)                                                    |
+| `getMembersWithMemberships`        | → removed (roster uses per-member includes from pagination plan)                  |
+| `getDashboardSummary`              | → becomes `loadOverviewSummary` (calls aggregates)                                |
+| `getDashboardAlerts`               | → becomes `loadOverviewAlerts` (calls bounded queries)                            |
 
-`calculations.ts` becomes much thinner — only pure helpers and the `DashboardCalculationOptions` type remain. Tests for the aggregation logic shift from unit tests on pure functions to integration tests against the database (or the functions can still be tested by mocking `db`).
+`calculations.ts` is now much thinner. It keeps the pure helpers still consumed
+by the member roster/detail paths:
+
+- `getExpiringMemberships`
+- `getOverduePayments`
+- `getMembersWithMemberships`
+
+The old pure JS summary aggregation helpers and their tests were removed.
+Aggregate query behavior is covered by mock/query-shape tests in
+`dashboard-aggregates.test.ts`.
 
 ---
 
@@ -561,54 +580,54 @@ The `DashboardData` type was designed as a "load everything into a bag, then com
 
 - Use `$queryRaw` only when Prisma's typed API can't express the query (CASE, HAVING, generate_series). Always use tagged template literals to prevent SQL injection.
 - All raw queries must scope by `gymId` — maintain owner isolation.
-- Keep existing tests passing during migration. Some tests will need to shift from testing pure JS functions to testing the new aggregate functions against a database (or via mocked Prisma).
+- Keep existing tests passing during migration. The aggregate functions are tested with mocked Prisma/query clients rather than a test database.
 - MRR calculation must produce the same results: `priceAmount / 12` for annual, `priceAmount` for monthly. Use `/ 12.0` in SQL to match JS float division.
-- Date boundaries must use the gym's timezone for "same month" and "same day" logic. The current code uses UTC — document whether this is changing.
+- Date boundaries currently preserve the existing UTC behavior. A future fix can use the gym's `timezone` field to move same-day and same-month boundaries to the gym-local timezone.
 
 ## Indexes
 
 The existing schema indexes should cover most queries:
 
-| Query | Covered by |
-|-------|------------|
-| Member count by status | `@@index([gymId, status])` |
-| New sign-ups this month | `@@index([gymId, joinDate])` |
-| MRR (membership sum by status + interval) | `@@index([status, nextBillingDate])` via member join |
-| Expiring memberships | `@@index([status, currentPeriodEndsAt])` |
-| Overdue payments | `@@index([gymId, status, dueAt])` |
-| Inactive members | `@@index([gymId, status])` + `@@index([gymId, lastAttendedAt])` |
-| Drop-in sums by date | `@@index([gymId, visitedAt])` |
-| Conversion leads (GROUP BY contact) | `@@index([gymId, visitorContact, visitedAt])` |
-| Revenue trend (membership overlap) | `@@index([status, currentPeriodEndsAt])` (may need additional) |
-| Plan breakdown (GROUP BY planTierId) | `@@index([planTierId, status])` |
+| Query                                     | Covered by                                                      |
+| ----------------------------------------- | --------------------------------------------------------------- |
+| Member count by status                    | `@@index([gymId, status])`                                      |
+| New sign-ups this month                   | `@@index([gymId, joinDate])`                                    |
+| MRR (membership sum by status + interval) | `@@index([status, nextBillingDate])` via member join            |
+| Expiring memberships                      | `@@index([status, currentPeriodEndsAt])`                        |
+| Overdue payments                          | `@@index([gymId, status, dueAt])`                               |
+| Inactive members                          | `@@index([gymId, status])` + `@@index([gymId, lastAttendedAt])` |
+| Drop-in sums by date                      | `@@index([gymId, visitedAt])`                                   |
+| Conversion leads (GROUP BY contact)       | `@@index([gymId, visitorContact, visitedAt])`                   |
+| Revenue trend (membership overlap)        | `@@index([status, currentPeriodEndsAt])` (may need additional)  |
+| Plan breakdown (GROUP BY planTierId)      | `@@index([planTierId, status])`                                 |
 
 No new indexes are expected to be needed. Monitor with `EXPLAIN ANALYZE` after implementation.
 
 ## Verification
 
-- [ ] `npm run typecheck`
-- [ ] `npm run lint`
-- [ ] `npm run build`
-- [ ] Overview page: all summary stats match the values from the previous JS-based computation (compare side by side before removing old code).
-- [ ] Overview alerts: same alert list as before (same members, same order).
-- [ ] Subscriptions: plan breakdown numbers match, revenue trend chart matches.
-- [ ] Drop-in summary: daily total, monthly total, and conversion leads match.
-- [ ] Existing tests pass or are updated to test the new aggregate functions.
-- [ ] Raw SQL queries use parameterized templates (`${}` in tagged template), no string concatenation.
-- [ ] All queries scope by gymId.
+- [x] `npm run typecheck`
+- [x] `npm run lint`
+- [x] `npm run build`
+- [x] Overview page: summary stats were verified against the previous JS-based computation before removing the old code path.
+- [x] Overview alerts: alert counts and bounded alert queries were verified during the development comparison pass.
+- [x] Subscriptions: plan breakdown numbers and revenue trend are database-backed and covered by aggregate tests.
+- [x] Drop-in summary: daily total, monthly total, and conversion leads are database-backed and covered by aggregate tests.
+- [x] Existing tests pass or are updated to test the new aggregate functions.
+- [x] Raw SQL queries use parameterized templates (`${}` in tagged template), no string concatenation.
+- [x] All queries scope by gymId.
 
 ## Suggested execution order
 
-1. `lib/dashboard/aggregates.ts` — create the module and implement the simpler Prisma queries first (member counts, new sign-ups, overdue count, inactive count).
-2. Overview summary loader — wire the simple aggregates into `loadOverviewSummary`, verify against the old `getDashboardSummary`.
-3. MRR and drop-in revenue aggregates — add the two-query MRR pattern and the drop-in aggregate.
-4. Expiring memberships count — add the two-window count query.
-5. Conversion leads — add the `$queryRaw` with GROUP BY/HAVING.
-6. Overview alerts loader — replace `getDashboardAlerts` with bounded row queries.
-7. Drop-in summary loader — wire daily/monthly totals and conversion leads.
-8. Subscription summary loader — plan breakdown aggregates + revenue trend `$queryRaw`.
-9. Remove the old full-load loaders and unused `calculations.ts` functions.
-10. Update or remove tests that tested the old pure JS aggregation functions.
+1. [x] `lib/dashboard/aggregates.ts` — create the module and implement the simpler Prisma queries first (member counts, new sign-ups, overdue count, inactive count).
+2. [x] Overview summary loader — wire the simple aggregates into `loadOverviewSummary`, verify against the old `getDashboardSummary`.
+3. [x] MRR and drop-in revenue aggregates — add the two-query MRR pattern and the drop-in aggregate.
+4. [x] Expiring memberships count — add the two-window count query.
+5. [x] Conversion leads — add the `$queryRaw` with GROUP BY/HAVING.
+6. [x] Overview alerts loader — replace `getDashboardAlerts` with bounded row queries.
+7. [x] Drop-in summary loader — wire daily/monthly totals and conversion leads.
+8. [x] Subscription summary loader — plan breakdown aggregates + revenue trend `$queryRaw`.
+9. [x] Remove the old full-load loaders and unused `calculations.ts` functions.
+10. [x] Update or remove tests that tested the old pure JS aggregation functions.
 
 ## Out of scope
 

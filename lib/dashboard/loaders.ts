@@ -36,7 +36,6 @@ import { getOwnerGym } from "@/lib/dashboard/owner-gym"
 import {
   getAttendanceRecordsQuery,
   getDropInVisitsPageQuery,
-  getDropInVisitsQuery,
   getMemberRosterPageQuery,
   getMemberRosterPageWhere,
   getMemberAttendancePageQuery,
@@ -44,9 +43,6 @@ import {
   getMembersQuery,
   getMembershipPaymentsQuery,
   getMembershipsQuery,
-  getOverviewMembersQuery,
-  getOverviewMembershipPaymentsQuery,
-  getOverviewMembershipsQuery,
   getPlanTiersQuery,
 } from "@/lib/dashboard/query-scopes"
 import type {
@@ -63,11 +59,6 @@ import type {
 } from "@/lib/dashboard/types"
 
 const aggregateDb = db as unknown as DashboardDb
-
-export type OverviewDashboardData = Pick<
-  DashboardData,
-  "gym" | "members" | "memberships" | "payments" | "dropIns"
->
 
 export type OverviewSummaryDashboardData = {
   gym: GymProfile
@@ -108,29 +99,6 @@ export type MemberDetailDashboardData = {
   memberships: MemberDetailMembership[]
   hasOverduePayments: boolean
 }
-
-export const loadOverviewDashboardData = cache(async () => {
-  const gym = await requireOwnerGym("/")
-
-  if (!gym) {
-    return null
-  }
-
-  const [members, memberships, payments, dropIns] = await Promise.all([
-    db.member.findMany(getOverviewMembersQuery(gym.id)),
-    db.membership.findMany(getOverviewMembershipsQuery(gym.id)),
-    db.membershipPayment.findMany(getOverviewMembershipPaymentsQuery(gym.id)),
-    db.dropInVisit.findMany(getDropInVisitsQuery(gym.id)),
-  ])
-
-  return {
-    gym,
-    members: members.map(mapMember),
-    memberships: memberships.map(mapMembership),
-    payments: payments.map(mapMembershipPayment),
-    dropIns: dropIns.map(mapDropInVisit),
-  } satisfies OverviewDashboardData
-})
 
 export const loadOverviewSummary = cache(
   async (

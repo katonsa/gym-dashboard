@@ -1,18 +1,8 @@
 import {
-  getDashboardAlerts,
-  getDashboardSummary,
-} from "@/lib/dashboard/calculations"
-import {
-  loadOverviewDashboardData,
   loadOverviewAlerts,
   loadOverviewSummary,
 } from "@/lib/dashboard/loaders"
-import type {
-  DashboardAlert,
-  DashboardAlertSeverity,
-  DashboardData,
-  DashboardSummary,
-} from "@/lib/dashboard"
+import type { DashboardAlert, DashboardAlertSeverity } from "@/lib/dashboard"
 
 const toneClasses: Record<string, string> = {
   alert: "bg-alert",
@@ -46,10 +36,6 @@ export default async function Page() {
   }
 
   const { summary, setupState } = overviewData
-
-  if (process.env.NODE_ENV === "development") {
-    await compareOverviewAggregates(summary, asOf)
-  }
 
   const moneyFormatter = new Intl.NumberFormat("en", {
     style: "currency",
@@ -132,7 +118,8 @@ export default async function Page() {
     !setupState.hasMembers
       ? {
           title: "No members yet.",
-          detail: "Add member records to start tracking attendance and billing.",
+          detail:
+            "Add member records to start tracking attendance and billing.",
         }
       : null,
     !setupState.hasMemberships
@@ -144,7 +131,8 @@ export default async function Page() {
     !setupState.hasDropIns
       ? {
           title: "No drop-ins yet.",
-          detail: "Log day-pass visits to track walk-in cash and follow-up leads.",
+          detail:
+            "Log day-pass visits to track walk-in cash and follow-up leads.",
         }
       : null,
   ].filter((gap): gap is { title: string; detail: string } => Boolean(gap))
@@ -257,7 +245,8 @@ export default async function Page() {
             Current membership and revenue snapshot.
           </p>
         </div>
-        {summary.totalMembers > 0 || summary.dropInRevenueThisMonthAmount > 0 ? (
+        {summary.totalMembers > 0 ||
+        summary.dropInRevenueThisMonthAmount > 0 ? (
           <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
             {stats.map((stat) => (
               <article
@@ -392,63 +381,4 @@ function formatDashboardDate(date: Date, timeZone: string) {
     day: "numeric",
     timeZone,
   }).format(date)
-}
-
-async function compareOverviewAggregates(
-  summary: DashboardSummary,
-  asOf: Date
-) {
-  const overviewData = await loadOverviewDashboardData()
-
-  if (!overviewData) {
-    return
-  }
-
-  const dashboardData = {
-    ...overviewData,
-    planTiers: [],
-    attendance: [],
-  } satisfies DashboardData
-  const oldSummary = getDashboardSummary(dashboardData, { asOf })
-  const oldAlerts = getDashboardAlerts(dashboardData, { asOf })
-  const mismatchedSummaryEntries = Object.entries(summary).filter(
-    ([key, value]) => oldSummary[key as keyof DashboardSummary] !== value
-  )
-  const oldAlertCounts = getAlertCountsByType(oldAlerts)
-  const newAlertCounts = getAlertCountsByTypeFromSummary(summary)
-
-  if (
-    mismatchedSummaryEntries.length > 0 ||
-    oldAlertCounts !== newAlertCounts
-  ) {
-    console.warn("Overview aggregate mismatch", {
-      summary: mismatchedSummaryEntries,
-      oldAlertCounts,
-      newAlertCounts,
-    })
-  }
-}
-
-function getAlertCountsByType(alerts: DashboardAlert[]) {
-  const counts = {
-    DROP_IN_CONVERSION: 0,
-    EXPIRING_MEMBERSHIP: 0,
-    INACTIVE_MEMBER: 0,
-    OVERDUE_PAYMENT: 0,
-  }
-
-  for (const alert of alerts) {
-    counts[alert.type] += 1
-  }
-
-  return JSON.stringify(counts)
-}
-
-function getAlertCountsByTypeFromSummary(summary: DashboardSummary) {
-  return JSON.stringify({
-    DROP_IN_CONVERSION: summary.dropInConversionOpportunitiesCount,
-    EXPIRING_MEMBERSHIP: summary.expiringMembershipsCount,
-    INACTIVE_MEMBER: summary.inactiveMembersCount,
-    OVERDUE_PAYMENT: summary.overduePaymentsCount,
-  })
 }

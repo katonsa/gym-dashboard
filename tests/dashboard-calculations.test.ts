@@ -2,11 +2,7 @@ import assert from "node:assert/strict"
 import test from "node:test"
 
 import {
-  calculateDropInRevenueForMonth,
-  calculateMembershipMrr,
-  getDropInConversionOpportunities,
   getExpiringMemberships,
-  getInactiveMembers,
   getOverduePayments,
 } from "../lib/dashboard/calculations.ts"
 import {
@@ -16,7 +12,6 @@ import {
 } from "../lib/dashboard/member-roster.ts"
 import type {
   DashboardData,
-  DropInVisit,
   GymProfile,
   Member,
   Membership,
@@ -25,59 +20,6 @@ import type {
 } from "../lib/dashboard/types.ts"
 
 const asOf = new Date("2026-04-16T09:00:00.000+07:00")
-
-test("normalizes active memberships into MRR and ignores paused memberships", () => {
-  const memberships: Membership[] = [
-    membership({
-      id: "monthly-active",
-      status: "ACTIVE",
-      billingInterval: "MONTHLY",
-      priceAmount: 350000,
-    }),
-    membership({
-      id: "annual-active",
-      status: "ACTIVE",
-      billingInterval: "ANNUAL",
-      priceAmount: 1200000,
-    }),
-    membership({
-      id: "monthly-past-due",
-      status: "PAST_DUE",
-      billingInterval: "MONTHLY",
-      priceAmount: 250000,
-    }),
-    membership({
-      id: "expired",
-      status: "EXPIRED",
-      billingInterval: "MONTHLY",
-      priceAmount: 999999,
-    }),
-  ]
-
-  assert.equal(calculateMembershipMrr(memberships), 450000)
-})
-
-test("calculates drop-in revenue for the current month only", () => {
-  const dropIns: DropInVisit[] = [
-    dropIn({
-      id: "apr-1",
-      amount: 150000,
-      visitedAt: "2026-04-01T10:00:00.000+07:00",
-    }),
-    dropIn({
-      id: "apr-2",
-      amount: 75000,
-      visitedAt: "2026-04-15T18:00:00.000+07:00",
-    }),
-    dropIn({
-      id: "mar-1",
-      amount: 300000,
-      visitedAt: "2026-03-31T18:00:00.000+07:00",
-    }),
-  ]
-
-  assert.equal(calculateDropInRevenueForMonth(dropIns, asOf), 225000)
-})
 
 test("detects active memberships expiring inside the relevant windows", () => {
   const memberships: Membership[] = [
@@ -260,82 +202,6 @@ test("parses member roster filters from URL search params", () => {
   )
 })
 
-test("detects inactive members with stale or missing attendance", () => {
-  const members: Member[] = [
-    member({
-      id: "inactive-stale",
-      status: "INACTIVE",
-      lastAttendedAt: "2026-03-01T09:00:00.000+07:00",
-    }),
-    member({
-      id: "inactive-missing",
-      status: "INACTIVE",
-      lastAttendedAt: undefined,
-    }),
-    member({
-      id: "inactive-recent",
-      status: "INACTIVE",
-      lastAttendedAt: "2026-04-01T09:00:00.000+07:00",
-    }),
-    member({
-      id: "active-stale",
-      status: "ACTIVE",
-      lastAttendedAt: "2026-03-01T09:00:00.000+07:00",
-    }),
-  ]
-
-  assert.deepEqual(
-    getInactiveMembers(members, { asOf }).map((item) => item.id),
-    ["inactive-stale", "inactive-missing"]
-  )
-})
-
-test("detects named current-month drop-in conversion opportunities", () => {
-  const dropIns: DropInVisit[] = [
-    dropIn({
-      id: "fajar-1",
-      visitorName: "Fajar Nugroho",
-      visitorContact: "+628122220001",
-      visitCount: 2,
-      amount: 150000,
-      visitedAt: "2026-04-02T17:15:00.000+07:00",
-    }),
-    dropIn({
-      id: "fajar-2",
-      visitorName: "Fajar Nugroho",
-      visitorContact: "+628122220001",
-      visitCount: 3,
-      amount: 225000,
-      visitedAt: "2026-04-12T18:30:00.000+07:00",
-    }),
-    dropIn({
-      id: "anonymous",
-      visitorName: undefined,
-      visitorContact: undefined,
-      visitCount: 8,
-      amount: 600000,
-      visitedAt: "2026-04-13T18:30:00.000+07:00",
-    }),
-    dropIn({
-      id: "march-fajar",
-      visitorName: "Fajar Nugroho",
-      visitorContact: "+628122220001",
-      visitCount: 8,
-      amount: 600000,
-      visitedAt: "2026-03-13T18:30:00.000+07:00",
-    }),
-  ]
-
-  assert.deepEqual(getDropInConversionOpportunities(dropIns, { asOf }), [
-    {
-      visitorName: "Fajar Nugroho",
-      visitorContact: "+628122220001",
-      visitCount: 5,
-      revenueAmount: 375000,
-    },
-  ])
-})
-
 function membership(overrides: Partial<Membership> = {}): Membership {
   return {
     id: "membership",
@@ -375,19 +241,6 @@ function member(overrides: Partial<Member> = {}): Member {
     status: "ACTIVE",
     joinDate: "2026-01-01T09:00:00.000+07:00",
     lastAttendedAt: "2026-04-01T09:00:00.000+07:00",
-    ...overrides,
-  }
-}
-
-function dropIn(overrides: Partial<DropInVisit> = {}): DropInVisit {
-  return {
-    id: "drop-in",
-    gymId: "gym",
-    visitorName: "Visitor Example",
-    visitorContact: "visitor@example.com",
-    visitCount: 1,
-    amount: 75000,
-    visitedAt: "2026-04-01T09:00:00.000+07:00",
     ...overrides,
   }
 }

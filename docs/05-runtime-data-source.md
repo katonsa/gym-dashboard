@@ -10,12 +10,12 @@ Mock dashboard data remains available for tests and calculation fixtures only.
 Dashboard pages load data through route-specific server loaders in
 `lib/dashboard/loaders.ts`.
 
-| Route            | Loader                             | Primary records                                        |
-| ---------------- | ---------------------------------- | ------------------------------------------------------ |
-| `/`              | `loadOverviewDashboardData()`      | Gym, members, memberships, payments, drop-ins          |
-| `/members`       | `loadMembersDashboardData()`       | Gym, plans, members, memberships, payments, attendance |
-| `/subscriptions` | `loadSubscriptionsDashboardData()` | Gym, plans, memberships, payments, drop-ins            |
-| `/drop-ins`      | `loadDropInsDashboardData()`       | Gym, drop-ins                                          |
+| Route            | Loader                                          | Primary records                                        |
+| ---------------- | ----------------------------------------------- | ------------------------------------------------------ |
+| `/`              | `loadOverviewSummary()`, `loadOverviewAlerts()` | Gym, aggregate counts/sums, capped alert rows          |
+| `/members`       | `loadMembersDashboardData()`                    | Gym, plans, members, memberships, payments, attendance |
+| `/subscriptions` | `loadSubscriptionsSummaryDashboardData()`       | Gym, plans, aggregate subscription summary             |
+| `/drop-ins`      | `loadDropInsSummaryDashboardData()`             | Gym, aggregate drop-in summary, paginated drop-ins     |
 
 Each loader requires a dashboard session before reading gym data. The owner gym
 is selected through `Gym.ownerId`, and all route data is scoped to that gym.
