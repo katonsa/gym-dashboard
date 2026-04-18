@@ -2,9 +2,10 @@ import Link from "next/link"
 import type * as React from "react"
 
 import { Button } from "@/components/ui/button"
+import { PaginationNav } from "@/components/ui/pagination-nav"
 import {
   getExpiringMemberships,
-  getOverduePayments,
+  parsePaginationParams,
   type AttendanceRecord,
   type AttendanceSource,
   type BillingInterval,
@@ -15,7 +16,9 @@ import {
   type PaymentStatus,
 } from "@/lib/dashboard"
 import {
+  loadMemberAttendancePage,
   loadMemberDetailData,
+  loadMemberPaymentsPage,
   type MemberDetailMembership,
 } from "@/lib/dashboard/loaders"
 import { cn } from "@/lib/utils"
@@ -25,6 +28,10 @@ import { MemberStatusAction } from "../member-status-action"
 type MemberDetailPageProps = {
   params: Promise<{
     id: string
+  }>
+  searchParams: Promise<{
+    pp?: string | string[]
+    ap?: string | string[]
   }>
 }
 
@@ -58,11 +65,26 @@ const paymentClasses: Record<PaymentStatus, string> = {
 
 export default async function MemberDetailPage({
   params,
+  searchParams,
 }: MemberDetailPageProps) {
   const { id } = await params
-  const data = await loadMemberDetailData(id)
+  const resolvedSearchParams = await searchParams
+  const [paymentsPagination, attendancePagination] = await Promise.all([
+    parsePaginationParams(resolvedSearchParams, {
+      pageParam: "pp",
+    }),
+    parsePaginationParams(resolvedSearchParams, {
+      pageParam: "ap",
+      pageSize: 20,
+    }),
+  ])
+  const [data, paymentsPage, attendancePage] = await Promise.all([
+    loadMemberDetailData(id),
+    loadMemberPaymentsPage(id, paymentsPagination),
+    loadMemberAttendancePage(id, attendancePagination),
+  ])
 
-  if (!data) {
+  if (!data || !paymentsPage || !attendancePage) {
     return (
       <div className="grid gap-4">
         <Button asChild variant="outline" size="lg" className="min-h-11 w-fit">
@@ -80,12 +102,14 @@ export default async function MemberDetailPage({
     )
   }
 
-  const { gym, member, planTiers, memberships, payments, attendance } = data
+  const { gym, member, planTiers, memberships, hasOverduePayments } = data
   const memberName = formatMemberName(member)
   const currentMembership = memberships.find(
     (membership) => membership.status === "ACTIVE"
   )
-  const billingRisk = getBillingRisk(memberships, payments)
+  const billingRisk = getBillingRisk(memberships, hasOverduePayments)
+  const preservedPaginationParams =
+    getPreservedPaginationParams(resolvedSearchParams)
 
   return (
     <div className="grid gap-5 lg:gap-6">
@@ -187,10 +211,13 @@ export default async function MemberDetailPage({
           )}
         </InfoCard>
 
-        <InfoCard title="Payment history">
-          {payments.length > 0 ? (
+        <InfoCard
+          title="Payment history"
+          detail={getPageRangeDetail(paymentsPage, "payments")}
+        >
+          {paymentsPage.rows.length > 0 ? (
             <div className="grid gap-3">
-              {payments.map((payment) => (
+              {paymentsPage.rows.map((payment) => (
                 <PaymentHistoryItem
                   key={payment.id}
                   currencyCode={gym.currencyCode}
@@ -198,6 +225,13 @@ export default async function MemberDetailPage({
                   timeZone={gym.timezone}
                 />
               ))}
+              <PaginationNav
+                page={paymentsPage.page}
+                pageCount={paymentsPage.pageCount}
+                basePath={`/members/${member.id}`}
+                pageParam="pp"
+                preservedSearchParams={preservedPaginationParams}
+              />
             </div>
           ) : (
             <EmptyText>No payment records.</EmptyText>
@@ -206,18 +240,25 @@ export default async function MemberDetailPage({
       </section>
 
       <InfoCard
-        title={`Attendance log (${attendance.length})`}
-        detail="Showing the 20 most recent entries."
+        title={`Attendance log (${attendancePage.total})`}
+        detail={getPageRangeDetail(attendancePage, "attendance entries")}
       >
-        {attendance.length > 0 ? (
+        {attendancePage.rows.length > 0 ? (
           <div className="grid gap-2">
-            {attendance.slice(0, 20).map((record) => (
+            {attendancePage.rows.map((record) => (
               <AttendanceLogItem
                 key={record.id}
                 record={record}
                 timeZone={gym.timezone}
               />
             ))}
+            <PaginationNav
+              page={attendancePage.page}
+              pageCount={attendancePage.pageCount}
+              basePath={`/members/${member.id}`}
+              pageParam="ap"
+              preservedSearchParams={preservedPaginationParams}
+            />
           </div>
         ) : (
           <EmptyText>No attendance recorded.</EmptyText>
@@ -433,9 +474,9 @@ function PaymentBadge({ status }: { status: PaymentStatus }) {
 
 function getBillingRisk(
   memberships: MemberDetailMembership[],
-  payments: MembershipPayment[]
+  hasOverduePayments: boolean
 ): BillingRisk {
-  if (getOverduePayments(payments).length > 0) {
+  if (hasOverduePayments) {
     return "overdue"
   }
 
@@ -444,6 +485,34 @@ function getBillingRisk(
   }
 
   return "clear"
+}
+
+function getPreservedPaginationParams(searchParams: {
+  pp?: string | string[]
+  ap?: string | string[]
+}) {
+  return {
+    ap: searchParams.ap,
+    pp: searchParams.pp,
+  }
+}
+
+function getPageRangeDetail(
+  pageData: {
+    page: number
+    pageSize: number
+    total: number
+  },
+  label: string
+) {
+  if (pageData.total === 0) {
+    return undefined
+  }
+
+  const start = (pageData.page - 1) * pageData.pageSize + 1
+  const end = Math.min(pageData.total, pageData.page * pageData.pageSize)
+
+  return `Showing ${start}-${end} of ${pageData.total} ${label}.`
 }
 
 function formatMemberName(member: Pick<Member, "firstName" | "lastName">) {

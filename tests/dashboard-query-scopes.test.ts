@@ -5,6 +5,8 @@ import {
   getAttendanceRecordsQuery,
   getDropInVisitsPageQuery,
   getDropInVisitsQuery,
+  getMemberAttendancePageQuery,
+  getMemberPaymentsPageQuery,
   getMembersQuery,
   getMembershipPaymentsQuery,
   getMembershipsQuery,
@@ -73,6 +75,41 @@ test("builds a stable paginated drop-in query", () => {
       visitCount: true,
       amount: true,
       visitedAt: true,
+      notes: true,
+    },
+  })
+})
+
+test("builds stable paginated member detail queries", () => {
+  assert.deepEqual(getMemberPaymentsPageQuery("gym-1", "member-1", 25, 25), {
+    where: { gymId: "gym-1", memberId: "member-1" },
+    orderBy: [{ dueAt: "desc" }, { id: "desc" }],
+    skip: 25,
+    take: 25,
+    select: {
+      id: true,
+      gymId: true,
+      memberId: true,
+      membershipId: true,
+      amount: true,
+      status: true,
+      dueAt: true,
+      paidAt: true,
+      notes: true,
+    },
+  })
+
+  assert.deepEqual(getMemberAttendancePageQuery("gym-1", "member-1", 20, 20), {
+    where: { gymId: "gym-1", memberId: "member-1" },
+    orderBy: [{ attendedAt: "desc" }, { id: "desc" }],
+    skip: 20,
+    take: 20,
+    select: {
+      id: true,
+      gymId: true,
+      memberId: true,
+      attendedAt: true,
+      source: true,
       notes: true,
     },
   })

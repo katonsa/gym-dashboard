@@ -187,3 +187,39 @@ export function getDropInVisitsPageQuery(
     select: dropInVisitSelect,
   }
 }
+
+export function getMemberPaymentsPageQuery(
+  gymId: string,
+  memberId: string,
+  skip: number,
+  take: number
+) {
+  return {
+    where: {
+      gymId,
+      memberId,
+    },
+    orderBy: [{ dueAt: descending }, { id: descending }],
+    skip,
+    take,
+    select: membershipPaymentSelect,
+  }
+}
+
+export function getMemberAttendancePageQuery(
+  gymId: string,
+  memberId: string,
+  skip: number,
+  take: number
+) {
+  return {
+    where: {
+      gymId,
+      memberId,
+    },
+    orderBy: [{ attendedAt: descending }, { id: descending }],
+    skip,
+    take,
+    select: attendanceRecordSelect,
+  }
+}

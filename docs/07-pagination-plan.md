@@ -190,10 +190,10 @@ The drop-in log has no filtering — it renders all rows newest-first. Paginate 
 
 Payments grow linearly with membership duration (one per billing cycle). Paginate server-side:
 
-- [ ] Add `loadMemberPaymentsPage(gymId, memberId, page, pageSize)` to `loaders.ts`
+- [x] Add `loadMemberPaymentsPage(gymId, memberId, page, pageSize)` to `loaders.ts`
   - Scoped to the owner's gym.
   - Returns `PaginatedResult<MembershipPayment>`.
-- [ ] Update `members/[id]/page.tsx`
+- [x] Update `members/[id]/page.tsx`
   - Accept `searchParams` and parse separate pagination params.
   - Pass paginated payments to the payment history section.
   - Render `PaginationNav` inside the payment history card.
@@ -204,11 +204,11 @@ Payments grow linearly with membership duration (one per billing cycle). Paginat
 
 The attendance log currently loads all records and slices to 20 client-side. Replace with proper server-side pagination:
 
-- [ ] Add `loadMemberAttendancePage(gymId, memberId, page, pageSize)` to `loaders.ts`
+- [x] Add `loadMemberAttendancePage(gymId, memberId, page, pageSize)` to `loaders.ts`
   - Scoped to the owner's gym.
   - Returns `PaginatedResult<AttendanceRecord>`.
   - Uses `take: 20` as page size (matches the existing slice).
-- [ ] Update `members/[id]/page.tsx`
+- [x] Update `members/[id]/page.tsx`
   - Parse `ap` from search params.
   - Show the total count in the section header: "Attendance log (147)".
   - Render `PaginationNav` inside the attendance card.

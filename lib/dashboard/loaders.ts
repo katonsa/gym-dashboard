@@ -21,6 +21,8 @@ import {
   getAttendanceRecordsQuery,
   getDropInVisitsPageQuery,
   getDropInVisitsQuery,
+  getMemberAttendancePageQuery,
+  getMemberPaymentsPageQuery,
   getMembersQuery,
   getMembershipPaymentsQuery,
   getMembershipsQuery,
@@ -67,8 +69,7 @@ export type MemberDetailDashboardData = {
   member: Member
   planTiers: PlanTier[]
   memberships: MemberDetailMembership[]
-  payments: MembershipPayment[]
-  attendance: AttendanceRecord[]
+  hasOverduePayments: boolean
 }
 
 export const loadOverviewDashboardData = cache(async () => {
@@ -203,7 +204,7 @@ export const loadMemberDetailData = cache(async (memberId: string) => {
     return null
   }
 
-  const [member, planTiers, memberships, payments, attendance] =
+  const [member, planTiers, memberships, overduePaymentsCount] =
     await Promise.all([
       db.member.findFirst({
         where: {
@@ -257,37 +258,21 @@ export const loadMemberDetailData = cache(async (memberId: string) => {
           },
         },
       }),
-      db.membershipPayment.findMany({
+      db.membershipPayment.count({
         where: {
           gymId: gym.id,
           memberId,
-        },
-        orderBy: [{ dueAt: "desc" }],
-        select: {
-          id: true,
-          gymId: true,
-          memberId: true,
-          membershipId: true,
-          amount: true,
-          status: true,
-          dueAt: true,
-          paidAt: true,
-          notes: true,
-        },
-      }),
-      db.attendanceRecord.findMany({
-        where: {
-          gymId: gym.id,
-          memberId,
-        },
-        orderBy: [{ attendedAt: "desc" }],
-        select: {
-          id: true,
-          gymId: true,
-          memberId: true,
-          attendedAt: true,
-          source: true,
-          notes: true,
+          OR: [
+            {
+              status: "OVERDUE",
+            },
+            {
+              status: "PENDING",
+              dueAt: {
+                lt: new Date(),
+              },
+            },
+          ],
         },
       }),
     ])
@@ -304,10 +289,89 @@ export const loadMemberDetailData = cache(async (memberId: string) => {
       ...mapMembership(membership),
       planTier: mapPlanTier(membership.planTier),
     })),
-    payments: payments.map(mapMembershipPayment),
-    attendance: attendance.map(mapAttendanceRecord),
+    hasOverduePayments: overduePaymentsCount > 0,
   } satisfies MemberDetailDashboardData
 })
+
+export const loadMemberPaymentsPage = cache(
+  async (
+    memberId: string,
+    pagination: PaginationParams
+  ): Promise<PaginatedResult<MembershipPayment> | null> => {
+    const session = await requireDashboardSession("/members")
+    const gym = await getOwnerGym(session.user.id)
+
+    if (!gym) {
+      return null
+    }
+
+    const total = await db.membershipPayment.count({
+      where: {
+        gymId: gym.id,
+        memberId,
+      },
+    })
+    const pageCount =
+      total === 0 ? 0 : Math.ceil(total / Math.max(1, pagination.pageSize))
+    const page =
+      pageCount === 0 ? 1 : Math.min(Math.max(1, pagination.page), pageCount)
+    const { skip, take } = getPrismaOffsetArgs({
+      page,
+      pageSize: pagination.pageSize,
+    })
+    const payments = await db.membershipPayment.findMany(
+      getMemberPaymentsPageQuery(gym.id, memberId, skip, take)
+    )
+
+    return {
+      rows: payments.map(mapMembershipPayment),
+      total,
+      page,
+      pageSize: take,
+      pageCount,
+    }
+  }
+)
+
+export const loadMemberAttendancePage = cache(
+  async (
+    memberId: string,
+    pagination: PaginationParams
+  ): Promise<PaginatedResult<AttendanceRecord> | null> => {
+    const session = await requireDashboardSession("/members")
+    const gym = await getOwnerGym(session.user.id)
+
+    if (!gym) {
+      return null
+    }
+
+    const total = await db.attendanceRecord.count({
+      where: {
+        gymId: gym.id,
+        memberId,
+      },
+    })
+    const pageCount =
+      total === 0 ? 0 : Math.ceil(total / Math.max(1, pagination.pageSize))
+    const page =
+      pageCount === 0 ? 1 : Math.min(Math.max(1, pagination.page), pageCount)
+    const { skip, take } = getPrismaOffsetArgs({
+      page,
+      pageSize: pagination.pageSize,
+    })
+    const attendance = await db.attendanceRecord.findMany(
+      getMemberAttendancePageQuery(gym.id, memberId, skip, take)
+    )
+
+    return {
+      rows: attendance.map(mapAttendanceRecord),
+      total,
+      page,
+      pageSize: take,
+      pageCount,
+    }
+  }
+)
 
 async function requireOwnerGym(
   nextPath: DashboardRouteHref
