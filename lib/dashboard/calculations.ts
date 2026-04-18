@@ -1,9 +1,4 @@
-import type {
-  DashboardData,
-  MemberWithMembership,
-  Membership,
-  MembershipPayment,
-} from "@/lib/dashboard/types"
+import type { Membership } from "@/lib/dashboard/types"
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000
 
@@ -33,46 +28,6 @@ export function getExpiringMemberships(
         : monthlyWindowDays
 
     return daysRemaining >= 0 && daysRemaining <= windowDays
-  })
-}
-
-export function getOverduePayments(
-  payments: MembershipPayment[],
-  asOf = new Date()
-) {
-  return payments.filter((payment) => {
-    return (
-      payment.status === "OVERDUE" ||
-      (payment.status === "PENDING" && new Date(payment.dueAt) < asOf)
-    )
-  })
-}
-
-export function getMembersWithMemberships(
-  data: DashboardData
-): MemberWithMembership[] {
-  const membershipByMemberId = new Map(
-    data.memberships.map((membership) => [membership.memberId, membership])
-  )
-  const planById = new Map(data.planTiers.map((plan) => [plan.id, plan]))
-  const attendanceCountByMemberId = new Map<string, number>()
-
-  for (const record of data.attendance) {
-    attendanceCountByMemberId.set(
-      record.memberId,
-      (attendanceCountByMemberId.get(record.memberId) ?? 0) + 1
-    )
-  }
-
-  return data.members.map((member) => {
-    const membership = membershipByMemberId.get(member.id)
-
-    return {
-      ...member,
-      membership,
-      planTier: membership ? planById.get(membership.planTierId) : undefined,
-      sessionsAttended: attendanceCountByMemberId.get(member.id) ?? 0,
-    }
   })
 }
 

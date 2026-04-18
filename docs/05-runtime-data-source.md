@@ -3,19 +3,19 @@
 Status: Active — applies to the database-backed dashboard milestone.
 
 The dashboard routes use authenticated, owner-scoped database reads at runtime.
-Mock dashboard data remains available for tests and calculation fixtures only.
+Mock dashboard data is no longer used as a runtime or test fixture.
 
 ## Runtime Reads
 
 Dashboard pages load data through route-specific server loaders in
 `lib/dashboard/loaders.ts`.
 
-| Route            | Loader                                          | Primary records                                        |
-| ---------------- | ----------------------------------------------- | ------------------------------------------------------ |
-| `/`              | `loadOverviewSummary()`, `loadOverviewAlerts()` | Gym, aggregate counts/sums, capped alert rows          |
-| `/members`       | `loadMembersDashboardData()`                    | Gym, plans, members, memberships, payments, attendance |
-| `/subscriptions` | `loadSubscriptionsSummaryDashboardData()`       | Gym, plans, aggregate subscription summary             |
-| `/drop-ins`      | `loadDropInsSummaryDashboardData()`             | Gym, aggregate drop-in summary, paginated drop-ins     |
+| Route            | Loader                                          | Primary records                                      |
+| ---------------- | ----------------------------------------------- | ---------------------------------------------------- |
+| `/`              | `loadOverviewSummary()`, `loadOverviewAlerts()` | Gym, aggregate counts/sums, capped alert rows        |
+| `/members`       | `loadMemberRosterPage()`                        | Gym, plans, paginated members with per-member counts |
+| `/subscriptions` | `loadSubscriptionSummary()`                     | Gym, plans, aggregate subscription summary           |
+| `/drop-ins`      | `loadDropInSummary()`, `loadDropInLogPage()`    | Gym, aggregate drop-in summary, paginated drop-ins   |
 
 Each loader requires a dashboard session before reading gym data. The owner gym
 is selected through `Gym.ownerId`, and all route data is scoped to that gym.
@@ -43,17 +43,16 @@ This keeps the UI on stable dashboard types while Prisma models remain the
 database contract. Date values are serialized to ISO strings before reaching
 client components.
 
-## Mock Data
+## Empty States
 
-`lib/dashboard/mock-data.ts` is test-only fixture data. Runtime pages must not
-fall back to mocks when the database is empty, unavailable, or unauthenticated.
-Instead:
+Runtime pages must not fall back to mocks when the database is empty,
+unavailable, or unauthenticated. Instead:
 
 - Unauthenticated users redirect to `/sign-in`.
 - Authenticated users without an owner gym see the no-gym empty state.
 - Empty database tables render route-specific empty states.
 
-Use the seed data for local runtime verification instead of mock data. See
+Use the seed data for local runtime verification. See
 `docs/04-local-database-and-seed.md` for setup and reset commands.
 
 ## Related Handoff Docs
@@ -62,3 +61,5 @@ Use the seed data for local runtime verification instead of mock data. See
   and member account scope.
 - `docs/04-local-database-and-seed.md` documents local Postgres setup, demo
   owner credentials, and seed coverage.
+- `docs/09-runtime-performance-cleanup.md` documents the removed legacy
+  full-load paths after pagination and aggregation landed.

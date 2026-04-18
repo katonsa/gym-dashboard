@@ -1,4 +1,4 @@
-import { parsePaginationParams, type DashboardData } from "@/lib/dashboard"
+import { parsePaginationParams, type DropInVisit } from "@/lib/dashboard"
 import { loadDropInSummary, loadDropInLogPage } from "@/lib/dashboard/loaders"
 import { PaginationNav } from "@/components/ui/pagination-nav"
 import { DropInEntryForm } from "./drop-in-entry-form"
@@ -377,7 +377,7 @@ function DropInsEmptyState({
 }
 
 function getDropInRows(
-  dropIns: DashboardData["dropIns"],
+  dropIns: DropInVisit[],
   currentDate: Date,
   moneyFormatter: Intl.NumberFormat
 ): DropInRow[] {

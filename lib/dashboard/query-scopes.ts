@@ -106,14 +106,6 @@ export function getPlanTiersQuery(gymId: string) {
   }
 }
 
-export function getMembersQuery(gymId: string) {
-  return {
-    where: { gymId },
-    orderBy: [{ lastName: ascending }, { firstName: ascending }],
-    select: memberSelect,
-  }
-}
-
 export function getMemberRosterPageWhere(
   gymId: string,
   filters: MemberRosterFilters,
@@ -195,74 +187,6 @@ export function getMemberRosterPageQuery(
         },
       },
     },
-  }
-}
-
-export function getOverviewMembersQuery(gymId: string) {
-  return {
-    where: { gymId },
-    orderBy: [
-      { status: ascending },
-      { lastName: ascending },
-      { firstName: ascending },
-    ],
-    select: memberSelect,
-  }
-}
-
-export function getMembershipsQuery(gymId: string) {
-  return {
-    where: { member: { gymId } },
-    orderBy: [{ status: ascending }, { nextBillingDate: ascending }],
-    select: membershipSelect,
-  }
-}
-
-export function getOverviewMembershipsQuery(gymId: string) {
-  return {
-    where: { member: { gymId } },
-    orderBy: [{ status: ascending }, { currentPeriodEndsAt: ascending }],
-    select: membershipSelect,
-  }
-}
-
-export function getSubscriptionMembershipsQuery(gymId: string) {
-  return {
-    where: { member: { gymId } },
-    orderBy: [{ status: ascending }, { startedAt: descending }],
-    select: membershipSelect,
-  }
-}
-
-export function getMembershipPaymentsQuery(gymId: string) {
-  return {
-    where: { gymId },
-    orderBy: [{ dueAt: descending }],
-    select: membershipPaymentSelect,
-  }
-}
-
-export function getOverviewMembershipPaymentsQuery(gymId: string) {
-  return {
-    where: { gymId },
-    orderBy: [{ dueAt: ascending }],
-    select: membershipPaymentSelect,
-  }
-}
-
-export function getAttendanceRecordsQuery(gymId: string) {
-  return {
-    where: { gymId },
-    orderBy: [{ attendedAt: descending }],
-    select: attendanceRecordSelect,
-  }
-}
-
-export function getDropInVisitsQuery(gymId: string) {
-  return {
-    where: { gymId },
-    orderBy: [{ visitedAt: descending }],
-    select: dropInVisitSelect,
   }
 }
 

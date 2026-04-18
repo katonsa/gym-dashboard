@@ -1,6 +1,6 @@
 # Pagination Plan
 
-Status: Pending.
+Status: Complete.
 
 Add server-side pagination to every unbounded list: the member roster, the drop-in log, and the member detail payment/attendance histories.
 
@@ -10,24 +10,24 @@ Every list currently loads all rows with `findMany` and no `take` limit. At the 
 
 ## What Gets Paginated
 
-| List | Route | Current behavior | Proposed behavior |
-|------|-------|-----------------|-------------------|
-| **Member roster** | `/members` | All members loaded server-side, filtered client-side | Server-side search, filter, and offset pagination |
-| **Drop-in log** | `/drop-ins` | All drop-ins loaded, rendered as cards/table | Server-side offset pagination |
-| **Payment history** | `/members/[id]` | All payments for that member, rendered as list | Server-side offset pagination |
-| **Attendance log** | `/members/[id]` | All records loaded, client sliced to 20 | Server-side offset pagination with correct total count |
-| **Membership history** | `/members/[id]` | All memberships for that member | No pagination — a member will have at most a handful of memberships |
+| List                   | Route           | Original behavior                                    | Current behavior                                                    |
+| ---------------------- | --------------- | ---------------------------------------------------- | ------------------------------------------------------------------- |
+| **Member roster**      | `/members`      | All members loaded server-side, filtered client-side | Server-side search, filter, and offset pagination                   |
+| **Drop-in log**        | `/drop-ins`     | All drop-ins loaded, rendered as cards/table         | Server-side offset pagination                                       |
+| **Payment history**    | `/members/[id]` | All payments for that member, rendered as list       | Server-side offset pagination                                       |
+| **Attendance log**     | `/members/[id]` | All records loaded, client sliced to 20              | Server-side offset pagination with correct total count              |
+| **Membership history** | `/members/[id]` | All memberships for that member                      | No pagination — a member will have at most a handful of memberships |
 
-## What Must NOT Be Paginated
+## Aggregate Inputs
 
-These loaders feed into aggregate calculations (MRR, alerts, revenue trends, plan breakdown). They must continue loading all rows:
+The display lists are paginated. Summary data is not derived from paginated
+lists; it is loaded through database aggregates:
 
-| Loader | Why |
-|--------|-----|
-| `loadOverviewDashboardData` | Computes MRR, alerts, and summary stats from the full dataset |
-| `loadSubscriptionsDashboardData` | Computes plan breakdown and 6-month revenue trend from all memberships and drop-ins |
-| Overview drop-in and payment queries | Feed into `getDashboardSummary` and `getDashboardAlerts` |
-| Summary stats on `/drop-ins` | Daily total, monthly total, and frequent visitor detection need all current-month rows |
+| Loader                                             | Why                                                                              |
+| -------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `loadOverviewSummary()` and `loadOverviewAlerts()` | Computes overview stats and capped alert rows with aggregate/bounded queries     |
+| `loadSubscriptionSummary()`                        | Computes plan breakdown and revenue trend with aggregate queries                 |
+| `loadDropInSummary()`                              | Computes daily total, monthly total, and conversion leads with aggregate queries |
 
 The pagination constraint is: **only paginate the display list, never the calculation inputs.**
 
@@ -40,11 +40,13 @@ The pagination constraint is: **only paginate the display list, never the calcul
 Use `?page=1` (and filter params like `?status=ACTIVE&plan=Pro`) as query params. This keeps every paginated view shareable, bookmarkable, and consistent with the Server Component architecture.
 
 **Why offset, not cursor:**
+
 - Lists have stable, human-readable page numbers.
 - The data rarely changes between pages during a single session.
 - Cursor pagination is more complex and adds no benefit at this scale.
 
 **Why server-side for all lists (including member roster):**
+
 - Consistent pattern — one pagination approach across the entire app.
 - Scales past 200 members without a rewrite.
 - Search and filters become URL-based — shareable, bookmarkable, and survive page refreshes.
@@ -79,23 +81,30 @@ Use `?page=1` (and filter params like `?status=ACTIVE&plan=Pro`) as query params
 
 ### Member roster pagination
 
-The member roster is currently a client component (`MemberRoster`) that receives all `MemberRosterRow[]` and filters/searches client-side. This section converts it to server-side search, filter, and pagination.
+The member roster was originally a client component (`MemberRoster`) that
+received all `MemberRosterRow[]` and filtered/searched client-side. This section
+converted it to server-side search, filter, and pagination.
 
 #### Move filters to URL search params
 
-The roster currently uses React state for search query, status filter, plan filter, and billing risk filter. Move all of these to URL search params so the server can apply them at the Prisma level:
+The roster originally used React state for search query, status filter, plan
+filter, and billing risk filter. These now live in URL search params so the
+server can apply them at the Prisma level:
 
-| Current client state | New URL param | Values |
-|---------------------|---------------|--------|
-| `query` (text search) | `q` | Free text |
-| `status` filter | `status` | `all`, `ACTIVE`, `INACTIVE`, `SUSPENDED` |
-| `plan` filter | `plan` | `all`, or a plan tier name |
-| `risk` filter | `risk` | `all`, `overdue`, `expiring`, `clear` |
-| (new) page | `page` | Integer >= 1 |
+| Current client state  | New URL param | Values                                   |
+| --------------------- | ------------- | ---------------------------------------- |
+| `query` (text search) | `q`           | Free text                                |
+| `status` filter       | `status`      | `all`, `ACTIVE`, `INACTIVE`, `SUSPENDED` |
+| `plan` filter         | `plan`        | `all`, or a plan tier name               |
+| `risk` filter         | `risk`        | `all`, `overdue`, `expiring`, `clear`    |
+| (new) page            | `page`        | Integer >= 1                             |
 
 #### Compute billing risk per-member at query time
 
-The current `buildMemberRosterRows` computes billing risk by scanning ALL payments and ALL memberships to build `overdueMemberIds` and `expiringMemberIds` Sets, then checking each member against those Sets.
+The original `buildMemberRosterRows` computed billing risk by scanning ALL
+payments and ALL memberships to build `overdueMemberIds` and
+`expiringMemberIds` Sets, then checking each member against those Sets. That
+legacy builder has been removed.
 
 Replace this with a per-member approach:
 
@@ -144,12 +153,12 @@ Replace this with a per-member approach:
 
 **Changes:**
 
-| File | Change |
-|------|--------|
-| `lib/dashboard/loaders.ts` | Add `loadMemberRosterPage(gymId, filters, pagination)` |
-| `lib/dashboard/query-scopes.ts` | Add `getMemberRosterPageQuery(gymId, filters, skip, take)` |
-| `lib/dashboard/member-roster.ts` | Simplify or replace `buildMemberRosterRows` — billing risk comes from per-member included data, not global Sets |
-| `app/(dashboard)/members/page.tsx` | Parse search params, call paginated loader, pass results to roster |
+| File                                        | Change                                                                                                       |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `lib/dashboard/loaders.ts`                  | Add `loadMemberRosterPage(gymId, filters, pagination)`                                                       |
+| `lib/dashboard/query-scopes.ts`             | Add `getMemberRosterPageQuery(gymId, filters, skip, take)`                                                   |
+| `lib/dashboard/member-roster.ts`            | Replace `buildMemberRosterRows` — billing risk comes from per-member included data, not global Sets          |
+| `app/(dashboard)/members/page.tsx`          | Parse search params, call paginated loader, pass results to roster                                           |
 | `app/(dashboard)/members/member-roster.tsx` | Remove client-side filter state; read filters from props; render pagination; filter changes navigate via URL |
 
 ---
@@ -158,7 +167,7 @@ Replace this with a per-member approach:
 
 The drop-in log displays all visits but the summary stats (daily total, monthly total, frequent visitors) need the full dataset. Split the concern:
 
-- [x] Keep loading all drop-ins in `loadDropInsDashboardData` for summary calculations.
+- [x] Keep drop-in summary calculations separate from the display list via `loadDropInSummary`.
 - [x] Add a separate paginated query for the display list.
 
 The drop-in log has no filtering — it renders all rows newest-first. Paginate at the query level:
@@ -166,22 +175,23 @@ The drop-in log has no filtering — it renders all rows newest-first. Paginate 
 - [x] Add `loadDropInLogPage(gymId, page, pageSize)` to `loaders.ts`
   - Uses `skip` and `take` with `orderBy: visitedAt desc`.
   - Returns `PaginatedResult<DropInVisit>`.
-  - Runs alongside the existing full `loadDropInsDashboardData` query (for summary stats).
+  - Runs alongside `loadDropInSummary` for summary stats.
 - [x] Update `drop-ins/page.tsx`
   - Accept `searchParams` and parse `page`.
   - Pass the paginated rows to the display list.
-  - Pass the full drop-ins to summary/frequent visitor calculations (unchanged).
+  - Pass aggregate summary data to summary/frequent visitor sections.
   - Render `PaginationNav` below the log table.
 
 > [!NOTE]
-> The drop-ins page runs two queries: one full load for summaries and one paginated for display. This is acceptable because the summary query is a read-only scan for aggregation, while the display query is bounded by `take: 25`. If drop-in volume grows very large (10k+), consider replacing the full summary query with database-level aggregates (`SUM`, `COUNT`, `GROUP BY`) instead of loading all rows.
+> The drop-ins page now runs aggregate queries for summaries and a separate
+> bounded query for the display list.
 
 **Changes:**
 
-| File | Change |
-|------|--------|
-| `lib/dashboard/loaders.ts` | Add `loadDropInLogPage` loader |
-| `lib/dashboard/query-scopes.ts` | Add `getDropInVisitsPageQuery(gymId, skip, take)` |
+| File                                | Change                                                                                                              |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `lib/dashboard/loaders.ts`          | Add `loadDropInLogPage` loader                                                                                      |
+| `lib/dashboard/query-scopes.ts`     | Add `getDropInVisitsPageQuery(gymId, skip, take)`                                                                   |
 | `app/(dashboard)/drop-ins/page.tsx` | Parse `searchParams.page`, use paginated rows for display, keep full rows for summaries, render pagination controls |
 
 ---
@@ -218,7 +228,7 @@ The attendance log currently loads all records and slices to 20 client-side. Rep
 
 ## Constraints
 
-- Do not paginate data that feeds into aggregate calculations (MRR, alerts, plan breakdown, revenue trend, summary stats).
+- Do not derive aggregate calculations (MRR, alerts, plan breakdown, revenue trend, summary stats) from paginated display rows.
 - All pagination uses server-side queries with `skip`/`take` at the Prisma level.
 - Pagination controls are server-rendered links (`<Link>`), not client-side buttons.
 - Member roster search and filters are URL search params, not client state: `?q=John&status=ACTIVE&plan=Pro&risk=overdue&page=2`.
@@ -229,18 +239,18 @@ The attendance log currently loads all records and slices to 20 client-side. Rep
 
 ## Verification
 
-- [ ] `npm run typecheck`
-- [ ] `npm run lint`
-- [ ] `npm run build`
-- [ ] Member roster: page through members with filters active; filter change resets to page 1; search works via URL; billing risk badges are correct per-member.
-- [ ] Member roster: bookmark a filtered + paginated URL, reload — same results appear.
-- [ ] Drop-in log: page through drop-ins; summary stats remain correct across all pages.
-- [ ] Member detail payments: page through payment history; page 1 shows the most recent payments.
-- [ ] Member detail attendance: page through attendance; total count in header matches full record count.
-- [ ] All pagination controls are usable on mobile (44px targets).
-- [ ] Page 1 with no `?page=` param shows the same result as `?page=1`.
-- [ ] Invalid page values (0, -1, 999, "abc") fall back to page 1 without error.
-- [ ] Empty lists show empty states, not pagination controls.
+- [x] `npm run typecheck`
+- [x] `npm run lint`
+- [x] `npm run build`
+- [x] Member roster: page through members with filters active; filter change resets to page 1; search works via URL; billing risk badges are correct per-member.
+- [x] Member roster: bookmark a filtered + paginated URL, reload — same results appear.
+- [x] Drop-in log: page through drop-ins; summary stats remain correct across all pages.
+- [x] Member detail payments: page through payment history; page 1 shows the most recent payments.
+- [x] Member detail attendance: page through attendance; total count in header matches full record count.
+- [x] All pagination controls are usable on mobile (44px targets).
+- [x] Page 1 with no `?page=` param shows the same result as `?page=1`.
+- [x] Invalid page values (0, -1, 999, "abc") fall back to page 1 without error.
+- [x] Empty lists show empty states, not pagination controls.
 
 ## Suggested execution order
 
@@ -255,4 +265,4 @@ The attendance log currently loads all records and slices to 20 client-side. Rep
 - Infinite scroll or "load more" patterns — URL-based pagination is simpler and shareable.
 - Configurable page size UI — fixed page sizes are sufficient.
 - Paginating the overview or subscriptions pages — their lists are bounded by plan tier count and month count.
-- Replacing summary aggregations with database-level `SUM`/`COUNT` — acceptable optimization for the future but not needed at current scale.
+- Replacing summary aggregations with database-level `SUM`/`COUNT` — completed in the database aggregation plan.

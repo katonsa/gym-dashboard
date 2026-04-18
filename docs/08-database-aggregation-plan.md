@@ -528,7 +528,7 @@ This replaces loading all drop-ins into JS and grouping them with a `Map`.
 The current `calculations.ts` contains two kinds of functions:
 
 1. **Aggregation functions** (counts, sums, grouping) — these move to `aggregates.ts` as database queries.
-2. **Pure logic and formatters** (`getDaysBetween`, `isSameMonth`, `formatMemberName`) — these stay.
+2. **Pure logic** still used by non-aggregate page behavior can stay.
 
 After migration:
 
@@ -547,12 +547,10 @@ After migration:
 | `getDashboardSummary`              | → becomes `loadOverviewSummary` (calls aggregates)                                |
 | `getDashboardAlerts`               | → becomes `loadOverviewAlerts` (calls bounded queries)                            |
 
-`calculations.ts` is now much thinner. It keeps the pure helpers still consumed
-by the member roster/detail paths:
+`calculations.ts` is now much thinner. It keeps the pure helper still consumed
+by the member detail path:
 
 - `getExpiringMemberships`
-- `getOverduePayments`
-- `getMembersWithMemberships`
 
 The old pure JS summary aggregation helpers and their tests were removed.
 Aggregate query behavior is covered by mock/query-shape tests in
@@ -567,9 +565,9 @@ The `DashboardData` type was designed as a "load everything into a bag, then com
 - The **overview page** no longer builds a `DashboardData` — it calls `loadOverviewSummary` and `loadOverviewAlerts` directly.
 - The **subscriptions page** no longer builds a `SubscriptionsDashboardData` with all memberships/payments/dropIns — it calls `loadSubscriptionSummary` directly.
 - The **drop-ins page** no longer loads all drop-ins for summaries — it calls `loadDropInSummary` directly.
-- The **members page** changes depend on the pagination plan (server-side roster pagination replaces the full load).
+- The **members page** uses server-side roster pagination and no longer builds a full `DashboardData` bag.
 
-`DashboardData` may survive as a type used only by the member roster builder and tests, or it may be removed entirely once pagination is also done.
+`DashboardData` was removed after the pagination cleanup.
 
 > [!IMPORTANT]
 > This plan and the pagination plan (doc 07) are complementary but independent. Either can be done first. If pagination is done first, the overview/subscriptions pages still load all data for summaries (acceptable for now). If aggregates are done first, the display lists still load all rows for rendering (acceptable for now). Doing both eliminates all unbounded full-table loads.

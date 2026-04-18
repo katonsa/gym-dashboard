@@ -151,12 +151,6 @@ export type DashboardAlert = {
   dueAt?: DateString
 }
 
-export type MemberWithMembership = Member & {
-  membership?: Membership
-  planTier?: PlanTier
-  sessionsAttended: number
-}
-
 export type DashboardSummary = {
   asOf: DateString
   currencyCode: CurrencyCode
@@ -172,14 +166,4 @@ export type DashboardSummary = {
   overduePaymentsCount: number
   inactiveMembersCount: number
   dropInConversionOpportunitiesCount: number
-}
-
-export type DashboardData = {
-  gym: GymProfile
-  planTiers: PlanTier[]
-  members: Member[]
-  memberships: Membership[]
-  payments: MembershipPayment[]
-  attendance: AttendanceRecord[]
-  dropIns: DropInVisit[]
 }

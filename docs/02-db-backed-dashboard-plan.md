@@ -1,8 +1,9 @@
 # Database-Backed Dashboard Plan
 
-Status: In progress.
+Status: Complete.
 
-The current dashboard UI is mostly built, but the visible data still comes from `mockDashboardData`. The next milestone is to connect the existing pages to the Prisma schema and database behind authentication.
+The dashboard UI is connected to authenticated, owner-scoped Prisma reads and
+writes. Mock dashboard data has been removed from the runtime and test paths.
 
 ## Goal
 
@@ -116,8 +117,8 @@ The first version should remain read-only except for explicitly scoped owner/adm
 - [x] Add route-specific database loaders
   - Use shared auth, ownership, and mapping helpers.
   - Use route-specific database loaders to avoid overfetching.
-  - Let the overview route load the combined data it needs for summary stats and alerts.
-  - Keep mock data for tests only.
+  - Let the overview route load aggregate summary stats and bounded alert rows.
+  - Remove mock data from runtime and tests.
   - Avoid silently mixing mock data with real database data.
 
 ## Phase 3: Seed And Local Data
@@ -284,7 +285,7 @@ The first version should remain read-only except for explicitly scoped owner/adm
   - [x] Document auth assumptions.
   - [x] Document owner account provisioning.
   - [x] Document seed data coverage.
-  - [x] Document runtime data source and test-only mock data.
+  - [x] Document runtime data sources and empty-state behavior.
 
 ## Resolved Decisions
 
@@ -308,7 +309,7 @@ The first version should remain read-only except for explicitly scoped owner/adm
 - `priceAmount` on `Membership` stores the full interval amount (monthly or annual). MRR calculations divide annual amounts by 12 at display time.
 - Seed data must include a usable demo owner login for local development.
 - Seed accounts should be created through Better Auth's API when possible, not by inserting raw password hashes.
-- Mock data should remain available for tests only, not as runtime fallback.
+- Mock data should not be used as runtime fallback.
 - Seed data should cover the same scenarios as the current mock data, but does not need to exactly mirror it.
 - `PlanTierName` should be widened to `string` so the dashboard accepts any plan name from the database.
 - Server actions return `{ success: boolean, error?: string }` and map internal errors to plain-language messages.

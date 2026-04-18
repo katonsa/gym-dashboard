@@ -34,23 +34,19 @@ import {
 } from "@/lib/dashboard/pagination"
 import { getOwnerGym } from "@/lib/dashboard/owner-gym"
 import {
-  getAttendanceRecordsQuery,
   getDropInVisitsPageQuery,
   getMemberRosterPageQuery,
   getMemberRosterPageWhere,
   getMemberAttendancePageQuery,
   getMemberPaymentsPageQuery,
-  getMembersQuery,
-  getMembershipPaymentsQuery,
-  getMembershipsQuery,
   getPlanTiersQuery,
 } from "@/lib/dashboard/query-scopes"
 import type {
   AttendanceRecord,
   DashboardAlert,
-  DashboardData,
   DashboardRouteHref,
   DashboardSummary,
+  DropInVisit,
   GymProfile,
   Member,
   Membership,
@@ -65,11 +61,6 @@ export type OverviewSummaryDashboardData = {
   summary: DashboardSummary
   setupState: OverviewSetupState
 }
-
-export type MembersDashboardData = Pick<
-  DashboardData,
-  "gym" | "planTiers" | "members" | "memberships" | "payments" | "attendance"
->
 
 export type MemberRosterPageData = {
   gym: GymProfile
@@ -137,32 +128,6 @@ export const loadOverviewAlerts = cache(
     return getOverviewAlerts(gym.id, gym.currencyCode, options, aggregateDb)
   }
 )
-
-export const loadMembersDashboardData = cache(async () => {
-  const gym = await requireOwnerGym("/members")
-
-  if (!gym) {
-    return null
-  }
-
-  const [planTiers, members, memberships, payments, attendance] =
-    await Promise.all([
-      db.planTier.findMany(getPlanTiersQuery(gym.id)),
-      db.member.findMany(getMembersQuery(gym.id)),
-      db.membership.findMany(getMembershipsQuery(gym.id)),
-      db.membershipPayment.findMany(getMembershipPaymentsQuery(gym.id)),
-      db.attendanceRecord.findMany(getAttendanceRecordsQuery(gym.id)),
-    ])
-
-  return {
-    gym,
-    planTiers: planTiers.map(mapPlanTier),
-    members: members.map(mapMember),
-    memberships: memberships.map(mapMembership),
-    payments: payments.map(mapMembershipPayment),
-    attendance: attendance.map(mapAttendanceRecord),
-  } satisfies MembersDashboardData
-})
 
 export const loadMemberRosterPage = cache(
   async (
@@ -254,7 +219,7 @@ export const loadDropInSummary = cache(
 export const loadDropInLogPage = cache(
   async (
     pagination: PaginationParams
-  ): Promise<PaginatedResult<DashboardData["dropIns"][number]> | null> => {
+  ): Promise<PaginatedResult<DropInVisit> | null> => {
     const gym = await requireOwnerGym("/drop-ins")
 
     if (!gym) {
