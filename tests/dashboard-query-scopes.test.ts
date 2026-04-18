@@ -7,6 +7,8 @@ import {
   getDropInVisitsQuery,
   getMemberAttendancePageQuery,
   getMemberPaymentsPageQuery,
+  getMemberRosterPageQuery,
+  getMemberRosterPageWhere,
   getMembersQuery,
   getMembershipPaymentsQuery,
   getMembershipsQuery,
@@ -113,4 +115,28 @@ test("builds stable paginated member detail queries", () => {
       notes: true,
     },
   })
+})
+
+test("builds member roster filters and paginated query", () => {
+  const asOf = new Date("2026-04-16T00:00:00.000Z")
+  const where = getMemberRosterPageWhere(
+    "gym-1",
+    {
+      q: "ari",
+      status: "ACTIVE",
+      plan: "Pro",
+      risk: "clear",
+    },
+    asOf
+  )
+
+  assert.equal(where.gymId, "gym-1")
+  assert.deepEqual(getMemberRosterPageQuery(where, 50, 25, asOf).orderBy, [
+    { lastName: "asc" },
+    { firstName: "asc" },
+    { id: "asc" },
+  ])
+  assert.equal(getMemberRosterPageQuery(where, 50, 25, asOf).skip, 50)
+  assert.equal(getMemberRosterPageQuery(where, 50, 25, asOf).take, 25)
+  assert.ok(where.AND)
 })

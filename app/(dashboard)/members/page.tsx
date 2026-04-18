@@ -1,10 +1,26 @@
-import { buildMemberRosterRows } from "@/lib/dashboard/member-roster"
-import { loadMembersDashboardData } from "@/lib/dashboard/loaders"
-import type { DashboardData } from "@/lib/dashboard"
+import {
+  parseMemberRosterFilters,
+} from "@/lib/dashboard/member-roster"
+import { loadMemberRosterPage } from "@/lib/dashboard/loaders"
+import { parsePaginationParams } from "@/lib/dashboard"
 import { MemberRoster } from "./member-roster"
 
-export default async function MembersPage() {
-  const membersData = await loadMembersDashboardData()
+type MembersPageProps = {
+  searchParams: Promise<{
+    q?: string | string[]
+    status?: string | string[]
+    plan?: string | string[]
+    risk?: string | string[]
+    page?: string | string[]
+  }>
+}
+
+export default async function MembersPage({ searchParams }: MembersPageProps) {
+  const resolvedSearchParams = await searchParams
+  const asOf = new Date()
+  const filters = parseMemberRosterFilters(resolvedSearchParams)
+  const pagination = await parsePaginationParams(resolvedSearchParams)
+  const membersData = await loadMemberRosterPage(filters, pagination, asOf)
 
   if (!membersData) {
     return (
@@ -15,26 +31,28 @@ export default async function MembersPage() {
     )
   }
 
-  const asOf = new Date()
-  const dashboardData = {
-    ...membersData,
-    dropIns: [],
-  } satisfies DashboardData
-  const memberRows = buildMemberRosterRows(dashboardData, asOf)
   const planNames = Array.from(
     new Set([
       ...membersData.planTiers.map((plan) => plan.name),
-      ...memberRows.map((member) => member.planName),
+      "No plan",
+      filters.plan !== "all" ? filters.plan : null,
     ])
   )
-    .filter((planName) => planName !== "No plan")
+    .filter((planName): planName is string => Boolean(planName))
     .sort((left, right) => left.localeCompare(right))
 
   return (
     <MemberRoster
-      members={memberRows}
+      members={membersData.members.rows}
       planTiers={membersData.planTiers}
       planNames={planNames}
+      filters={filters}
+      pagination={{
+        page: membersData.members.page,
+        pageCount: membersData.members.pageCount,
+      }}
+      totalMatchingMembers={membersData.members.total}
+      totalMembers={membersData.totalMembers}
       asOfLabel={formatDashboardDate(asOf, membersData.gym.timezone)}
       initialJoinDate={formatDateInput(asOf, membersData.gym.timezone)}
     />

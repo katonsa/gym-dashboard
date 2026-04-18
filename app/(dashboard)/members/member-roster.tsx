@@ -1,27 +1,24 @@
 "use client"
 
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import * as React from "react"
 import { Search } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import type {
-  MemberStatus,
-  MembershipStatus,
-  PlanTier,
-  PlanTierName,
-} from "@/lib/dashboard"
+import { PaginationNav } from "@/components/ui/pagination-nav"
+import type { MemberStatus, MembershipStatus, PlanTier } from "@/lib/dashboard"
 import type {
   BillingRisk,
   MemberRosterRow,
+  MemberRosterFilters,
+  PlanFilter,
+  RiskFilter,
+  StatusFilter,
 } from "@/lib/dashboard/member-roster"
 import { cn } from "@/lib/utils"
 import { MemberCreateForm } from "./member-create-form"
 import { MemberStatusAction } from "./member-status-action"
-
-type StatusFilter = "all" | MemberStatus
-type PlanFilter = "all" | PlanTierName
-type RiskFilter = "all" | BillingRisk
 
 const statusOptions: StatusFilter[] = ["all", "ACTIVE", "INACTIVE", "SUSPENDED"]
 const riskOptions: RiskFilter[] = ["all", "overdue", "expiring", "clear"]
@@ -42,65 +39,73 @@ export function MemberRoster({
   members,
   planTiers,
   planNames,
+  filters,
+  pagination,
+  totalMatchingMembers,
+  totalMembers,
   asOfLabel,
   initialJoinDate,
 }: {
   members: MemberRosterRow[]
   planTiers: PlanTier[]
   planNames: string[]
+  filters: MemberRosterFilters
+  pagination: {
+    page: number
+    pageCount: number
+  }
+  totalMatchingMembers: number
+  totalMembers: number
   asOfLabel: string
   initialJoinDate: string
 }) {
-  const [query, setQuery] = React.useState("")
-  const [status, setStatus] = React.useState<StatusFilter>("all")
-  const [plan, setPlan] = React.useState<PlanFilter>("all")
-  const [risk, setRisk] = React.useState<RiskFilter>("all")
+  const router = useRouter()
+  const [query, setQuery] = React.useState(filters.q)
   const [actionMessage, setActionMessage] = React.useState("")
 
-  const filteredMembers = React.useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase()
-
-    return members.filter((member) => {
-      const matchesQuery =
-        normalizedQuery.length === 0 ||
-        member.name.toLowerCase().includes(normalizedQuery) ||
-        member.email.toLowerCase().includes(normalizedQuery) ||
-        member.phone.toLowerCase().includes(normalizedQuery)
-      const matchesStatus = status === "all" || member.status === status
-      const matchesPlan = plan === "all" || member.planName === plan
-      const matchesRisk = risk === "all" || member.billingRisk === risk
-
-      return matchesQuery && matchesStatus && matchesPlan && matchesRisk
-    })
-  }, [members, plan, query, risk, status])
-
-  const resetFilters = React.useCallback(() => {
-    setQuery("")
-    setStatus("all")
-    setPlan("all")
-    setRisk("all")
-  }, [])
+  React.useEffect(() => {
+    setQuery(filters.q)
+  }, [filters.q])
 
   const handleActionMessage = React.useCallback((message: string) => {
     setActionMessage(message)
   }, [])
+  const navigateFilters = React.useCallback(
+    (nextFilters: Partial<MemberRosterFilters>) => {
+      const href = getMemberRosterHref({
+        ...filters,
+        ...nextFilters,
+      })
+
+      router.push(href, { scroll: false })
+    },
+    [filters, router]
+  )
+  const handleSearchSubmit = React.useCallback(
+    (event: React.FormEvent<HTMLFormElement>) => {
+      event.preventDefault()
+      navigateFilters({ q: query.trim() })
+    },
+    [navigateFilters, query]
+  )
 
   const activeFiltersCount = [
-    query.trim().length > 0,
-    status !== "all",
-    plan !== "all",
-    risk !== "all",
+    filters.q.length > 0,
+    filters.status !== "all",
+    filters.plan !== "all",
+    filters.risk !== "all",
   ].filter(Boolean).length
   const planOptions = React.useMemo<PlanFilter[]>(
     () => ["all", ...planNames],
     [planNames]
   )
   const emptyState = getEmptyState({
-    totalMembers: members.length,
-    filteredMembers: filteredMembers.length,
-    hasSearch: query.trim().length > 0,
+    totalMembers,
+    filteredMembers: totalMatchingMembers,
+    hasSearch: filters.q.length > 0,
     activeFiltersCount,
   })
+  const preservedSearchParams = getPaginationSearchParams(filters)
 
   return (
     <div className="grid gap-5 lg:gap-6">
@@ -121,7 +126,7 @@ export function MemberRoster({
             Visible members
           </p>
           <p className="mt-1 text-2xl font-semibold">
-            {filteredMembers.length} of {members.length}
+            {totalMatchingMembers} of {totalMembers}
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
             {activeFiltersCount} active filters
@@ -138,7 +143,11 @@ export function MemberRoster({
         aria-labelledby="member-filters"
         className="rounded-lg border border-border bg-card p-3 text-card-foreground sm:p-4"
       >
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
+        <form
+          action="/members"
+          className="flex flex-col gap-3 lg:flex-row lg:items-end"
+          onSubmit={handleSearchSubmit}
+        >
           <div className="min-w-0 flex-1">
             <h2 id="member-filters" className="text-sm font-semibold">
               Find a member
@@ -147,6 +156,7 @@ export function MemberRoster({
               <Search className="size-4 shrink-0 text-muted-foreground" />
               <span className="sr-only">Search by name, email, or phone</span>
               <input
+                name="q"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="Name, email, or phone"
@@ -157,36 +167,43 @@ export function MemberRoster({
 
           <FilterSelect
             label="Status"
-            value={status}
+            name="status"
+            value={filters.status}
             options={statusOptions}
             formatOption={formatStatusFilter}
-            onChange={(value) => setStatus(value as StatusFilter)}
+            onChange={(value) =>
+              navigateFilters({ status: value as StatusFilter })
+            }
           />
           <FilterSelect
             label="Plan"
-            value={plan}
+            name="plan"
+            value={filters.plan}
             options={planOptions}
             formatOption={formatPlanFilter}
-            onChange={(value) => setPlan(value as PlanFilter)}
+            onChange={(value) => navigateFilters({ plan: value as PlanFilter })}
           />
           <FilterSelect
             label="Billing risk"
-            value={risk}
+            name="risk"
+            value={filters.risk}
             options={riskOptions}
             formatOption={formatRiskFilter}
-            onChange={(value) => setRisk(value as RiskFilter)}
+            onChange={(value) => navigateFilters({ risk: value as RiskFilter })}
           />
 
           <Button
-            type="button"
-            variant="outline"
+            type="submit"
+            variant="default"
             size="lg"
             className="min-h-11"
-            onClick={resetFilters}
           >
-            Reset
+            Search
           </Button>
-        </div>
+          <Button asChild variant="outline" size="lg" className="min-h-11">
+            <Link href="/members">Reset</Link>
+          </Button>
+        </form>
       </section>
 
       <section aria-labelledby="member-roster" className="grid gap-3">
@@ -207,10 +224,10 @@ export function MemberRoster({
           </p>
         </div>
 
-        {filteredMembers.length > 0 ? (
+        {members.length > 0 ? (
           <>
             <div className="grid gap-3 md:hidden">
-              {filteredMembers.map((member) => (
+              {members.map((member) => (
                 <MemberCard
                   key={member.id}
                   member={member}
@@ -233,7 +250,7 @@ export function MemberRoster({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {filteredMembers.map((member) => (
+                  {members.map((member) => (
                     <MemberTableRow
                       key={member.id}
                       member={member}
@@ -243,13 +260,19 @@ export function MemberRoster({
                 </tbody>
               </table>
             </div>
+            <PaginationNav
+              page={pagination.page}
+              pageCount={pagination.pageCount}
+              basePath="/members"
+              preservedSearchParams={preservedSearchParams}
+            />
           </>
         ) : (
           <MemberRosterEmptyState
             title={emptyState.title}
             detail={emptyState.detail}
             actionLabel={emptyState.canReset ? "Clear filters" : undefined}
-            onAction={emptyState.canReset ? resetFilters : undefined}
+            actionHref={emptyState.canReset ? "/members" : undefined}
           />
         )}
       </section>
@@ -261,26 +284,20 @@ function MemberRosterEmptyState({
   title,
   detail,
   actionLabel,
-  onAction,
+  actionHref,
 }: {
   title: string
   detail: string
   actionLabel?: string
-  onAction?: () => void
+  actionHref?: string
 }) {
   return (
     <div className="rounded-lg border border-border bg-card p-5 text-card-foreground">
       <p className="text-sm font-medium">{title}</p>
       <p className="mt-1 text-xs leading-5 text-muted-foreground">{detail}</p>
-      {actionLabel && onAction ? (
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="mt-4 min-h-11"
-          onClick={onAction}
-        >
-          {actionLabel}
+      {actionLabel && actionHref ? (
+        <Button asChild variant="outline" size="sm" className="mt-4 min-h-11">
+          <Link href={actionHref}>{actionLabel}</Link>
         </Button>
       ) : null}
     </div>
@@ -289,12 +306,14 @@ function MemberRosterEmptyState({
 
 function FilterSelect({
   label,
+  name,
   value,
   options,
   formatOption,
   onChange,
 }: {
   label: string
+  name: string
   value: string
   options: readonly string[]
   formatOption: (value: string) => string
@@ -304,6 +323,7 @@ function FilterSelect({
     <label className="grid min-w-40 gap-1 text-xs font-medium text-muted-foreground uppercase">
       {label}
       <select
+        name={name}
         value={value}
         onChange={(event) => onChange(event.target.value)}
         className="min-h-11 rounded-lg border border-input bg-background px-3 text-sm font-normal text-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
@@ -557,6 +577,39 @@ function getEmptyState({
     title: "No members yet.",
     detail: "Add member records to start tracking plans, renewals, and visits.",
     canReset: false,
+  }
+}
+
+function getMemberRosterHref(filters: MemberRosterFilters) {
+  const params = new URLSearchParams()
+
+  if (filters.q.length > 0) {
+    params.set("q", filters.q)
+  }
+
+  if (filters.status !== "all") {
+    params.set("status", filters.status)
+  }
+
+  if (filters.plan !== "all") {
+    params.set("plan", filters.plan)
+  }
+
+  if (filters.risk !== "all") {
+    params.set("risk", filters.risk)
+  }
+
+  const queryString = params.toString()
+
+  return queryString.length > 0 ? `/members?${queryString}` : "/members"
+}
+
+function getPaginationSearchParams(filters: MemberRosterFilters) {
+  return {
+    q: filters.q.length > 0 ? filters.q : undefined,
+    status: filters.status !== "all" ? filters.status : undefined,
+    plan: filters.plan !== "all" ? filters.plan : undefined,
+    risk: filters.risk !== "all" ? filters.risk : undefined,
   }
 }
 

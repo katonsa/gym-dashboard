@@ -9,7 +9,11 @@ import {
   getInactiveMembers,
   getOverduePayments,
 } from "../lib/dashboard/calculations.ts"
-import { buildMemberRosterRows } from "../lib/dashboard/member-roster.ts"
+import {
+  buildMemberRosterPageRows,
+  buildMemberRosterRows,
+  parseMemberRosterFilters,
+} from "../lib/dashboard/member-roster.ts"
 import type {
   DashboardData,
   DropInVisit,
@@ -184,6 +188,78 @@ test("builds member roster rows with overdue, expiring, and clear billing risk",
   )
 })
 
+test("builds paginated member roster rows from per-member query data", () => {
+  assert.deepEqual(
+    buildMemberRosterPageRows(
+      [
+        memberRosterPageMember({
+          id: "overdue-member",
+          _count: {
+            attendanceRecords: 12,
+            payments: 1,
+          },
+        }),
+        memberRosterPageMember({
+          id: "expiring-member",
+          firstName: "Bima",
+          lastName: "Expiring",
+          memberships: [
+            memberRosterMembership({
+              currentPeriodEndsAt: "2026-04-20T23:59:59.000+07:00",
+            }),
+          ],
+        }),
+        memberRosterPageMember({
+          id: "clear-member",
+          firstName: "Citra",
+          lastName: "Clear",
+          memberships: [
+            memberRosterMembership({
+              currentPeriodEndsAt: "2026-05-20T23:59:59.000+07:00",
+            }),
+          ],
+        }),
+      ],
+      asOf
+    ).map((row) => [row.id, row.sessionsAttended, row.billingRisk]),
+    [
+      ["overdue-member", 12, "overdue"],
+      ["expiring-member", 0, "expiring"],
+      ["clear-member", 0, "clear"],
+    ]
+  )
+})
+
+test("parses member roster filters from URL search params", () => {
+  assert.deepEqual(
+    parseMemberRosterFilters({
+      q: " Ari ",
+      status: "ACTIVE",
+      plan: "Pro",
+      risk: "overdue",
+    }),
+    {
+      q: "Ari",
+      status: "ACTIVE",
+      plan: "Pro",
+      risk: "overdue",
+    }
+  )
+
+  assert.deepEqual(
+    parseMemberRosterFilters({
+      status: "UNKNOWN",
+      risk: "bad",
+    }),
+    {
+      q: "",
+      status: "all",
+      plan: "all",
+      risk: "all",
+    }
+  )
+})
+
 test("detects inactive members with stale or missing attendance", () => {
   const members: Member[] = [
     member({
@@ -344,6 +420,50 @@ function dashboardData(overrides: Partial<DashboardData> = {}): DashboardData {
     payments: [],
     attendance: [],
     dropIns: [],
+    ...overrides,
+  }
+}
+
+type MemberRosterPageMemberFixture = Parameters<
+  typeof buildMemberRosterPageRows
+>[0][number]
+type MemberRosterMembershipFixture =
+  MemberRosterPageMemberFixture["memberships"][number]
+
+function memberRosterMembership(
+  overrides: Partial<MemberRosterMembershipFixture> = {}
+): MemberRosterMembershipFixture {
+  return {
+    id: "membership",
+    memberId: "member",
+    planTierId: "plan-basic",
+    billingInterval: "MONTHLY" as const,
+    status: "ACTIVE" as const,
+    currentPeriodEndsAt: "2026-05-01T23:59:59.000+07:00",
+    nextBillingDate: "2026-05-02T08:00:00.000+07:00",
+    planTier: {
+      name: "Basic",
+    },
+    ...overrides,
+  }
+}
+
+function memberRosterPageMember(
+  overrides: Partial<MemberRosterPageMemberFixture> = {}
+): MemberRosterPageMemberFixture {
+  return {
+    id: "member",
+    firstName: "Ari",
+    lastName: "Overdue",
+    email: "ari@example.com",
+    phone: "+62000000001",
+    status: "ACTIVE" as const,
+    joinDate: "2026-01-01T09:00:00.000+07:00",
+    memberships: [memberRosterMembership()],
+    _count: {
+      attendanceRecords: 0,
+      payments: 0,
+    },
     ...overrides,
   }
 }

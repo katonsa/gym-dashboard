@@ -12,6 +12,11 @@ import {
   mapPlanTier,
 } from "@/lib/dashboard/mappers"
 import {
+  buildMemberRosterPageRows,
+  type MemberRosterFilters,
+  type MemberRosterRow,
+} from "@/lib/dashboard/member-roster"
+import {
   getPrismaOffsetArgs,
   type PaginatedResult,
   type PaginationParams,
@@ -21,6 +26,8 @@ import {
   getAttendanceRecordsQuery,
   getDropInVisitsPageQuery,
   getDropInVisitsQuery,
+  getMemberRosterPageQuery,
+  getMemberRosterPageWhere,
   getMemberAttendancePageQuery,
   getMemberPaymentsPageQuery,
   getMembersQuery,
@@ -52,6 +59,13 @@ export type MembersDashboardData = Pick<
   DashboardData,
   "gym" | "planTiers" | "members" | "memberships" | "payments" | "attendance"
 >
+
+export type MemberRosterPageData = {
+  gym: GymProfile
+  planTiers: PlanTier[]
+  members: PaginatedResult<MemberRosterRow>
+  totalMembers: number
+}
 
 export type SubscriptionsDashboardData = Pick<
   DashboardData,
@@ -120,6 +134,55 @@ export const loadMembersDashboardData = cache(async () => {
     attendance: attendance.map(mapAttendanceRecord),
   } satisfies MembersDashboardData
 })
+
+export const loadMemberRosterPage = cache(
+  async (
+    filters: MemberRosterFilters,
+    pagination: PaginationParams,
+    asOf = new Date()
+  ): Promise<MemberRosterPageData | null> => {
+    const gym = await requireOwnerGym("/members")
+
+    if (!gym) {
+      return null
+    }
+
+    const where = getMemberRosterPageWhere(gym.id, filters, asOf)
+    const [planTiers, totalMembers, total] = await Promise.all([
+      db.planTier.findMany(getPlanTiersQuery(gym.id)),
+      db.member.count({
+        where: {
+          gymId: gym.id,
+        },
+      }),
+      db.member.count({ where }),
+    ])
+    const pageCount =
+      total === 0 ? 0 : Math.ceil(total / Math.max(1, pagination.pageSize))
+    const page =
+      pageCount === 0 ? 1 : Math.min(Math.max(1, pagination.page), pageCount)
+    const { skip, take } = getPrismaOffsetArgs({
+      page,
+      pageSize: pagination.pageSize,
+    })
+    const members = await db.member.findMany(
+      getMemberRosterPageQuery(where, skip, take, asOf)
+    )
+
+    return {
+      gym,
+      planTiers: planTiers.map(mapPlanTier),
+      members: {
+        rows: buildMemberRosterPageRows(members, asOf),
+        total,
+        page,
+        pageSize: take,
+        pageCount,
+      },
+      totalMembers,
+    }
+  }
+)
 
 export const loadSubscriptionsDashboardData = cache(async () => {
   const gym = await requireOwnerGym("/subscriptions")

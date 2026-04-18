@@ -99,7 +99,7 @@ The current `buildMemberRosterRows` computes billing risk by scanning ALL paymen
 
 Replace this with a per-member approach:
 
-- [ ] Add a `loadMemberRosterPage` loader that includes each member's relevant data:
+- [x] Add a `loadMemberRosterPage` loader that includes each member's relevant data:
   - Include the member's active/latest membership (via `member.memberships` with `take: 1, orderBy: startedAt desc, where: status in [ACTIVE, PAST_DUE]`).
   - Include the membership's plan tier (for plan name and billing interval display).
   - Include the member's overdue/pending-past-due payment count (via a filtered `_count` or a subquery).
@@ -111,7 +111,7 @@ Replace this with a per-member approach:
 
 #### Apply filters at the Prisma level
 
-- [ ] Build `WHERE` clauses from URL params:
+- [x] Build `WHERE` clauses from URL params:
   - `q` → `OR: [{ firstName: { contains: q, mode: insensitive } }, { lastName: { contains: q, mode: insensitive } }, { email: { contains: q, mode: insensitive } }, { phone: { contains: q, mode: insensitive } }]`
   - `status` → `status: { equals: status }` (skip if `all`)
   - `plan` → filter through membership relation: `memberships: { some: { planTier: { name: plan }, status: { in: ['ACTIVE', 'PAST_DUE'] } } }`. Members with "No plan" can be filtered with `memberships: { none: { status: { in: ['ACTIVE', 'PAST_DUE'] } } }`.
@@ -120,25 +120,25 @@ Replace this with a per-member approach:
     - For `expiring`: filter through membership where `status = ACTIVE AND currentPeriodEndsAt` is within the window. This requires computing the window boundary date and filtering `currentPeriodEndsAt: { gte: now, lte: windowEnd }`.
     - For `clear`: negate both overdue and expiring conditions.
 
-- [ ] Get `total` count with `db.member.count()` using the same `WHERE` clause (without `skip`/`take`).
+- [x] Get `total` count with `db.member.count()` using the same `WHERE` clause (without `skip`/`take`).
 
 #### Convert MemberRoster from client filter state to URL-driven
 
-- [ ] Convert `MemberRoster` from managing filter state internally to reading/writing URL search params:
+- [x] Convert `MemberRoster` from managing filter state internally to reading/writing URL search params:
   - Replace `useState` for filters with values parsed from props (passed down from the server component).
   - Filter inputs (search box, dropdowns) submit via form `GET` to the same page with updated search params, or use `useRouter().push` with new params.
   - The "Reset" button clears all search params.
   - Each filter change resets `page` to 1.
   - The component receives the pre-filtered, pre-paginated `MemberRosterRow[]` from the server — no client-side filtering needed.
 
-- [ ] Keep the filter UI interactive:
+- [x] Keep the filter UI interactive:
   - Use a lightweight client component for the filter bar that constructs URLs and navigates.
   - The data list itself can be a server component receiving the already-paginated rows.
   - Or keep `MemberRoster` as a client component but have it receive only the current page of rows.
 
 #### Visible member count
 
-- [ ] The header currently shows "Visible members: X of Y". Adjust to:
+- [x] The header currently shows "Visible members: X of Y". Adjust to:
   - "X of Y" where X = total matching the current filters (from `count` query), Y = total members in the gym.
   - The total gym member count can be a simple `db.member.count({ where: { gymId } })`.
 

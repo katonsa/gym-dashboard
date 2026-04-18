@@ -1,3 +1,7 @@
+import type { Prisma } from "@/lib/generated/prisma/client"
+import type { MemberRosterFilters } from "@/lib/dashboard/member-roster"
+import type { MembershipStatus } from "@/lib/dashboard/types"
+
 const planTierSelect = {
   id: true,
   gymId: true,
@@ -77,6 +81,10 @@ const ownerGymSelect = {
 
 const ascending = "asc" as const
 const descending = "desc" as const
+const activeRosterMembershipStatuses: MembershipStatus[] = [
+  "ACTIVE",
+  "PAST_DUE",
+]
 
 export function getOwnerGymQuery(ownerId: string) {
   return {
@@ -103,6 +111,90 @@ export function getMembersQuery(gymId: string) {
     where: { gymId },
     orderBy: [{ lastName: ascending }, { firstName: ascending }],
     select: memberSelect,
+  }
+}
+
+export function getMemberRosterPageWhere(
+  gymId: string,
+  filters: MemberRosterFilters,
+  asOf: Date
+): Prisma.MemberWhereInput {
+  const where: Prisma.MemberWhereInput = { gymId }
+  const and: Prisma.MemberWhereInput[] = []
+
+  if (filters.q.length > 0) {
+    and.push({
+      OR: [
+        { firstName: { contains: filters.q, mode: "insensitive" } },
+        { lastName: { contains: filters.q, mode: "insensitive" } },
+        { email: { contains: filters.q, mode: "insensitive" } },
+        { phone: { contains: filters.q, mode: "insensitive" } },
+      ],
+    })
+  }
+
+  if (filters.status !== "all") {
+    and.push({
+      status: filters.status,
+    })
+  }
+
+  if (filters.plan !== "all") {
+    and.push(getMemberRosterPlanWhere(filters.plan))
+  }
+
+  if (filters.risk !== "all") {
+    and.push(getMemberRosterRiskWhere(filters.risk, asOf))
+  }
+
+  if (and.length > 0) {
+    where.AND = and
+  }
+
+  return where
+}
+
+export function getMemberRosterPageQuery(
+  where: Prisma.MemberWhereInput,
+  skip: number,
+  take: number,
+  asOf: Date
+) {
+  return {
+    where,
+    orderBy: [
+      { lastName: ascending },
+      { firstName: ascending },
+      { id: ascending },
+    ],
+    skip,
+    take,
+    select: {
+      ...memberSelect,
+      memberships: {
+        where: {
+          status: {
+            in: activeRosterMembershipStatuses,
+          },
+        },
+        orderBy: [{ startedAt: descending }, { id: descending }],
+        take: 1,
+        select: {
+          ...membershipSelect,
+          planTier: {
+            select: planTierSelect,
+          },
+        },
+      },
+      _count: {
+        select: {
+          attendanceRecords: true,
+          payments: {
+            where: getOverdueMemberPaymentWhere(asOf),
+          },
+        },
+      },
+    },
   }
 }
 
@@ -172,6 +264,115 @@ export function getDropInVisitsQuery(gymId: string) {
     orderBy: [{ visitedAt: descending }],
     select: dropInVisitSelect,
   }
+}
+
+function getMemberRosterPlanWhere(plan: string): Prisma.MemberWhereInput {
+  if (plan === "No plan") {
+    return {
+      memberships: {
+        none: {
+          status: {
+            in: activeRosterMembershipStatuses,
+          },
+        },
+      },
+    }
+  }
+
+  return {
+    memberships: {
+      some: {
+        status: {
+          in: activeRosterMembershipStatuses,
+        },
+        planTier: {
+          name: plan,
+        },
+      },
+    },
+  }
+}
+
+function getMemberRosterRiskWhere(
+  risk: MemberRosterFilters["risk"],
+  asOf: Date
+): Prisma.MemberWhereInput {
+  const overdueWhere: Prisma.MemberWhereInput = {
+    payments: {
+      some: getOverdueMemberPaymentWhere(asOf),
+    },
+  }
+  const expiringWhere: Prisma.MemberWhereInput = {
+    memberships: {
+      some: getExpiringMemberMembershipWhere(asOf),
+    },
+  }
+
+  if (risk === "overdue") {
+    return overdueWhere
+  }
+
+  if (risk === "expiring") {
+    return {
+      AND: [
+        {
+          NOT: overdueWhere,
+        },
+        expiringWhere,
+      ],
+    }
+  }
+
+  return {
+    NOT: [overdueWhere, expiringWhere],
+  }
+}
+
+function getOverdueMemberPaymentWhere(
+  asOf: Date
+): Prisma.MembershipPaymentWhereInput {
+  return {
+    OR: [
+      {
+        status: "OVERDUE",
+      },
+      {
+        status: "PENDING",
+        dueAt: {
+          lt: asOf,
+        },
+      },
+    ],
+  }
+}
+
+function getExpiringMemberMembershipWhere(
+  asOf: Date
+): Prisma.MembershipWhereInput {
+  return {
+    status: "ACTIVE",
+    currentPeriodEndsAt: {
+      gte: asOf,
+    },
+    OR: [
+      {
+        billingInterval: "MONTHLY",
+        currentPeriodEndsAt: {
+          lte: addDays(asOf, 7),
+        },
+      },
+      {
+        billingInterval: "ANNUAL",
+        currentPeriodEndsAt: {
+          lte: addDays(asOf, 30),
+        },
+      },
+    ],
+  }
+}
+
+function addDays(date: Date, days: number) {
+  return new Date(date.getTime() + days * 24 * 60 * 60 * 1000)
 }
 
 export function getDropInVisitsPageQuery(
