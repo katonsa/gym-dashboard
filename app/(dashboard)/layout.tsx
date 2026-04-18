@@ -1,12 +1,26 @@
+import { Suspense } from "react"
 import { Dumbbell } from "lucide-react"
 
 import { SignOutButton } from "@/components/auth/sign-out-button"
 import { AppShell } from "@/components/dashboard/app-shell"
+import { DashboardShellFallback } from "@/components/dashboard/dashboard-shell-fallback"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { requireDashboardSession } from "@/lib/auth/server"
 import { getOwnerGym } from "@/lib/dashboard/owner-gym"
 
-export default async function DashboardLayout({
+export default function DashboardLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode
+}>) {
+  return (
+    <Suspense fallback={<DashboardShellFallback />}>
+      <DashboardLayoutContent>{children}</DashboardLayoutContent>
+    </Suspense>
+  )
+}
+
+async function DashboardLayoutContent({
   children,
 }: Readonly<{
   children: React.ReactNode
