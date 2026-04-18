@@ -11,9 +11,15 @@ import {
   mapMembershipPayment,
   mapPlanTier,
 } from "@/lib/dashboard/mappers"
+import {
+  getPrismaOffsetArgs,
+  type PaginatedResult,
+  type PaginationParams,
+} from "@/lib/dashboard/pagination"
 import { getOwnerGym } from "@/lib/dashboard/owner-gym"
 import {
   getAttendanceRecordsQuery,
+  getDropInVisitsPageQuery,
   getDropInVisitsQuery,
   getMembersQuery,
   getMembershipPaymentsQuery,
@@ -151,6 +157,43 @@ export const loadDropInsDashboardData = cache(async () => {
     dropIns: dropIns.map(mapDropInVisit),
   } satisfies DropInsDashboardData
 })
+
+export const loadDropInLogPage = cache(
+  async (
+    pagination: PaginationParams
+  ): Promise<PaginatedResult<DashboardData["dropIns"][number]> | null> => {
+    const gym = await requireOwnerGym("/drop-ins")
+
+    if (!gym) {
+      return null
+    }
+
+    const total = await db.dropInVisit.count({
+      where: {
+        gymId: gym.id,
+      },
+    })
+    const pageCount =
+      total === 0 ? 0 : Math.ceil(total / Math.max(1, pagination.pageSize))
+    const page =
+      pageCount === 0 ? 1 : Math.min(Math.max(1, pagination.page), pageCount)
+    const { skip, take } = getPrismaOffsetArgs({
+      page,
+      pageSize: pagination.pageSize,
+    })
+    const dropIns = await db.dropInVisit.findMany(
+      getDropInVisitsPageQuery(gym.id, skip, take)
+    )
+
+    return {
+      rows: dropIns.map(mapDropInVisit),
+      total,
+      page,
+      pageSize: take,
+      pageCount,
+    }
+  }
+)
 
 export const loadMemberDetailData = cache(async (memberId: string) => {
   const session = await requireDashboardSession("/members")

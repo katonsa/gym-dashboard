@@ -3,6 +3,7 @@ import test from "node:test"
 
 import {
   getAttendanceRecordsQuery,
+  getDropInVisitsPageQuery,
   getDropInVisitsQuery,
   getMembersQuery,
   getMembershipPaymentsQuery,
@@ -41,6 +42,7 @@ test("scopes gym-owned dashboard rows to the owner's gym id", () => {
   assert.equal(getOverviewMembershipPaymentsQuery(gymId).where.gymId, gymId)
   assert.equal(getAttendanceRecordsQuery(gymId).where.gymId, gymId)
   assert.equal(getDropInVisitsQuery(gymId).where.gymId, gymId)
+  assert.equal(getDropInVisitsPageQuery(gymId, 25, 25).where.gymId, gymId)
 })
 
 test("scopes memberships through the owning member's gym", () => {
@@ -54,5 +56,24 @@ test("scopes memberships through the owning member's gym", () => {
   })
   assert.deepEqual(getSubscriptionMembershipsQuery(gymId).where, {
     member: { gymId },
+  })
+})
+
+test("builds a stable paginated drop-in query", () => {
+  assert.deepEqual(getDropInVisitsPageQuery("gym-1", 25, 25), {
+    where: { gymId: "gym-1" },
+    orderBy: [{ visitedAt: "desc" }, { id: "desc" }],
+    skip: 25,
+    take: 25,
+    select: {
+      id: true,
+      gymId: true,
+      visitorName: true,
+      visitorContact: true,
+      visitCount: true,
+      amount: true,
+      visitedAt: true,
+      notes: true,
+    },
   })
 })

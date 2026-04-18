@@ -1,11 +1,14 @@
 import {
   getDropInConversionOpportunities,
+  parsePaginationParams,
   type DropInVisit,
 } from "@/lib/dashboard"
 import {
+  loadDropInLogPage,
   loadDropInsDashboardData,
   type DropInsDashboardData,
 } from "@/lib/dashboard/loaders"
+import { PaginationNav } from "@/components/ui/pagination-nav"
 import { DropInEntryForm } from "./drop-in-entry-form"
 
 const numberFormatter = new Intl.NumberFormat("en")
@@ -25,10 +28,20 @@ const toneClasses: Record<string, string> = {
   status: "bg-status",
 }
 
-export default async function DropInsPage() {
-  const dropInsData = await loadDropInsDashboardData()
+type DropInsPageProps = {
+  searchParams: Promise<{
+    page?: string | string[]
+  }>
+}
 
-  if (!dropInsData) {
+export default async function DropInsPage({ searchParams }: DropInsPageProps) {
+  const pagination = await parsePaginationParams(searchParams)
+  const [dropInsData, dropInLogPage] = await Promise.all([
+    loadDropInsDashboardData(),
+    loadDropInLogPage(pagination),
+  ])
+
+  if (!dropInsData || !dropInLogPage) {
     return (
       <DropInsEmptyState
         title="No gym is connected to this owner account."
@@ -43,7 +56,7 @@ export default async function DropInsPage() {
     currency: dropInsData.gym.currencyCode,
     maximumFractionDigits: 0,
   })
-  const dropInRows = getDropInRows(dropInsData, asOf, moneyFormatter)
+  const dropInRows = getDropInRows(dropInLogPage.rows, asOf, moneyFormatter)
   const dailyDropIns = getDropInsForDay(dropInsData.dropIns, asOf)
   const monthlyDropIns = getDropInsForMonth(dropInsData.dropIns, asOf)
   const frequentDropIns = getDropInConversionOpportunities(
@@ -208,6 +221,11 @@ export default async function DropInsPage() {
             <p className="mt-1 text-xs text-muted-foreground">
               Visitor details, visit counts, payment, and notes.
             </p>
+            {dropInLogPage.total > 0 ? (
+              <p className="mt-2 text-xs text-muted-foreground">
+                Showing {getPageRangeLabel(dropInLogPage)}
+              </p>
+            ) : null}
           </div>
 
           <div className="grid gap-3 md:hidden">
@@ -224,24 +242,32 @@ export default async function DropInsPage() {
           </div>
 
           {dropInRows.length > 0 ? (
-            <div className="hidden overflow-hidden rounded-lg border border-border bg-card text-card-foreground md:block">
-              <table className="w-full table-fixed text-left text-sm">
-                <thead className="border-b border-border bg-muted/60 text-xs text-muted-foreground uppercase">
-                  <tr>
-                    <th className="w-[17%] px-4 py-3 font-medium">Date</th>
-                    <th className="w-[21%] px-4 py-3 font-medium">Visitor</th>
-                    <th className="w-[24%] px-4 py-3 font-medium">Contact</th>
-                    <th className="w-[12%] px-4 py-3 font-medium">Visits</th>
-                    <th className="w-[14%] px-4 py-3 font-medium">Paid</th>
-                    <th className="w-[12%] px-4 py-3 font-medium">Notes</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {dropInRows.map((dropIn) => (
-                    <DropInTableRow key={dropIn.id} dropIn={dropIn} />
-                  ))}
-                </tbody>
-              </table>
+            <div className="grid gap-3">
+              <div className="hidden overflow-hidden rounded-lg border border-border bg-card text-card-foreground md:block">
+                <table className="w-full table-fixed text-left text-sm">
+                  <thead className="border-b border-border bg-muted/60 text-xs text-muted-foreground uppercase">
+                    <tr>
+                      <th className="w-[17%] px-4 py-3 font-medium">Date</th>
+                      <th className="w-[21%] px-4 py-3 font-medium">Visitor</th>
+                      <th className="w-[24%] px-4 py-3 font-medium">Contact</th>
+                      <th className="w-[12%] px-4 py-3 font-medium">Visits</th>
+                      <th className="w-[14%] px-4 py-3 font-medium">Paid</th>
+                      <th className="w-[12%] px-4 py-3 font-medium">Notes</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {dropInRows.map((dropIn) => (
+                      <DropInTableRow key={dropIn.id} dropIn={dropIn} />
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <PaginationNav
+                page={dropInLogPage.page}
+                pageCount={dropInLogPage.pageCount}
+                basePath="/drop-ins"
+              />
             </div>
           ) : (
             <div className="hidden md:block">
@@ -363,11 +389,11 @@ function DropInsEmptyState({
 }
 
 function getDropInRows(
-  data: DropInsDashboardData,
+  dropIns: DropInsDashboardData["dropIns"],
   currentDate: Date,
   moneyFormatter: Intl.NumberFormat
 ): DropInRow[] {
-  return data.dropIns
+  return dropIns
     .toSorted((left, right) => right.visitedAt.localeCompare(left.visitedAt))
     .map((dropIn) => {
       const visitedAt = new Date(dropIn.visitedAt)
@@ -391,6 +417,21 @@ function getDropInRows(
         identified: Boolean(dropIn.visitorName || dropIn.visitorContact),
       } satisfies DropInRow
     })
+}
+
+function getPageRangeLabel({
+  page,
+  pageSize,
+  total,
+}: {
+  page: number
+  pageSize: number
+  total: number
+}) {
+  const start = (page - 1) * pageSize + 1
+  const end = Math.min(total, page * pageSize)
+
+  return `${numberFormatter.format(start)}-${numberFormatter.format(end)} of ${numberFormatter.format(total)}`
 }
 
 function getDropInsForDay(dropIns: DropInVisit[], day: Date) {

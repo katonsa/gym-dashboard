@@ -173,3 +173,17 @@ export function getDropInVisitsQuery(gymId: string) {
     select: dropInVisitSelect,
   }
 }
+
+export function getDropInVisitsPageQuery(
+  gymId: string,
+  skip: number,
+  take: number
+) {
+  return {
+    where: { gymId },
+    orderBy: [{ visitedAt: descending }, { id: descending }],
+    skip,
+    take,
+    select: dropInVisitSelect,
+  }
+}

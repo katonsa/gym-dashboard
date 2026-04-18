@@ -158,16 +158,16 @@ Replace this with a per-member approach:
 
 The drop-in log displays all visits but the summary stats (daily total, monthly total, frequent visitors) need the full dataset. Split the concern:
 
-- [ ] Keep loading all drop-ins in `loadDropInsDashboardData` for summary calculations.
-- [ ] Add a separate paginated query for the display list.
+- [x] Keep loading all drop-ins in `loadDropInsDashboardData` for summary calculations.
+- [x] Add a separate paginated query for the display list.
 
 The drop-in log has no filtering — it renders all rows newest-first. Paginate at the query level:
 
-- [ ] Add `loadDropInLogPage(gymId, page, pageSize)` to `loaders.ts`
+- [x] Add `loadDropInLogPage(gymId, page, pageSize)` to `loaders.ts`
   - Uses `skip` and `take` with `orderBy: visitedAt desc`.
   - Returns `PaginatedResult<DropInVisit>`.
   - Runs alongside the existing full `loadDropInsDashboardData` query (for summary stats).
-- [ ] Update `drop-ins/page.tsx`
+- [x] Update `drop-ins/page.tsx`
   - Accept `searchParams` and parse `page`.
   - Pass the paginated rows to the display list.
   - Pass the full drop-ins to summary/frequent visitor calculations (unchanged).
