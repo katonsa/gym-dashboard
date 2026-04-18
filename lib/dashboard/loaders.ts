@@ -3,6 +3,13 @@ import { cache } from "react"
 import { requireDashboardSession } from "@/lib/auth/server"
 import { db } from "@/lib/db"
 import {
+  getOverviewAlerts,
+  getOverviewSummary,
+  type DashboardDb,
+  type OverviewAggregateOptions,
+  type OverviewSetupState,
+} from "@/lib/dashboard/aggregates"
+import {
   mapAttendanceRecord,
   mapDropInVisit,
   mapGymProfile,
@@ -41,8 +48,10 @@ import {
 } from "@/lib/dashboard/query-scopes"
 import type {
   AttendanceRecord,
+  DashboardAlert,
   DashboardData,
   DashboardRouteHref,
+  DashboardSummary,
   GymProfile,
   Member,
   Membership,
@@ -50,10 +59,18 @@ import type {
   PlanTier,
 } from "@/lib/dashboard/types"
 
+const aggregateDb = db as unknown as DashboardDb
+
 export type OverviewDashboardData = Pick<
   DashboardData,
   "gym" | "members" | "memberships" | "payments" | "dropIns"
 >
+
+export type OverviewSummaryDashboardData = {
+  gym: GymProfile
+  summary: DashboardSummary
+  setupState: OverviewSetupState
+}
 
 export type MembersDashboardData = Pick<
   DashboardData,
@@ -108,6 +125,44 @@ export const loadOverviewDashboardData = cache(async () => {
     dropIns: dropIns.map(mapDropInVisit),
   } satisfies OverviewDashboardData
 })
+
+export const loadOverviewSummary = cache(
+  async (
+    options: OverviewAggregateOptions = {}
+  ): Promise<OverviewSummaryDashboardData | null> => {
+    const gym = await requireOwnerGym("/")
+
+    if (!gym) {
+      return null
+    }
+
+    const result = await getOverviewSummary(
+      gym.id,
+      gym.currencyCode,
+      options,
+      aggregateDb
+    )
+
+    return {
+      gym,
+      ...result,
+    }
+  }
+)
+
+export const loadOverviewAlerts = cache(
+  async (
+    options: OverviewAggregateOptions = {}
+  ): Promise<DashboardAlert[] | null> => {
+    const gym = await requireOwnerGym("/")
+
+    if (!gym) {
+      return null
+    }
+
+    return getOverviewAlerts(gym.id, gym.currencyCode, options, aggregateDb)
+  }
+)
 
 export const loadMembersDashboardData = cache(async () => {
   const gym = await requireOwnerGym("/members")

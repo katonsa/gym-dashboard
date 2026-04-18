@@ -1,12 +1,17 @@
 import {
   getDashboardAlerts,
   getDashboardSummary,
-} from "@/lib/dashboard"
-import { loadOverviewDashboardData } from "@/lib/dashboard/loaders"
+} from "@/lib/dashboard/calculations"
+import {
+  loadOverviewDashboardData,
+  loadOverviewAlerts,
+  loadOverviewSummary,
+} from "@/lib/dashboard/loaders"
 import type {
   DashboardAlert,
   DashboardAlertSeverity,
   DashboardData,
+  DashboardSummary,
 } from "@/lib/dashboard"
 
 const toneClasses: Record<string, string> = {
@@ -25,9 +30,13 @@ const severityClasses: Record<DashboardAlertSeverity, string> = {
 }
 
 export default async function Page() {
-  const overviewData = await loadOverviewDashboardData()
+  const asOf = new Date()
+  const [overviewData, alerts] = await Promise.all([
+    loadOverviewSummary({ asOf }),
+    loadOverviewAlerts({ asOf }),
+  ])
 
-  if (!overviewData) {
+  if (!overviewData || !alerts) {
     return (
       <OverviewEmptyState
         title="No gym is connected to this owner account."
@@ -36,14 +45,12 @@ export default async function Page() {
     )
   }
 
-  const asOf = new Date()
-  const dashboardData = {
-    ...overviewData,
-    planTiers: [],
-    attendance: [],
-  } satisfies DashboardData
-  const summary = getDashboardSummary(dashboardData, { asOf })
-  const alerts = getDashboardAlerts(dashboardData, { asOf })
+  const { summary, setupState } = overviewData
+
+  if (process.env.NODE_ENV === "development") {
+    await compareOverviewAggregates(summary, asOf)
+  }
+
   const moneyFormatter = new Intl.NumberFormat("en", {
     style: "currency",
     currency: summary.currencyCode,
@@ -115,22 +122,26 @@ export default async function Page() {
       empty: "No frequent drop-ins have crossed the follow-up threshold.",
     },
   ] as const
+  const openAlertsCount = alertSections.reduce(
+    (total, section) => total + section.count,
+    0
+  )
   const getAlertsByType = (type: DashboardAlert["type"]) =>
     alerts.filter((alert) => alert.type === type)
   const setupGaps = [
-    overviewData.members.length === 0
+    !setupState.hasMembers
       ? {
           title: "No members yet.",
           detail: "Add member records to start tracking attendance and billing.",
         }
       : null,
-    overviewData.memberships.length === 0
+    !setupState.hasMemberships
       ? {
           title: "No memberships yet.",
           detail: "Create memberships to populate MRR and renewal alerts.",
         }
       : null,
-    overviewData.dropIns.length === 0
+    !setupState.hasDropIns
       ? {
           title: "No drop-ins yet.",
           detail: "Log day-pass visits to track walk-in cash and follow-up leads.",
@@ -158,7 +169,7 @@ export default async function Page() {
             Open alerts
           </p>
           <p className="mt-1 text-2xl font-semibold">
-            {numberFormatter.format(alerts.length)}
+            {numberFormatter.format(openAlertsCount)}
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
             Billing, renewals, churn risk, and drop-in follow-up
@@ -181,11 +192,13 @@ export default async function Page() {
           </span>
         </div>
 
-        {alerts.length > 0 ? (
+        {openAlertsCount > 0 ? (
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             {alertSections.map((section) => {
               const sectionAlerts = getAlertsByType(section.type)
               const firstAlert = sectionAlerts[0]
+              const capped =
+                section.count > 0 && sectionAlerts.length < section.count
 
               return (
                 <article
@@ -215,6 +228,12 @@ export default async function Page() {
                   {firstAlert ? (
                     <p className="mt-1 text-xs leading-5 text-muted-foreground">
                       {firstAlert.detail}
+                    </p>
+                  ) : null}
+                  {capped ? (
+                    <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                      Showing {numberFormatter.format(sectionAlerts.length)} of{" "}
+                      {numberFormatter.format(section.count)}.
                     </p>
                   ) : null}
                 </article>
@@ -324,7 +343,7 @@ export default async function Page() {
           <div className="mt-4 grid gap-3 text-sm">
             <div className="flex items-center justify-between gap-3 border-b border-border pb-3">
               <span className="text-muted-foreground">Open alerts</span>
-              <span className="font-semibold">{alerts.length}</span>
+              <span className="font-semibold">{openAlertsCount}</span>
             </div>
             <div className="flex items-center justify-between gap-3 border-b border-border pb-3">
               <span className="text-muted-foreground">Billing follow-up</span>
@@ -373,4 +392,63 @@ function formatDashboardDate(date: Date, timeZone: string) {
     day: "numeric",
     timeZone,
   }).format(date)
+}
+
+async function compareOverviewAggregates(
+  summary: DashboardSummary,
+  asOf: Date
+) {
+  const overviewData = await loadOverviewDashboardData()
+
+  if (!overviewData) {
+    return
+  }
+
+  const dashboardData = {
+    ...overviewData,
+    planTiers: [],
+    attendance: [],
+  } satisfies DashboardData
+  const oldSummary = getDashboardSummary(dashboardData, { asOf })
+  const oldAlerts = getDashboardAlerts(dashboardData, { asOf })
+  const mismatchedSummaryEntries = Object.entries(summary).filter(
+    ([key, value]) => oldSummary[key as keyof DashboardSummary] !== value
+  )
+  const oldAlertCounts = getAlertCountsByType(oldAlerts)
+  const newAlertCounts = getAlertCountsByTypeFromSummary(summary)
+
+  if (
+    mismatchedSummaryEntries.length > 0 ||
+    oldAlertCounts !== newAlertCounts
+  ) {
+    console.warn("Overview aggregate mismatch", {
+      summary: mismatchedSummaryEntries,
+      oldAlertCounts,
+      newAlertCounts,
+    })
+  }
+}
+
+function getAlertCountsByType(alerts: DashboardAlert[]) {
+  const counts = {
+    DROP_IN_CONVERSION: 0,
+    EXPIRING_MEMBERSHIP: 0,
+    INACTIVE_MEMBER: 0,
+    OVERDUE_PAYMENT: 0,
+  }
+
+  for (const alert of alerts) {
+    counts[alert.type] += 1
+  }
+
+  return JSON.stringify(counts)
+}
+
+function getAlertCountsByTypeFromSummary(summary: DashboardSummary) {
+  return JSON.stringify({
+    DROP_IN_CONVERSION: summary.dropInConversionOpportunitiesCount,
+    EXPIRING_MEMBERSHIP: summary.expiringMembershipsCount,
+    INACTIVE_MEMBER: summary.inactiveMembersCount,
+    OVERDUE_PAYMENT: summary.overduePaymentsCount,
+  })
 }
