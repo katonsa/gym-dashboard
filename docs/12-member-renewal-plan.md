@@ -1,6 +1,6 @@
 # Member Renewal Plan
 
-Status: Phase 1 complete.
+Status: Phase 2 complete.
 
 Let the gym owner manually renew a member's expiring or expired membership
 from two surfaces: the member detail page and the overview alert panel. This
@@ -12,17 +12,17 @@ billing period without doing a full plan change.
 
 ## Current State
 
-| Capability                                                        | Status                                      |
-| ----------------------------------------------------------------- | ------------------------------------------- |
-| `currentPeriodEndsAt` and `nextBillingDate` stored per membership | ✅ Exists                                   |
-| Expiring membership alert (7-day monthly, 30-day annual)          | ✅ Exists                                   |
-| Expired membership visible on member detail                       | ✅ Exists (no dedicated state)              |
-| `addBillingPeriod` helper in `lib/dashboard/billing.ts`           | ✅ Exists                                   |
-| Renewal server action                                             | ❌ Missing                                  |
-| "Renew" UI on member detail page                                  | ❌ Missing                                  |
-| "Renew" action on overview expiring alert                         | ❌ Missing                                  |
-| Expired membership status and UI distinction                      | ❌ Missing                                  |
-| MRR accuracy after period ends                                    | ❌ Broken — expired memberships stay ACTIVE |
+| Capability                                                        | Status                               |
+| ----------------------------------------------------------------- | ------------------------------------ |
+| `currentPeriodEndsAt` and `nextBillingDate` stored per membership | ✅ Exists                            |
+| Expiring membership alert (7-day monthly, 30-day annual)          | ✅ Exists                            |
+| Expired membership visible on member detail                       | ✅ Exists with dedicated state       |
+| `addBillingPeriod` helper in `lib/dashboard/billing.ts`           | ✅ Exists                            |
+| Renewal server action                                             | ✅ Exists                            |
+| "Renew" UI on member detail page                                  | ❌ Missing                           |
+| "Renew" action on overview expiring alert                         | ❌ Missing                           |
+| Expired membership status and UI distinction                      | ✅ Exists                            |
+| MRR accuracy after period ends                                    | ✅ Fixed for current revenue metrics |
 
 ---
 
@@ -248,7 +248,7 @@ differently from a current one.
 
 ### Server action
 
-- [ ] Add `renewMembership` to `app/(dashboard)/members/actions.ts`
+- [x] Add `renewMembership` to `app/(dashboard)/members/actions.ts`
   - Signature:
     `(values: RenewMembershipValues) => Promise<RenewMembershipActionResult>`
   - Input values:
@@ -310,7 +310,7 @@ differently from a current one.
 
 ### Validation schema
 
-- [ ] Add `renew-membership-schema.ts` in `app/(dashboard)/members/`
+- [x] Add `renew-membership-schema.ts` in `app/(dashboard)/members/`
   - `membershipId`: non-empty string.
   - `expectedStatus`: enum of `"ACTIVE"` or `"EXPIRED"`.
   - `expectedCurrentPeriodEndsAt`: valid ISO date string.
@@ -324,28 +324,28 @@ differently from a current one.
 
 ### Verification
 
-- [ ] Renewing an `ACTIVE` expiring membership advances period from
+- [x] Renewing an `ACTIVE` expiring membership advances period from
       `currentPeriodEndsAt`.
-- [ ] Renewing an `EXPIRED` membership advances period from the renewal date,
+- [x] Renewing an `EXPIRED` membership advances period from the renewal date,
       defaulting to gym-local today.
-- [ ] Backdating an expired renewal advances the period from the selected
+- [x] Backdating an expired renewal advances the period from the selected
       renewal date while the pending payment due date remains the recording date.
-- [ ] Renewing an `EXPIRED` membership sets status back to `ACTIVE`.
-- [ ] Renewal creates a new `PENDING` payment for the correct amount.
-- [ ] Double-clicking or retrying renewal does not advance two periods or create
+- [x] Renewing an `EXPIRED` membership sets status back to `ACTIVE`.
+- [x] Renewal creates a new `PENDING` payment for the correct amount.
+- [x] Double-clicking or retrying renewal does not advance two periods or create
       duplicate pending payments.
-- [ ] Retrying the same `submissionId` after a successful renewal returns
+- [x] Retrying the same `submissionId` after a successful renewal returns
       success without creating another payment or extending another period.
-- [ ] Concurrent renewals return one success and one conflict-style error.
-- [ ] Submitting from a stale dialog after the membership changed returns a
+- [x] Concurrent renewals return one success and one conflict-style error.
+- [x] Submitting from a stale dialog after the membership changed returns a
       conflict-style error.
-- [ ] `startedAt` is not modified by renewal.
-- [ ] Renewal is rejected for `PAST_DUE`, `CANCELED`, `INACTIVE` memberships.
-- [ ] Renewal is rejected for members with `SUSPENDED` status.
-- [ ] `renewalDate` in the future is rejected.
-- [ ] Action is scoped to the owner's gym.
-- [ ] MRR updates correctly after renewing an expired membership.
-- [ ] `npm run typecheck`, `npm run lint`, `npm run build`.
+- [x] `startedAt` is not modified by renewal.
+- [x] Renewal is rejected for `PAST_DUE`, `CANCELED`, `INACTIVE` memberships.
+- [x] Renewal is rejected for members with `SUSPENDED` status.
+- [x] `renewalDate` in the future is rejected.
+- [x] Action is scoped to the owner's gym.
+- [x] MRR updates correctly after renewing an expired membership.
+- [x] `npm run typecheck`, `npm run lint`, `npm run build`.
 
 ---
 

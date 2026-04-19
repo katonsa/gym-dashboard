@@ -14,6 +14,14 @@ export function getGymLocalDayBoundary(date: Date, timeZone: string) {
   )
 }
 
+export function getGymLocalDateInput(date: Date, timeZone: string) {
+  const parts = getZonedDateParts(date, timeZone)
+  const month = String(parts.month).padStart(2, "0")
+  const day = String(parts.day).padStart(2, "0")
+
+  return `${parts.year}-${month}-${day}`
+}
+
 type ZonedDateParts = {
   year: number
   month: number

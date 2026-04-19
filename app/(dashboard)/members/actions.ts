@@ -29,6 +29,12 @@ import {
 } from "./void-payment-schema"
 import { markPaymentPaidForGym, voidPaymentForGym } from "./payment-lifecycle"
 import {
+  renewMembershipSchema,
+  type RenewMembershipValues,
+  type RenewMembershipActionResult,
+} from "./renew-membership-schema"
+import { renewMembershipForGym } from "./renewal-lifecycle"
+import {
   createMemberSchema,
   parseDateInput,
   type CreateMemberActionResult,
@@ -454,6 +460,108 @@ export async function changeMemberPlan(
   revalidatePath(`/members/${parsed.data.memberId}`)
   revalidatePath("/subscriptions")
   revalidatePath("/")
+
+  return { success: true }
+}
+
+export async function renewMembership(
+  values: RenewMembershipValues
+): Promise<RenewMembershipActionResult> {
+  const session = await requireDashboardSession("/members")
+  const parsed = renewMembershipSchema.safeParse(values)
+
+  if (!parsed.success) {
+    return {
+      success: false,
+      error:
+        parsed.error.issues[0]?.message ??
+        "Check the renewal details and try again.",
+    }
+  }
+
+  const gym = await db.gym.findFirst({
+    where: { ownerId: session.user.id },
+    select: { id: true, timezone: true },
+    orderBy: { createdAt: "asc" },
+  })
+
+  if (!gym) {
+    return {
+      success: false,
+      error: "Connect a gym to this owner account before renewing members.",
+    }
+  }
+
+  const expectedCurrentPeriodEndsAt = new Date(
+    parsed.data.expectedCurrentPeriodEndsAt
+  )
+  const parsedRenewalDate = parsed.data.renewalDate
+    ? parseDateInput(parsed.data.renewalDate)
+    : undefined
+
+  if (parsed.data.renewalDate && !parsedRenewalDate) {
+    return { success: false, error: "Choose a valid renewal date." }
+  }
+
+  const renewalDate = parsedRenewalDate ?? undefined
+
+  try {
+    const result = await renewMembershipForGym({
+      client: db,
+      gymId: gym.id,
+      timezone: gym.timezone,
+      membershipId: parsed.data.membershipId,
+      expectedStatus: parsed.data.expectedStatus,
+      expectedCurrentPeriodEndsAt,
+      submissionId: parsed.data.submissionId,
+      renewalDate,
+    })
+
+    if (result.status === "not-found") {
+      return {
+        success: false,
+        error: "This membership does not exist or belongs to a different gym.",
+      }
+    }
+
+    if (result.status === "not-renewable") {
+      return {
+        success: false,
+        error: "This membership cannot be renewed from its current status.",
+      }
+    }
+
+    if (result.status === "member-suspended") {
+      return {
+        success: false,
+        error: "Unsuspend this member before renewing their membership.",
+      }
+    }
+
+    if (result.status === "future-renewal-date") {
+      return {
+        success: false,
+        error: "Choose today or an earlier date for this renewal.",
+      }
+    }
+
+    if (result.status === "conflict") {
+      return {
+        success: false,
+        error: "This membership changed. Refresh and try again.",
+      }
+    }
+
+    revalidatePath("/members")
+    revalidatePath(`/members/${result.memberId}`)
+    revalidatePath("/subscriptions")
+    revalidatePath("/")
+  } catch {
+    return {
+      success: false,
+      error: "The membership could not be renewed. Try again.",
+    }
+  }
 
   return { success: true }
 }
