@@ -1,6 +1,7 @@
 # Member Actions Plan
 
-Status: Phase 3 complete.
+Status: Phase 3 complete, with shared shadcn confirmation dialogs shipped for
+suspend/unsuspend and plan changes.
 
 Replace the three placeholder quick actions on the members roster — View profile, Suspend account, and Edit plan — with working implementations.
 
@@ -96,9 +97,19 @@ Add a server action to toggle a member between ACTIVE and SUSPENDED, replacing t
 - [x] Replace the "Suspend account" placeholder button
   - Show "Suspend" for ACTIVE members, "Unsuspend" for SUSPENDED members.
   - Do not show the action for INACTIVE members (they should be reactivated through a different workflow or manually).
-  - On click, show a brief inline confirmation: "Suspend [name]? Active memberships will be paused." / "Unsuspend [name]? You can assign a new plan afterward."
+  - On click, show a confirmation dialog: "Suspend [name]? Active memberships will be paused." / "Unsuspend [name]? You can assign a new plan afterward."
   - Disable the button while the action is pending.
   - Show the action result message in the existing `actionMessage` area.
+
+### Shipped implementation note
+
+- [x] `app/(dashboard)/members/member-status-action.tsx` now uses
+  `components/ui/alert-dialog.tsx` instead of the previous inline confirmation
+  block.
+- [x] The dialog keeps the existing pending and error states and still reports
+  messages through the surrounding `onResult` callback.
+- [x] Suspend confirmation copy now explicitly warns that active memberships are
+  marked `PAST_DUE`.
 
 ### Wire into member detail page
 
@@ -172,6 +183,8 @@ This is the same create-membership logic used in `createMember`, but applied to 
   - Success feedback: "Plan changed to [Plan Name] ([Interval])."
   - Error feedback: standard `{ error }` rendering.
   - Disable submit while pending.
+  - Before running the mutation, open a confirmation dialog summarizing the new
+    plan, interval, and effective date.
 
 - [x] On the roster view, change the "Edit plan" button to link to the member detail page
   - The plan change form lives on the detail page, not inline in the roster.
@@ -189,7 +202,18 @@ This is the same create-membership logic used in `createMember`, but applied to 
 - [x] Member with no current plan can be assigned one (same flow, no membership to expire).
 - [x] Validation rejects missing plan, missing interval, invalid date.
 - [x] Action is scoped to the owner's gym.
-- [x] `npm run typecheck`, `npm run lint`, `npm run build`.
+- [x] `npm run typecheck`
+- [x] `npm run lint`
+- [x] `npm run build`
+
+### Shipped implementation note
+
+- [x] `app/(dashboard)/members/member-plan-change-form.tsx` now validates the
+  form first, then opens `AlertDialog` before executing `changeMemberPlan`.
+- [x] The confirmation copy includes the selected plan name, billing interval,
+  and formatted effective date when available.
+- [x] Cancel only closes the dialog. Confirm runs the existing server action and
+  preserves the current success and error handling.
 
 ---
 

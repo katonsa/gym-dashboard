@@ -2,9 +2,19 @@
 
 import * as React from "react"
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import type { MemberStatus } from "@/lib/dashboard"
-import { cn } from "@/lib/utils"
 import { updateMemberStatus, type ActionResult } from "./actions"
 
 type StatusActionStatus = Extract<MemberStatus, "ACTIVE" | "SUSPENDED">
@@ -22,7 +32,7 @@ export function MemberStatusAction({
   compact?: boolean
   onResult?: (message: string) => void
 }) {
-  const [isConfirming, setIsConfirming] = React.useState(false)
+  const [isOpen, setIsOpen] = React.useState(false)
   const [result, setResult] = React.useState<ActionResult>({
     success: false,
   })
@@ -41,16 +51,26 @@ export function MemberStatusAction({
       ? `Suspend ${memberName}? Active memberships will be paused.`
       : `Unsuspend ${memberName}? You can assign a new plan afterward.`
 
-  function handleOpenConfirmation() {
-    setResult({ success: false })
-    setIsConfirming(true)
-    onResult?.(confirmation)
+  function handleOpenChange(open: boolean) {
+    setIsOpen(open)
+
+    if (open) {
+      setResult({ success: false })
+      onResult?.(confirmation)
+      return
+    }
+
+    if (!isPending) {
+      setResult({ success: false })
+    }
+
+    onResult?.("")
   }
 
-  function handleCancel() {
-    setIsConfirming(false)
+  function handleOpenConfirmation() {
     setResult({ success: false })
-    onResult?.("")
+    setIsOpen(true)
+    onResult?.(confirmation)
   }
 
   function handleConfirm() {
@@ -65,7 +85,7 @@ export function MemberStatusAction({
       setResult(actionResult)
 
       if (actionResult.success) {
-        setIsConfirming(false)
+        setIsOpen(false)
         onResult?.(
           nextStatus === "SUSPENDED"
             ? `${memberName} is suspended.`
@@ -80,53 +100,44 @@ export function MemberStatusAction({
     })
   }
 
-  if (!isConfirming) {
-    return (
-      <Button
-        type="button"
-        variant={status === "ACTIVE" ? "destructive" : "outline"}
-        size="sm"
-        className="min-h-11"
-        onClick={handleOpenConfirmation}
-      >
-        {actionLabel}
-      </Button>
-    )
-  }
-
   return (
-    <div
-      className={cn(
-        "grid gap-2 rounded-lg border border-border bg-background p-2",
-        compact ? "min-w-32" : "w-full min-w-52"
-      )}
+    <AlertDialog open={isOpen} onOpenChange={handleOpenChange}
     >
-      <p className="text-xs leading-5 text-muted-foreground">{confirmation}</p>
-      <div className="flex flex-wrap gap-2">
+      <AlertDialogTrigger asChild>
         <Button
           type="button"
-          variant={status === "ACTIVE" ? "destructive" : "default"}
+          variant={status === "ACTIVE" ? "destructive" : "outline"}
           size="sm"
           className="min-h-11"
-          disabled={isPending}
-          onClick={handleConfirm}
+          onClick={handleOpenConfirmation}
         >
-          {isPending ? pendingLabel : actionLabel}
+          {actionLabel}
         </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="min-h-11"
-          disabled={isPending}
-          onClick={handleCancel}
-        >
-          Cancel
-        </Button>
-      </div>
-      {result.error ? (
-        <p className="text-xs leading-5 text-destructive">{result.error}</p>
-      ) : null}
-    </div>
+      </AlertDialogTrigger>
+
+      <AlertDialogContent className={compact ? "sm:max-w-xs" : undefined}>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{confirmation}</AlertDialogTitle>
+          <AlertDialogDescription>
+            {status === "ACTIVE"
+              ? "This will suspend the member and mark any active memberships as past due."
+              : "This will reactivate the member so you can assign a new plan afterward."}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        {result.error ? (
+          <p className="text-sm leading-6 text-destructive">{result.error}</p>
+        ) : null}
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            variant={status === "ACTIVE" ? "destructive" : "default"}
+            disabled={isPending}
+            onClick={handleConfirm}
+          >
+            {isPending ? pendingLabel : actionLabel}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   )
 }

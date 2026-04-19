@@ -4,6 +4,16 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import * as React from "react"
 import { Controller, useForm, useWatch } from "react-hook-form"
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import {
   Field,
@@ -68,6 +78,9 @@ export function MemberPlanChangeForm({
     success: false,
   })
   const [successMessage, setSuccessMessage] = React.useState("")
+  const [isConfirmOpen, setIsConfirmOpen] = React.useState(false)
+  const [pendingValues, setPendingValues] =
+    React.useState<ChangeMemberPlanValues | null>(null)
   const [isPending, startTransition] = React.useTransition()
   const form = useForm<ChangeMemberPlanValues>({
     resolver: zodResolver(changePlanSchema),
@@ -91,24 +104,35 @@ export function MemberPlanChangeForm({
   const isSubmitting = form.formState.isSubmitting || isPending
 
   function onSubmit(values: ChangeMemberPlanValues) {
+    setPendingValues(values)
+    setIsConfirmOpen(true)
+  }
+
+  function handleConfirmPlanChange() {
+    if (!pendingValues) {
+      return
+    }
+
     form.clearErrors("root")
     setResult({ success: false })
     setSuccessMessage("")
 
     const selectedPlan = activePlanTiers.find(
-      (planTier) => planTier.id === values.planTierId
+      (planTier) => planTier.id === pendingValues.planTierId
     )
 
     startTransition(async () => {
-      const actionResult = await changeMemberPlan(values)
+      const actionResult = await changeMemberPlan(pendingValues)
 
       setResult(actionResult)
 
       if (actionResult.success) {
+        setIsConfirmOpen(false)
+        setPendingValues(null)
         setSuccessMessage(
           selectedPlan
             ? `Plan changed to ${selectedPlan.name} (${titleCase(
-                values.billingInterval
+                pendingValues.billingInterval
               )}).`
             : "Plan changed."
         )
@@ -122,6 +146,10 @@ export function MemberPlanChangeForm({
       })
     })
   }
+
+  const pendingPlanTier = pendingValues
+    ? activePlanTiers.find((planTier) => planTier.id === pendingValues.planTierId)
+    : null
 
   return (
     <section
@@ -273,6 +301,42 @@ export function MemberPlanChangeForm({
           </Button>
         </div>
       </form>
+
+      <AlertDialog
+        open={isConfirmOpen}
+        onOpenChange={(open) => {
+          setIsConfirmOpen(open)
+
+          if (!open && !isPending) {
+            setPendingValues(null)
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm plan change?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingPlanTier
+                ? `This will end the current membership and move the member to ${pendingPlanTier.name} (${titleCase(
+                    pendingValues?.billingInterval ?? "MONTHLY"
+                  )}) starting ${formatDate(
+                    pendingValues?.effectiveDate ?? initialEffectiveDate
+                  )}.`
+                : "This will end the current membership and create a new one with the selected billing details."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isPending}
+              onClick={handleConfirmPlanChange}
+            >
+              {isPending ? "Changing plan..." : "Change plan"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </section>
   )
 }
@@ -289,6 +353,18 @@ function formatCurrency(amount: number, currencyCode: string) {
     maximumFractionDigits: 0,
     style: "currency",
   }).format(amount)
+}
+
+function formatDate(value: string) {
+  const date = new Date(`${value}T00:00:00`)
+
+  if (Number.isNaN(date.getTime())) {
+    return value
+  }
+
+  return new Intl.DateTimeFormat("en", {
+    dateStyle: "medium",
+  }).format(date)
 }
 
 function titleCase(value: string) {
