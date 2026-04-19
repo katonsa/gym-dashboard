@@ -81,9 +81,10 @@ const ownerGymSelect = {
 
 const ascending = "asc" as const
 const descending = "desc" as const
-const activeRosterMembershipStatuses: MembershipStatus[] = [
+const rosterMembershipStatuses: MembershipStatus[] = [
   "ACTIVE",
   "PAST_DUE",
+  "EXPIRED",
 ]
 
 export function getOwnerGymQuery(ownerId: string) {
@@ -166,7 +167,7 @@ export function getMemberRosterPageQuery(
       memberships: {
         where: {
           status: {
-            in: activeRosterMembershipStatuses,
+            in: rosterMembershipStatuses,
           },
         },
         orderBy: [{ startedAt: descending }, { id: descending }],
@@ -196,7 +197,7 @@ function getMemberRosterPlanWhere(plan: string): Prisma.MemberWhereInput {
       memberships: {
         none: {
           status: {
-            in: activeRosterMembershipStatuses,
+            in: rosterMembershipStatuses,
           },
         },
       },
@@ -207,7 +208,7 @@ function getMemberRosterPlanWhere(plan: string): Prisma.MemberWhereInput {
     memberships: {
       some: {
         status: {
-          in: activeRosterMembershipStatuses,
+          in: rosterMembershipStatuses,
         },
         planTier: {
           name: plan,
@@ -221,6 +222,11 @@ function getMemberRosterRiskWhere(
   risk: MemberRosterFilters["risk"],
   asOf: Date
 ): Prisma.MemberWhereInput {
+  const renewableMemberWhere: Prisma.MemberWhereInput = {
+    status: {
+      not: "SUSPENDED",
+    },
+  }
   const overdueWhere: Prisma.MemberWhereInput = {
     payments: {
       some: getOverdueMemberPaymentWhere(asOf),
@@ -231,6 +237,11 @@ function getMemberRosterRiskWhere(
       some: getExpiringMemberMembershipWhere(asOf),
     },
   }
+  const expiredWhere: Prisma.MemberWhereInput = {
+    memberships: {
+      some: getExpiredMemberMembershipWhere(asOf),
+    },
+  }
 
   if (risk === "overdue") {
     return overdueWhere
@@ -239,6 +250,7 @@ function getMemberRosterRiskWhere(
   if (risk === "expiring") {
     return {
       AND: [
+        renewableMemberWhere,
         {
           NOT: overdueWhere,
         },
@@ -247,8 +259,20 @@ function getMemberRosterRiskWhere(
     }
   }
 
+  if (risk === "expired") {
+    return {
+      AND: [
+        renewableMemberWhere,
+        {
+          NOT: overdueWhere,
+        },
+        expiredWhere,
+      ],
+    }
+  }
+
   return {
-    NOT: [overdueWhere, expiringWhere],
+    NOT: [overdueWhere, expiredWhere, expiringWhere],
   }
 }
 
@@ -289,6 +313,24 @@ function getExpiringMemberMembershipWhere(
         billingInterval: "ANNUAL",
         currentPeriodEndsAt: {
           lte: addDays(asOf, 30),
+        },
+      },
+    ],
+  }
+}
+
+function getExpiredMemberMembershipWhere(
+  asOf: Date
+): Prisma.MembershipWhereInput {
+  return {
+    OR: [
+      {
+        status: "EXPIRED",
+      },
+      {
+        status: "ACTIVE",
+        currentPeriodEndsAt: {
+          lt: asOf,
         },
       },
     ],

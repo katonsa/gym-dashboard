@@ -1,7 +1,11 @@
 import assert from "node:assert/strict"
 import test from "node:test"
 
-import { getExpiringMemberships } from "../lib/dashboard/calculations.ts"
+import {
+  getExpiringMemberships,
+  getMembershipDisplayStatus,
+  isExpired,
+} from "../lib/dashboard/calculations.ts"
 import {
   buildMemberRosterPageRows,
   parseMemberRosterFilters,
@@ -41,6 +45,45 @@ test("detects active memberships expiring inside the relevant windows", () => {
   )
 })
 
+test("detects de facto expired memberships against a gym-local boundary", () => {
+  const sameGymDayBoundary = new Date("2026-04-18T17:00:00.000Z")
+  const nextGymDayBoundary = new Date("2026-04-19T17:00:00.000Z")
+  const endingOnLocalDate = membership({
+    currentPeriodEndsAt: "2026-04-19T00:00:00.000Z",
+  })
+
+  assert.equal(isExpired(endingOnLocalDate, sameGymDayBoundary), false)
+  assert.equal(isExpired(endingOnLocalDate, nextGymDayBoundary), true)
+})
+
+test("returns display membership statuses for active, expiring, and expired rows", () => {
+  assert.equal(
+    getMembershipDisplayStatus(
+      membership({ currentPeriodEndsAt: "2026-05-20T00:00:00.000Z" }),
+      asOf
+    ),
+    "active"
+  )
+  assert.equal(
+    getMembershipDisplayStatus(
+      membership({ currentPeriodEndsAt: "2026-04-20T00:00:00.000Z" }),
+      asOf
+    ),
+    "expiring"
+  )
+  assert.equal(
+    getMembershipDisplayStatus(
+      membership({ currentPeriodEndsAt: "2026-04-10T00:00:00.000Z" }),
+      asOf
+    ),
+    "expired"
+  )
+  assert.equal(
+    getMembershipDisplayStatus(membership({ status: "EXPIRED" }), asOf),
+    "expired"
+  )
+})
+
 test("builds paginated member roster rows from per-member query data", () => {
   assert.deepEqual(
     buildMemberRosterPageRows(
@@ -72,6 +115,16 @@ test("builds paginated member roster rows from per-member query data", () => {
             }),
           ],
         }),
+        memberRosterPageMember({
+          id: "expired-member",
+          firstName: "Dewi",
+          lastName: "Expired",
+          memberships: [
+            memberRosterMembership({
+              currentPeriodEndsAt: "2026-04-10T23:59:59.000+07:00",
+            }),
+          ],
+        }),
       ],
       asOf
     ).map((row) => [row.id, row.sessionsAttended, row.billingRisk]),
@@ -79,6 +132,7 @@ test("builds paginated member roster rows from per-member query data", () => {
       ["overdue-member", 12, "overdue"],
       ["expiring-member", 0, "expiring"],
       ["clear-member", 0, "clear"],
+      ["expired-member", 0, "expired"],
     ]
   )
 })
@@ -89,13 +143,13 @@ test("parses member roster filters from URL search params", () => {
       q: " Ari ",
       status: "ACTIVE",
       plan: "Pro",
-      risk: "overdue",
+      risk: "expired",
     }),
     {
       q: "Ari",
       status: "ACTIVE",
       plan: "Pro",
-      risk: "overdue",
+      risk: "expired",
     }
   )
 

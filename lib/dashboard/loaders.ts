@@ -321,7 +321,7 @@ export const loadMemberDetailData = cache(async (memberId: string) => {
             gymId: gym.id,
           },
         },
-        orderBy: [{ startedAt: "desc" }],
+        orderBy: [{ startedAt: "desc" }, { id: "desc" }],
         select: {
           id: true,
           memberId: true,

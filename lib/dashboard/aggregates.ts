@@ -361,6 +361,16 @@ export async function getExpiringMembershipsCount(
   return monthlyExpiring + annualExpiring
 }
 
+export function getExpiredMembershipsCount(
+  gymId: string,
+  now: Date,
+  client: DashboardDb
+) {
+  return client.membership.count({
+    where: getExpiredMembershipWhere(gymId, now),
+  })
+}
+
 export function getOverduePaymentsCount(
   gymId: string,
   now: Date,
@@ -488,6 +498,7 @@ export async function getOverviewSummary(
     membershipMrrAmount,
     dropInRevenueThisMonthAmount,
     expiringMembershipsCount,
+    expiredMembershipsCount,
     overduePaymentsCount,
     inactiveMembersCount,
     dropInConversionOpportunitiesCount,
@@ -509,6 +520,7 @@ export async function getOverviewSummary(
       ranges.annualWindowEnd,
       client
     ),
+    getExpiredMembershipsCount(gymId, ranges.membershipAsOf, client),
     getOverduePaymentsCount(gymId, ranges.asOf, client),
     getInactiveMembersCount(gymId, ranges.inactiveCutoff, client),
     getConversionLeadsCount(
@@ -532,6 +544,7 @@ export async function getOverviewSummary(
       totalRevenueThisMonthAmount:
         membershipMrrAmount + dropInRevenueThisMonthAmount,
       expiringMembershipsCount,
+      expiredMembershipsCount,
       overduePaymentsCount,
       inactiveMembersCount,
       dropInConversionOpportunitiesCount,
@@ -748,12 +761,19 @@ export async function getOverviewAlerts(
   const ranges = getOverviewDateRanges(options)
   const [
     overduePayments,
+    expiredMemberships,
     monthlyExpiring,
     annualExpiring,
     inactiveMembers,
     leads,
   ] = await Promise.all([
     getOverduePaymentAlerts(gymId, ranges.asOf, ranges.alertLimit, client),
+    getExpiredMembershipAlerts(
+      gymId,
+      ranges.membershipAsOf,
+      ranges.alertLimit,
+      client
+    ),
     getExpiringMembershipAlerts(
       gymId,
       ranges.membershipAsOf,
@@ -805,6 +825,18 @@ export async function getOverviewAlerts(
         membershipId: payment.membershipId,
         paymentId: payment.id,
         dueAt: toDateString(payment.dueAt),
+      } satisfies DashboardAlert
+    }),
+    ...expiredMemberships.map((membership) => {
+      return {
+        id: `expired-${membership.id}`,
+        type: "EXPIRED_MEMBERSHIP",
+        severity: "critical",
+        title: `${formatMemberName(membership.member)} membership expired`,
+        detail: `Membership ended ${formatDate(membership.currentPeriodEndsAt)}.`,
+        memberId: membership.memberId,
+        membershipId: membership.id,
+        dueAt: toDateString(membership.currentPeriodEndsAt),
       } satisfies DashboardAlert
     }),
     ...expiringMemberships.map((membership) => {
@@ -910,6 +942,30 @@ async function getExpiringMembershipAlerts(
   })
 }
 
+function getExpiredMembershipAlerts(
+  gymId: string,
+  now: Date,
+  limit: number,
+  client: DashboardDb
+) {
+  return client.membership.findMany({
+    where: getExpiredMembershipWhere(gymId, now),
+    orderBy: [{ currentPeriodEndsAt: "asc" }, { id: "asc" }],
+    take: limit,
+    select: {
+      id: true,
+      memberId: true,
+      currentPeriodEndsAt: true,
+      member: {
+        select: {
+          firstName: true,
+          lastName: true,
+        },
+      },
+    },
+  })
+}
+
 function getOverduePaymentAlerts(
   gymId: string,
   now: Date,
@@ -965,10 +1021,36 @@ function getExpiringMembershipWhere(
   windowEnd: Date
 ) {
   return {
-    member: { gymId },
+    member: getRenewableMembershipMemberWhere(gymId),
     status: "ACTIVE",
     billingInterval,
     currentPeriodEndsAt: { gte: now, lte: windowEnd },
+  }
+}
+
+function getExpiredMembershipWhere(gymId: string, now: Date) {
+  return {
+    member: getRenewableMembershipMemberWhere(gymId),
+    OR: [
+      {
+        status: "EXPIRED",
+      },
+      {
+        status: "ACTIVE",
+        currentPeriodEndsAt: {
+          lt: now,
+        },
+      },
+    ],
+  }
+}
+
+function getRenewableMembershipMemberWhere(gymId: string) {
+  return {
+    gymId,
+    status: {
+      not: "SUSPENDED",
+    },
   }
 }
 

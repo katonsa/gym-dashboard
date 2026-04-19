@@ -22,7 +22,13 @@ import { MemberQuickCheckInAction } from "./member-quick-checkin-action"
 import { MemberStatusAction } from "./member-status-action"
 
 const statusOptions: StatusFilter[] = ["all", "ACTIVE", "INACTIVE", "SUSPENDED"]
-const riskOptions: RiskFilter[] = ["all", "overdue", "expiring", "clear"]
+const riskOptions: RiskFilter[] = [
+  "all",
+  "overdue",
+  "expired",
+  "expiring",
+  "clear",
+]
 
 const statusClasses: Record<MemberStatus, string> = {
   ACTIVE: "border-status/45 bg-status/12 text-status",
@@ -32,6 +38,7 @@ const statusClasses: Record<MemberStatus, string> = {
 
 const riskClasses: Record<BillingRisk, string> = {
   clear: "border-border bg-muted text-muted-foreground",
+  expired: "border-alert/45 bg-alert/12 text-alert",
   expiring: "border-chart-3/45 bg-chart-3/12 text-chart-3",
   overdue: "border-alert/45 bg-alert/12 text-alert",
 }

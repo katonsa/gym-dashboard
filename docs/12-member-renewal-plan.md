@@ -1,6 +1,6 @@
 # Member Renewal Plan
 
-Status: Planning.
+Status: Phase 1 complete.
 
 Let the gym owner manually renew a member's expiring or expired membership
 from two surfaces: the member detail page and the overview alert panel. This
@@ -150,14 +150,14 @@ differently from a current one.
 
 ### Data layer
 
-- [ ] Add `isExpired(membership, asOf)` to `lib/dashboard/calculations.ts`
+- [x] Add `isExpired(membership, asOf)` to `lib/dashboard/calculations.ts`
   - Returns `true` if `membership.status === "ACTIVE"` and
     `currentPeriodEndsAt` is before the gym-local `asOf` day boundary.
   - An `ACTIVE` membership with a past period end is de facto expired even if
     the status field has not been updated.
   - Keep this as a pure helper — do not mutate the database here.
 
-- [ ] Add `getMembershipDisplayStatus(membership, asOf)` to
+- [x] Add `getMembershipDisplayStatus(membership, asOf)` to
       `lib/dashboard/calculations.ts`
   - Returns a display-level status: `"active"`, `"expiring"`, `"expired"`,
     `"past_due"`, or `"canceled"`.
@@ -167,7 +167,7 @@ differently from a current one.
   - `"active"`: `ACTIVE` + none of the above.
   - This is a read-only display helper used by the member detail page and roster.
 
-- [ ] Add or reuse a gym-local day-boundary helper
+- [x] Add or reuse a gym-local day-boundary helper
   - Accepts a `Date` and `gym.timezone`.
   - Returns the start of that gym-local day as the canonical comparison instant.
   - Use the helper instead of direct full-timestamp comparisons in expired and
@@ -178,14 +178,14 @@ differently from a current one.
 
 ### UI — member detail page
 
-- [ ] Update current membership selection on `/members/[id]`
+- [x] Update current membership selection on `/members/[id]`
   - Select the latest renewable membership (`ACTIVE` or `EXPIRED`), ordered by
     `startedAt desc`, then `id desc`.
   - Do not show `PAST_DUE` or `CANCELED` memberships as current.
   - This fixes the existing `status === "ACTIVE"` selection, which would hide
     persisted `EXPIRED` memberships from the Renew flow.
 
-- [ ] Update the current membership card on `/members/[id]`
+- [x] Update the current membership card on `/members/[id]`
   - Add an `"Expired"` badge when `getMembershipDisplayStatus` returns
     `"expired"`.
   - Distinguish visually: `"Expiring soon"` badge in amber, `"Expired"` badge
@@ -195,7 +195,7 @@ differently from a current one.
 
 ### UI — member roster
 
-- [ ] Update the billing risk badge on the member roster row/card
+- [x] Update the billing risk badge on the member roster row/card
   - Add `"expired"` as a distinct billing risk state alongside `"expiring"` and
     `"overdue"`.
   - Filter bar: add `"Expired"` as a selectable risk filter value.
@@ -210,7 +210,7 @@ differently from a current one.
 
 ### UI — overview alerts
 
-- [ ] Update the expiring membership alert section on the overview page
+- [x] Update the expiring membership alert section on the overview page
   - Split into two distinct alert groups:
     - **"Expiring soon"** — memberships within the renewal window, not yet past.
     - **"Expired"** — memberships whose period has already passed.
@@ -228,19 +228,19 @@ differently from a current one.
 
 ### Verification
 
-- [ ] Member with `currentPeriodEndsAt` in the past shows `"Expired"` badge
+- [x] Member with `currentPeriodEndsAt` in the past shows `"Expired"` badge
       on member detail.
-- [ ] Member with `currentPeriodEndsAt` within renewal window shows
+- [x] Member with `currentPeriodEndsAt` within renewal window shows
       `"Expiring soon"` badge.
-- [ ] Member with future period end and no other flags shows `"Active"`.
-- [ ] Persisted `EXPIRED` membership appears in the current membership card and
+- [x] Member with future period end and no other flags shows `"Active"`.
+- [x] Persisted `EXPIRED` membership appears in the current membership card and
       can host the Renew action.
-- [ ] Overview splits expiring and expired into separate groups.
-- [ ] Expired overview alerts use the `EXPIRED_MEMBERSHIP` alert type.
-- [ ] Overview open-alert count includes expired membership alerts.
-- [ ] `DashboardSummary` exposes an `expiredMembershipsCount` value.
-- [ ] Roster filter correctly isolates expired members.
-- [ ] `npm run typecheck`, `npm run lint`, `npm run build`.
+- [x] Overview splits expiring and expired into separate groups.
+- [x] Expired overview alerts use the `EXPIRED_MEMBERSHIP` alert type.
+- [x] Overview open-alert count includes expired membership alerts.
+- [x] `DashboardSummary` exposes an `expiredMembershipsCount` value.
+- [x] Roster filter correctly isolates expired members.
+- [x] `npm run typecheck`, `npm run lint`, `npm run build`.
 
 ---
 

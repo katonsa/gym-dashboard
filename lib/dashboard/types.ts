@@ -138,6 +138,7 @@ export type DashboardAlert = {
   id: string
   type:
     | "EXPIRING_MEMBERSHIP"
+    | "EXPIRED_MEMBERSHIP"
     | "OVERDUE_PAYMENT"
     | "INACTIVE_MEMBER"
     | "DROP_IN_CONVERSION"
@@ -163,6 +164,7 @@ export type DashboardSummary = {
   dropInRevenueThisMonthAmount: number
   totalRevenueThisMonthAmount: number
   expiringMembershipsCount: number
+  expiredMembershipsCount: number
   overduePaymentsCount: number
   inactiveMembersCount: number
   dropInConversionOpportunitiesCount: number

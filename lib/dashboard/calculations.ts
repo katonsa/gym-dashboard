@@ -1,12 +1,20 @@
 import type { Membership } from "@/lib/dashboard/types"
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000
+type DateValue = Date | string
 
 export type DashboardCalculationOptions = {
   asOf?: Date
   expiringMonthlyWindowDays?: number
   expiringAnnualWindowDays?: number
 }
+
+export type MembershipDisplayStatus =
+  | "active"
+  | "expiring"
+  | "expired"
+  | "past_due"
+  | "canceled"
 
 export function getExpiringMemberships(
   memberships: Membership[],
@@ -31,7 +39,57 @@ export function getExpiringMemberships(
   })
 }
 
-function getDaysBetween(start: Date | string, end: Date | string) {
+export function isExpired(
+  membership: {
+    currentPeriodEndsAt: DateValue
+    status: Membership["status"]
+  },
+  asOf: Date
+) {
+  return (
+    membership.status === "ACTIVE" &&
+    new Date(membership.currentPeriodEndsAt).getTime() < asOf.getTime()
+  )
+}
+
+export function getMembershipDisplayStatus(
+  membership: {
+    billingInterval: Membership["billingInterval"]
+    currentPeriodEndsAt: DateValue
+    status: Membership["status"]
+  },
+  asOf: Date,
+  options: Pick<
+    DashboardCalculationOptions,
+    "expiringMonthlyWindowDays" | "expiringAnnualWindowDays"
+  > = {}
+): MembershipDisplayStatus {
+  if (membership.status === "PAST_DUE") {
+    return "past_due"
+  }
+
+  if (membership.status === "CANCELED") {
+    return "canceled"
+  }
+
+  if (membership.status === "EXPIRED" || isExpired(membership, asOf)) {
+    return "expired"
+  }
+
+  const monthlyWindowDays = options.expiringMonthlyWindowDays ?? 7
+  const annualWindowDays = options.expiringAnnualWindowDays ?? 30
+  const daysRemaining = getDaysBetween(asOf, membership.currentPeriodEndsAt)
+  const windowDays =
+    membership.billingInterval === "ANNUAL"
+      ? annualWindowDays
+      : monthlyWindowDays
+
+  return daysRemaining >= 0 && daysRemaining <= windowDays
+    ? "expiring"
+    : "active"
+}
+
+export function getDaysBetween(start: Date | string, end: Date | string) {
   const startTime = new Date(start).getTime()
   const endTime = new Date(end).getTime()
 

@@ -4,7 +4,8 @@ import type * as React from "react"
 import { Button } from "@/components/ui/button"
 import { PaginationNav } from "@/components/ui/pagination-nav"
 import {
-  getExpiringMemberships,
+  getDaysBetween,
+  getMembershipDisplayStatus,
   parsePaginationParams,
   type AttendanceRecord,
   type AttendanceSource,
@@ -15,6 +16,8 @@ import {
   type MembershipStatus,
   type PaymentStatus,
 } from "@/lib/dashboard"
+import type { MembershipDisplayStatus } from "@/lib/dashboard/calculations"
+import { getGymLocalDayBoundary } from "@/lib/dashboard/date-boundaries"
 import {
   loadMemberAttendancePage,
   loadMemberDetailData,
@@ -37,7 +40,7 @@ type MemberDetailPageProps = {
   }>
 }
 
-type BillingRisk = "clear" | "expiring" | "overdue"
+type BillingRisk = "clear" | "expired" | "expiring" | "overdue"
 
 const statusClasses: Record<MemberStatus, string> = {
   ACTIVE: "border-status/45 bg-status/12 text-status",
@@ -47,8 +50,17 @@ const statusClasses: Record<MemberStatus, string> = {
 
 const riskClasses: Record<BillingRisk, string> = {
   clear: "border-border bg-muted text-muted-foreground",
+  expired: "border-alert/45 bg-alert/12 text-alert",
   expiring: "border-chart-3/45 bg-chart-3/12 text-chart-3",
   overdue: "border-alert/45 bg-alert/12 text-alert",
+}
+
+const membershipDisplayClasses: Record<MembershipDisplayStatus, string> = {
+  active: "border-status/45 bg-status/12 text-status",
+  canceled: "border-muted-foreground/35 bg-muted text-muted-foreground",
+  expired: "border-alert/45 bg-alert/12 text-alert",
+  expiring: "border-chart-3/45 bg-chart-3/12 text-chart-3",
+  past_due: "border-alert/45 bg-alert/12 text-alert",
 }
 
 const membershipClasses: Record<MembershipStatus, string> = {
@@ -106,10 +118,16 @@ export default async function MemberDetailPage({
 
   const { gym, member, planTiers, memberships, hasOverduePayments } = data
   const memberName = formatMemberName(member)
+  const membershipAsOf = getGymLocalDayBoundary(new Date(), gym.timezone)
   const currentMembership = memberships.find(
-    (membership) => membership.status === "ACTIVE"
+    (membership) =>
+      membership.status === "ACTIVE" || membership.status === "EXPIRED"
   )
-  const billingRisk = getBillingRisk(memberships, hasOverduePayments)
+  const billingRisk = getBillingRisk(
+    currentMembership,
+    hasOverduePayments,
+    membershipAsOf
+  )
   const preservedPaginationParams =
     getPreservedPaginationParams(resolvedSearchParams)
 
@@ -169,6 +187,7 @@ export default async function MemberDetailPage({
             <CurrentMembershipSummary
               currencyCode={gym.currencyCode}
               membership={currentMembership}
+              asOf={membershipAsOf}
               timeZone={gym.timezone}
             />
           ) : (
@@ -280,18 +299,32 @@ export default async function MemberDetailPage({
 function CurrentMembershipSummary({
   currencyCode,
   membership,
+  asOf,
   timeZone,
 }: {
   currencyCode: string
   membership: MemberDetailMembership
+  asOf: Date
   timeZone: string
 }) {
+  const displayStatus = getMembershipDisplayStatus(membership, asOf)
+  const periodDetail = getMembershipPeriodDetail(
+    membership,
+    displayStatus,
+    asOf
+  )
+
   return (
     <div className="grid gap-3">
       <div className="flex flex-wrap items-center gap-2">
         <p className="text-lg font-semibold">{membership.planTier.name}</p>
-        <MembershipBadge status={membership.status} />
+        <MembershipDisplayBadge status={displayStatus} />
       </div>
+      {periodDetail ? (
+        <p className="text-sm font-medium text-muted-foreground">
+          {periodDetail}
+        </p>
+      ) : null}
       <div className="grid gap-3 sm:grid-cols-2">
         <DetailField
           label="Interval"
@@ -476,6 +509,23 @@ function RiskBadge({ risk }: { risk: BillingRisk }) {
   )
 }
 
+function MembershipDisplayBadge({
+  status,
+}: {
+  status: MembershipDisplayStatus
+}) {
+  return (
+    <span
+      className={cn(
+        "inline-flex w-fit items-center rounded-lg border px-2 py-1 text-[0.7rem] font-medium uppercase",
+        membershipDisplayClasses[status]
+      )}
+    >
+      {status === "expiring" ? "Expiring soon" : titleCase(status)}
+    </span>
+  )
+}
+
 function MembershipBadge({ status }: { status: MembershipStatus }) {
   return (
     <span
@@ -503,18 +553,59 @@ function PaymentBadge({ status }: { status: PaymentStatus }) {
 }
 
 function getBillingRisk(
-  memberships: MemberDetailMembership[],
-  hasOverduePayments: boolean
+  membership: MemberDetailMembership | undefined,
+  hasOverduePayments: boolean,
+  asOf: Date
 ): BillingRisk {
   if (hasOverduePayments) {
     return "overdue"
   }
 
-  if (getExpiringMemberships(memberships).length > 0) {
+  if (!membership) {
+    return "clear"
+  }
+
+  const displayStatus = getMembershipDisplayStatus(membership, asOf)
+
+  if (displayStatus === "expired") {
+    return "expired"
+  }
+
+  if (displayStatus === "expiring") {
     return "expiring"
   }
 
   return "clear"
+}
+
+function getMembershipPeriodDetail(
+  membership: MemberDetailMembership,
+  displayStatus: MembershipDisplayStatus,
+  asOf: Date
+) {
+  if (displayStatus === "expiring") {
+    const daysRemaining = Math.max(
+      0,
+      getDaysBetween(asOf, membership.currentPeriodEndsAt)
+    )
+
+    return daysRemaining === 1
+      ? "Expires in 1 day."
+      : `Expires in ${daysRemaining} days.`
+  }
+
+  if (displayStatus === "expired") {
+    const daysOverdue = Math.max(
+      1,
+      getDaysBetween(membership.currentPeriodEndsAt, asOf)
+    )
+
+    return daysOverdue === 1
+      ? "Expired 1 day ago."
+      : `Expired ${daysOverdue} days ago.`
+  }
+
+  return null
 }
 
 function getPreservedPaginationParams(searchParams: {

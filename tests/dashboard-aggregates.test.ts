@@ -4,6 +4,7 @@ import test from "node:test"
 import {
   getConversionLeads,
   getDropInTotal,
+  getExpiredMembershipsCount,
   getExpiringMembershipsCount,
   getInactiveMembersCount,
   getMemberCountsByStatus,
@@ -11,6 +12,7 @@ import {
   getNewSignUpsThisMonth,
   getOverdueAgingSummary,
   getOverduePaymentsCount,
+  getOverviewAlerts,
   getPlanBreakdownAggregates,
   getRevenueTrend,
   getSubscriptionSummary,
@@ -137,7 +139,12 @@ test("counts expiring memberships with separate monthly and annual windows", asy
   assert.deepEqual(calls, [
     {
       where: {
-        member: { gymId: "gym-1" },
+        member: {
+          gymId: "gym-1",
+          status: {
+            not: "SUSPENDED",
+          },
+        },
         status: "ACTIVE",
         billingInterval: "MONTHLY",
         currentPeriodEndsAt: { gte: now, lte: monthlyWindowEnd },
@@ -145,13 +152,122 @@ test("counts expiring memberships with separate monthly and annual windows", asy
     },
     {
       where: {
-        member: { gymId: "gym-1" },
+        member: {
+          gymId: "gym-1",
+          status: {
+            not: "SUSPENDED",
+          },
+        },
         status: "ACTIVE",
         billingInterval: "ANNUAL",
         currentPeriodEndsAt: { gte: now, lte: annualWindowEnd },
       },
     },
   ])
+})
+
+test("counts expired memberships with persisted and de facto expired rows", async () => {
+  const calls: unknown[] = []
+  const db = mockDb({
+    membership: {
+      count: async (args: unknown) => {
+        calls.push(args)
+
+        return 2
+      },
+    },
+  })
+  const asOf = new Date("2026-04-18T17:00:00.000Z")
+
+  assert.equal(await getExpiredMembershipsCount("gym-1", asOf, db), 2)
+  assert.deepEqual(calls[0], {
+    where: {
+      member: {
+        gymId: "gym-1",
+        status: {
+          not: "SUSPENDED",
+        },
+      },
+      OR: [
+        { status: "EXPIRED" },
+        {
+          status: "ACTIVE",
+          currentPeriodEndsAt: { lt: asOf },
+        },
+      ],
+    },
+  })
+})
+
+test("maps expired memberships into distinct overview alerts", async () => {
+  const membershipFindManyCalls: unknown[] = []
+  const db = mockDb({
+    membership: {
+      findMany: async (args: unknown) => {
+        membershipFindManyCalls.push(args)
+
+        return membershipFindManyCalls.length === 1
+          ? [
+              {
+                id: "membership-expired",
+                memberId: "member-1",
+                currentPeriodEndsAt: "2026-04-10T00:00:00.000Z",
+                member: {
+                  firstName: "Ari",
+                  lastName: "Expired",
+                },
+              },
+            ]
+          : []
+      },
+    },
+  })
+  const alerts = await getOverviewAlerts(
+    "gym-1",
+    "IDR",
+    {
+      asOf: new Date("2026-04-19T09:30:00.000Z"),
+      membershipAsOf: new Date("2026-04-18T17:00:00.000Z"),
+      alertLimit: 50,
+    },
+    db
+  )
+
+  assert.equal(alerts[0]?.type, "EXPIRED_MEMBERSHIP")
+  assert.equal(alerts[0]?.severity, "critical")
+  assert.equal(alerts[0]?.membershipId, "membership-expired")
+  assert.deepEqual(membershipFindManyCalls[0], {
+    where: {
+      member: {
+        gymId: "gym-1",
+        status: {
+          not: "SUSPENDED",
+        },
+      },
+      OR: [
+        { status: "EXPIRED" },
+        {
+          status: "ACTIVE",
+          currentPeriodEndsAt: {
+            lt: new Date("2026-04-18T17:00:00.000Z"),
+          },
+        },
+      ],
+    },
+    orderBy: [{ currentPeriodEndsAt: "asc" }, { id: "asc" }],
+    take: 50,
+    select: {
+      id: true,
+      memberId: true,
+      currentPeriodEndsAt: true,
+      member: {
+        select: {
+          firstName: true,
+          lastName: true,
+        },
+      },
+    },
+  })
 })
 
 test("counts overdue payments and stale inactive members with scoped filters", async () => {

@@ -6,8 +6,9 @@ import type {
   PlanTier,
   PlanTierName,
 } from "./types.ts"
+import { getMembershipDisplayStatus, isExpired } from "./calculations.ts"
 
-export type BillingRisk = "clear" | "expiring" | "overdue"
+export type BillingRisk = "clear" | "expired" | "expiring" | "overdue"
 export type StatusFilter = "all" | MemberStatus
 export type PlanFilter = "all" | PlanTierName | "No plan"
 export type RiskFilter = "all" | BillingRisk
@@ -72,7 +73,13 @@ const validStatuses = new Set<StatusFilter>([
   "INACTIVE",
   "SUSPENDED",
 ])
-const validRisks = new Set<RiskFilter>(["all", "clear", "expiring", "overdue"])
+const validRisks = new Set<RiskFilter>([
+  "all",
+  "clear",
+  "expired",
+  "expiring",
+  "overdue",
+])
 
 export function buildMemberRosterPageRows(
   members: MemberRosterPageMember[],
@@ -134,32 +141,17 @@ function getMemberRosterPageBillingRisk(
 
   const membership = member.memberships[0]
 
-  if (!membership || membership.status !== "ACTIVE") {
+  if (!membership) {
     return "clear"
   }
 
-  return isMembershipExpiring(membership, asOf) ? "expiring" : "clear"
-}
-
-function isMembershipExpiring(
-  membership: {
-    billingInterval: BillingInterval
-    currentPeriodEndsAt: DateValue
-    status: MembershipStatus
-  },
-  asOf: Date
-) {
-  if (membership.status !== "ACTIVE") {
-    return false
+  if (membership.status === "EXPIRED" || isExpired(membership, asOf)) {
+    return "expired"
   }
 
-  const daysRemaining = Math.floor(
-    (new Date(membership.currentPeriodEndsAt).getTime() - asOf.getTime()) /
-      (24 * 60 * 60 * 1000)
-  )
-  const windowDays = membership.billingInterval === "ANNUAL" ? 30 : 7
-
-  return daysRemaining >= 0 && daysRemaining <= windowDays
+  return getMembershipDisplayStatus(membership, asOf) === "expiring"
+    ? "expiring"
+    : "clear"
 }
 
 function getFirstSearchParamValue(value: string | string[] | undefined) {

@@ -111,5 +111,67 @@ test("builds member roster filters and paginated query", () => {
   ])
   assert.equal(getMemberRosterPageQuery(where, 50, 25, asOf).skip, 50)
   assert.equal(getMemberRosterPageQuery(where, 50, 25, asOf).take, 25)
+  assert.deepEqual(
+    getMemberRosterPageQuery(where, 50, 25, asOf).select.memberships.where,
+    {
+      status: {
+        in: ["ACTIVE", "PAST_DUE", "EXPIRED"],
+      },
+    }
+  )
   assert.ok(where.AND)
+})
+
+test("builds an expired member roster risk filter", () => {
+  const asOf = new Date("2026-04-16T00:00:00.000Z")
+  const where = getMemberRosterPageWhere(
+    "gym-1",
+    {
+      q: "",
+      status: "all",
+      plan: "all",
+      risk: "expired",
+    },
+    asOf
+  )
+
+  assert.deepEqual(where, {
+    gymId: "gym-1",
+    AND: [
+      {
+        AND: [
+          {
+            status: {
+              not: "SUSPENDED",
+            },
+          },
+          {
+            NOT: {
+              payments: {
+                some: {
+                  OR: [
+                    { status: "OVERDUE" },
+                    { status: "PENDING", dueAt: { lt: asOf } },
+                  ],
+                },
+              },
+            },
+          },
+          {
+            memberships: {
+              some: {
+                OR: [
+                  { status: "EXPIRED" },
+                  {
+                    status: "ACTIVE",
+                    currentPeriodEndsAt: { lt: asOf },
+                  },
+                ],
+              },
+            },
+          },
+        ],
+      },
+    ],
+  })
 })

@@ -85,6 +85,12 @@ export default async function Page() {
       detail: "Inside renewal window",
       tone: "alert",
     },
+    {
+      label: "Expired subs",
+      value: numberFormatter.format(summary.expiredMembershipsCount),
+      detail: "Past current period",
+      tone: "alert",
+    },
   ]
   const alertSections = [
     {
@@ -94,8 +100,14 @@ export default async function Page() {
       empty: "No overdue payments.",
     },
     {
+      type: "EXPIRED_MEMBERSHIP",
+      label: "Expired memberships",
+      count: summary.expiredMembershipsCount,
+      empty: "No memberships are past their current period.",
+    },
+    {
       type: "EXPIRING_MEMBERSHIP",
-      label: "Expiring memberships",
+      label: "Expiring soon",
       count: summary.expiringMembershipsCount,
       empty: "No renewals inside the current window.",
     },
@@ -268,7 +280,7 @@ export default async function Page() {
         </div>
         {summary.totalMembers > 0 ||
         summary.dropInRevenueThisMonthAmount > 0 ? (
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-7">
             {stats.map((stat) => (
               <article
                 key={stat.label}
@@ -333,6 +345,12 @@ export default async function Page() {
               <span className="text-muted-foreground">Expiring soon</span>
               <span className="font-semibold">
                 {summary.expiringMembershipsCount}
+              </span>
+            </div>
+            <div className="flex items-center justify-between gap-3 border-b border-border pb-3">
+              <span className="text-muted-foreground">Expired</span>
+              <span className="font-semibold">
+                {summary.expiredMembershipsCount}
               </span>
             </div>
             <div className="flex items-center justify-between gap-3 border-b border-border pb-3">
