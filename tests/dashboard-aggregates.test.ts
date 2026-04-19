@@ -211,6 +211,7 @@ test("maps expired memberships into distinct overview alerts", async () => {
               {
                 id: "membership-expired",
                 memberId: "member-1",
+                status: "ACTIVE",
                 currentPeriodEndsAt: "2026-04-10T00:00:00.000Z",
                 member: {
                   firstName: "Ari",
@@ -236,6 +237,7 @@ test("maps expired memberships into distinct overview alerts", async () => {
   assert.equal(alerts[0]?.type, "EXPIRED_MEMBERSHIP")
   assert.equal(alerts[0]?.severity, "critical")
   assert.equal(alerts[0]?.membershipId, "membership-expired")
+  assert.equal(alerts[0]?.membershipStatus, "ACTIVE")
   assert.deepEqual(membershipFindManyCalls[0], {
     where: {
       member: {
@@ -259,6 +261,7 @@ test("maps expired memberships into distinct overview alerts", async () => {
     select: {
       id: true,
       memberId: true,
+      status: true,
       currentPeriodEndsAt: true,
       member: {
         select: {

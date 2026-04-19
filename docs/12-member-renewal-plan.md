@@ -1,6 +1,6 @@
 # Member Renewal Plan
 
-Status: Phase 3 complete.
+Status: Phase 4 complete.
 
 Let the gym owner manually renew a member's expiring or expired membership
 from two surfaces: the member detail page and the overview alert panel. This
@@ -417,7 +417,7 @@ approach taken for overdue payments in doc 10.
 
 ### Deep link (primary)
 
-- [ ] Make each expiring and expired membership alert card on the overview page
+- [x] Make each expiring and expired membership alert card on the overview page
       a link to `/members/[memberId]` where the renewal button is visible.
   - The `DashboardAlert` type already carries `memberId`.
   - Add an anchor such as `/members/[memberId]#current-membership` if the
@@ -426,7 +426,7 @@ approach taken for overdue payments in doc 10.
 
 ### Inline "Renew" action (stretch goal)
 
-- [ ] Render a small **"Renew"** button directly inside each expiring/expired
+- [x] Render a small **"Renew"** button directly inside each expiring/expired
       alert card on the overview page.
   - Reuses the same `renewMembership` server action.
   - On success: the alert card disappears on the next revalidation and overview
@@ -440,9 +440,9 @@ owners find the extra navigation step frustrating.
 
 ### Verification
 
-- [ ] Clicking an expiring alert navigates to the correct member detail page.
-- [ ] Clicking an expired alert navigates to the correct member detail page.
-- [ ] Expired alert deep links land near the current membership card or renewal
+- [x] Clicking an expiring alert navigates to the correct member detail page.
+- [x] Clicking an expired alert navigates to the correct member detail page.
+- [x] Expired alert deep links land near the current membership card or renewal
       action on mobile.
 - [ ] (Stretch) Inline "Renew" on the overview resolves the alert.
 - [ ] Overview expiring and expired counts decrease after renewal.

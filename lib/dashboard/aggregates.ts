@@ -95,6 +95,7 @@ type ConversionLeadRawRow = {
 type ExpiringMembershipAlertRow = {
   id: string
   memberId: string
+  status: "ACTIVE" | "EXPIRED"
   currentPeriodEndsAt: Date | string
   member: {
     firstName: string
@@ -836,6 +837,7 @@ export async function getOverviewAlerts(
         detail: `Membership ended ${formatDate(membership.currentPeriodEndsAt)}.`,
         memberId: membership.memberId,
         membershipId: membership.id,
+        membershipStatus: membership.status,
         dueAt: toDateString(membership.currentPeriodEndsAt),
       } satisfies DashboardAlert
     }),
@@ -848,6 +850,7 @@ export async function getOverviewAlerts(
         detail: `Membership ends ${formatDate(membership.currentPeriodEndsAt)}.`,
         memberId: membership.memberId,
         membershipId: membership.id,
+        membershipStatus: membership.status,
         dueAt: toDateString(membership.currentPeriodEndsAt),
       } satisfies DashboardAlert
     }),
@@ -931,6 +934,7 @@ async function getExpiringMembershipAlerts(
     select: {
       id: true,
       memberId: true,
+      status: true,
       currentPeriodEndsAt: true,
       member: {
         select: {
@@ -955,6 +959,7 @@ function getExpiredMembershipAlerts(
     select: {
       id: true,
       memberId: true,
+      status: true,
       currentPeriodEndsAt: true,
       member: {
         select: {
