@@ -1,6 +1,6 @@
 # Member Renewal Plan
 
-Status: Phase 2 complete.
+Status: Phase 3 complete.
 
 Let the gym owner manually renew a member's expiring or expired membership
 from two surfaces: the member detail page and the overview alert panel. This
@@ -363,7 +363,7 @@ memberships, the Renew button must be available for both de facto expired
 
 ### Behavior
 
-- [ ] Button opens a confirmation dialog:
+- [x] Button opens a confirmation dialog:
   - For expiring memberships:
     _"Renew [Plan Name] ([Interval])? A new billing period will start on
     [currentPeriodEndsAt] and a payment of [amount] will be recorded as
@@ -382,31 +382,31 @@ memberships, the Renew button must be available for both de facto expired
     state.
   - Include `expectedStatus` and `expectedCurrentPeriodEndsAt` from the rendered
     membership card in the action payload.
-- [ ] On success:
+- [x] On success:
   - Dialog closes.
   - Membership card updates: new period end date, `ACTIVE` badge, no expiry
     warning.
   - Payment history section shows the new `PENDING` payment.
   - Success feedback: "Membership renewed. Next period ends [date]."
-- [ ] On error: show inline error message inside the dialog.
-- [ ] Disable confirm button while action is pending.
-- [ ] Keep 44px touch targets on mobile.
+- [x] On error: show inline error message inside the dialog.
+- [x] Disable confirm button while action is pending.
+- [x] Keep 44px touch targets on mobile.
 
 ### Verification
 
-- [ ] "Renew" button appears on the membership card for expiring and expired
+- [x] "Renew" button appears on the membership card for expiring and expired
       memberships.
-- [ ] "Renew" button does not appear for active (non-expiring) memberships.
-- [ ] Confirmation dialog copy reflects expiring vs expired state correctly.
-- [ ] Expired membership dialog shows the optional renewal date input.
-- [ ] Persisted `EXPIRED` membership shows the same renewal dialog as a de facto
+- [x] "Renew" button does not appear for active (non-expiring) memberships.
+- [x] Confirmation dialog copy reflects expiring vs expired state correctly.
+- [x] Expired membership dialog shows the optional renewal date input.
+- [x] Persisted `EXPIRED` membership shows the same renewal dialog as a de facto
       expired `ACTIVE` membership.
-- [ ] If one renewal does not bring a long-expired membership current, show a
+- [x] If one renewal does not bring a long-expired membership current, show a
       note that another renewal may be needed.
-- [ ] Renewing updates the membership card dates.
-- [ ] New PENDING payment appears in payment history.
-- [ ] Expiring/expired badge clears after successful renewal.
-- [ ] `npm run typecheck`, `npm run lint`, `npm run build`.
+- [x] Renewing updates the membership card dates.
+- [x] New PENDING payment appears in payment history.
+- [x] Expiring/expired badge clears after successful renewal.
+- [x] `npm run typecheck`, `npm run lint`, `npm run build`.
 
 ---
 

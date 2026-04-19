@@ -27,6 +27,7 @@ import {
 import { cn } from "@/lib/utils"
 import { MemberCheckInForm } from "../member-checkin-form"
 import { MemberPlanChangeForm } from "../member-plan-change-form"
+import { MemberRenewalAction } from "../member-renewal-action"
 import { MemberStatusAction } from "../member-status-action"
 import { PaymentActions } from "../payment-actions"
 
@@ -182,7 +183,7 @@ export default async function MemberDetailPage({
           </div>
         </InfoCard>
 
-        <InfoCard title="Current membership">
+        <InfoCard id="current-membership" title="Current membership">
           {currentMembership ? (
             <CurrentMembershipSummary
               currencyCode={gym.currencyCode}
@@ -313,6 +314,9 @@ function CurrentMembershipSummary({
     displayStatus,
     asOf
   )
+  const canRenew =
+    (displayStatus === "expiring" || displayStatus === "expired") &&
+    (membership.status === "ACTIVE" || membership.status === "EXPIRED")
 
   return (
     <div className="grid gap-3">
@@ -342,6 +346,32 @@ function CurrentMembershipSummary({
           label="Next billing"
           value={formatDate(membership.nextBillingDate, timeZone)}
         />
+      </div>
+      <div className="flex flex-col gap-2 border-t border-border pt-3 sm:flex-row sm:flex-wrap sm:items-start">
+        <MemberRenewalAction
+          membershipId={membership.id}
+          expectedStatus={
+            membership.status === "EXPIRED" ? "EXPIRED" : "ACTIVE"
+          }
+          expectedCurrentPeriodEndsAt={membership.currentPeriodEndsAt}
+          canRenew={canRenew}
+          displayStatus={displayStatus}
+          planName={membership.planTier.name}
+          billingInterval={membership.billingInterval}
+          formattedAmount={formatCurrency(membership.priceAmount, currencyCode)}
+          defaultRenewalDate={formatDateInput(new Date(), timeZone)}
+          asOf={asOf.toISOString()}
+          timeZone={timeZone}
+        />
+        <Button
+          asChild
+          type="button"
+          variant="outline"
+          size="sm"
+          className="min-h-11"
+        >
+          <Link href="#plan-change">Edit plan</Link>
+        </Button>
       </div>
     </div>
   )
