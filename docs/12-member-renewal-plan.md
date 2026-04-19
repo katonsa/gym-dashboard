@@ -1,6 +1,6 @@
 # Member Renewal Plan
 
-Status: Phase 4 complete.
+Status: Complete.
 
 Let the gym owner manually renew a member's expiring or expired membership
 from two surfaces: the member detail page and the overview alert panel. This
@@ -522,8 +522,8 @@ current revenue metrics and correctly displayed as expired in the UI.
 - [x] Subscription plan breakdown does not include stale ACTIVE memberships.
 - [x] Subscription setup state does not treat stale ACTIVE memberships as active
       revenue memberships.
-- [ ] MRR increases after renewing an expired membership.
-- [ ] MRR decreases when a membership expires (period end passes) without
+- [x] MRR increases after renewing an expired membership.
+- [x] MRR decreases when a membership expires (period end passes) without
       renewal.
 - [x] Existing MRR tests updated to cover the `currentPeriodEndsAt` boundary.
 - [x] Existing subscription aggregate tests updated to cover the
