@@ -460,7 +460,7 @@ its plan breakdown and active revenue setup state.
 
 ### Option A: Fix revenue aggregate queries (recommended)
 
-- [ ] Update `getMembershipMrr` in `lib/dashboard/aggregates.ts` to exclude
+- [x] Update `getMembershipMrr` in `lib/dashboard/aggregates.ts` to exclude
       memberships whose `currentPeriodEndsAt` is before the gym-local `asOf`
       day boundary.
   - Change the function signature to accept a pre-normalized `revenueAsOf`
@@ -476,21 +476,21 @@ its plan breakdown and active revenue setup state.
   - The membership `status` stays `ACTIVE` until the owner renews or changes
     the plan — the MRR query just stops counting stale ones.
 
-- [ ] Update `getSubscriptionSummary` revenue setup state
+- [x] Update `getSubscriptionSummary` revenue setup state
   - Its `hasActiveRevenueMemberships` query should use the same revenue
     membership definition.
   - Do not count `PAST_DUE` as active revenue. Current revenue counts only
     `ACTIVE` memberships whose period has not ended.
   - Pass the same gym-local `revenueAsOf` from `loadSubscriptionSummary`.
 
-- [ ] Update `getPlanBreakdownAggregates`
+- [x] Update `getPlanBreakdownAggregates`
   - Add a pre-normalized `revenueAsOf` parameter.
   - Count only revenue memberships in the plan breakdown and monthly-equivalent
     revenue totals.
   - Keep historical revenue trend behavior unchanged unless a separate decision
     is made to redefine historical months.
 
-- [ ] Replace direct UTC membership-day comparisons in overview and roster
+- [x] Replace direct UTC membership-day comparisons in overview and roster
       membership queries
   - `getExpiringMembershipsCount`, `getExpiringMembershipAlerts`, and roster
     risk filters should receive the same gym-local membership boundary.
@@ -518,17 +518,17 @@ current revenue metrics and correctly displayed as expired in the UI.
 
 ### Verification
 
-- [ ] MRR does not include memberships with `currentPeriodEndsAt` in the past.
-- [ ] Subscription plan breakdown does not include stale ACTIVE memberships.
-- [ ] Subscription setup state does not treat stale ACTIVE memberships as active
+- [x] MRR does not include memberships with `currentPeriodEndsAt` in the past.
+- [x] Subscription plan breakdown does not include stale ACTIVE memberships.
+- [x] Subscription setup state does not treat stale ACTIVE memberships as active
       revenue memberships.
 - [ ] MRR increases after renewing an expired membership.
 - [ ] MRR decreases when a membership expires (period end passes) without
       renewal.
-- [ ] Existing MRR tests updated to cover the `currentPeriodEndsAt` boundary.
-- [ ] Existing subscription aggregate tests updated to cover the
+- [x] Existing MRR tests updated to cover the `currentPeriodEndsAt` boundary.
+- [x] Existing subscription aggregate tests updated to cover the
       `currentPeriodEndsAt` boundary.
-- [ ] `npm run typecheck`, `npm run lint`, `npm run build`.
+- [x] `npm run typecheck`, `npm run lint`, `npm run build`.
 
 ---
 

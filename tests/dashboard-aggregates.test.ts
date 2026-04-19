@@ -13,6 +13,7 @@ import {
   getOverduePaymentsCount,
   getPlanBreakdownAggregates,
   getRevenueTrend,
+  getSubscriptionSummary,
 } from "../lib/dashboard/aggregates.ts"
 import type { PlanTier } from "../lib/dashboard/types.ts"
 
@@ -72,6 +73,7 @@ test("counts new sign-ups in a UTC month window", async () => {
 
 test("calculates MRR with monthly and annual membership aggregate queries", async () => {
   const calls: unknown[] = []
+  const revenueAsOf = new Date("2026-04-18T17:00:00.000Z")
   const db = mockDb({
     membership: {
       aggregate: async (args: unknown) => {
@@ -84,13 +86,14 @@ test("calculates MRR with monthly and annual membership aggregate queries", asyn
     },
   })
 
-  assert.equal(await getMembershipMrr("gym-1", db), 450000)
+  assert.equal(await getMembershipMrr("gym-1", revenueAsOf, db), 450000)
   assert.deepEqual(calls, [
     {
       where: {
         member: { gymId: "gym-1" },
         status: "ACTIVE",
         billingInterval: "MONTHLY",
+        currentPeriodEndsAt: { gte: revenueAsOf },
       },
       _sum: { priceAmount: true },
     },
@@ -99,6 +102,7 @@ test("calculates MRR with monthly and annual membership aggregate queries", asyn
         member: { gymId: "gym-1" },
         status: "ACTIVE",
         billingInterval: "ANNUAL",
+        currentPeriodEndsAt: { gte: revenueAsOf },
       },
       _sum: { priceAmount: true },
     },
@@ -259,6 +263,7 @@ test("aggregates drop-in totals for a scoped date window", async () => {
 
 test("maps plan breakdown aggregate rows onto sorted plan tiers", async () => {
   const rawCalls: { strings: readonly string[]; values: unknown[] }[] = []
+  const revenueAsOf = new Date("2026-04-18T17:00:00.000Z")
   const db = mockDb({
     $queryRaw: async (strings: TemplateStringsArray, ...values: unknown[]) => {
       rawCalls.push({ strings: Array.from(strings), values })
@@ -279,30 +284,75 @@ test("maps plan breakdown aggregate rows onto sorted plan tiers", async () => {
     planTier({ id: "plan-basic", name: "Basic", sortOrder: 1 }),
   ]
 
-  assert.deepEqual(await getPlanBreakdownAggregates("gym-1", plans, db), [
-    {
-      id: "plan-basic",
-      name: "Basic",
-      description: undefined,
-      memberCount: 0,
-      memberShare: 0,
-      monthlyMemberships: 0,
-      annualMemberships: 0,
-      monthlyEquivalentRevenue: 0,
-    },
-    {
-      id: "plan-pro",
-      name: "Pro",
-      description: undefined,
-      memberCount: 3,
-      memberShare: 1,
-      monthlyMemberships: 2,
-      annualMemberships: 1,
-      monthlyEquivalentRevenue: 800000,
-    },
-  ])
+  assert.deepEqual(
+    await getPlanBreakdownAggregates("gym-1", plans, revenueAsOf, db),
+    [
+      {
+        id: "plan-basic",
+        name: "Basic",
+        description: undefined,
+        memberCount: 0,
+        memberShare: 0,
+        monthlyMemberships: 0,
+        annualMemberships: 0,
+        monthlyEquivalentRevenue: 0,
+      },
+      {
+        id: "plan-pro",
+        name: "Pro",
+        description: undefined,
+        memberCount: 3,
+        memberShare: 1,
+        monthlyMemberships: 2,
+        annualMemberships: 1,
+        monthlyEquivalentRevenue: 800000,
+      },
+    ]
+  )
   assert.equal(rawCalls[0]?.values[0], "gym-1")
-  assert.match(rawCalls[0]?.strings.join(" "), /"status" IN/)
+  assert.equal(rawCalls[0]?.values[1], revenueAsOf)
+  assert.match(rawCalls[0]?.strings.join(" "), /"status" = 'ACTIVE'/)
+  assert.match(rawCalls[0]?.strings.join(" "), /"currentPeriodEndsAt" >=/)
+})
+
+test("loads subscription setup from current active revenue memberships only", async () => {
+  const membershipCountCalls: unknown[] = []
+  const revenueAsOf = new Date("2026-04-18T17:00:00.000Z")
+  const db = mockDb({
+    membership: {
+      count: async (args: unknown) => {
+        membershipCountCalls.push(args)
+
+        return membershipCountCalls.length === 1 ? 1 : 2
+      },
+    },
+    membershipPayment: {
+      count: async () => 0,
+    },
+    dropInVisit: {
+      aggregate: async () => ({ _sum: { visitCount: 0 } }),
+    },
+  })
+  const plans: PlanTier[] = [
+    planTier({ id: "plan-basic", name: "Basic", sortOrder: 1 }),
+  ]
+
+  const summary = await getSubscriptionSummary(
+    "gym-1",
+    plans,
+    new Date("2026-04-19T09:30:00.000Z"),
+    revenueAsOf,
+    db
+  )
+
+  assert.equal(summary.setupState.hasActiveRevenueMemberships, true)
+  assert.deepEqual(membershipCountCalls[0], {
+    where: {
+      member: { gymId: "gym-1" },
+      status: "ACTIVE",
+      currentPeriodEndsAt: { gte: revenueAsOf },
+    },
+  })
 })
 
 test("combines membership and drop-in raw rows into revenue trend", async () => {

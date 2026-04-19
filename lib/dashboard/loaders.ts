@@ -43,6 +43,7 @@ import {
   getMemberPaymentsPageQuery,
   getPlanTiersQuery,
 } from "@/lib/dashboard/query-scopes"
+import { getGymLocalDayBoundary } from "@/lib/dashboard/date-boundaries"
 import type {
   AttendanceRecord,
   DashboardAlert,
@@ -103,10 +104,12 @@ export const loadOverviewSummary = cache(
       return null
     }
 
+    const asOf = options.asOf ?? new Date()
+    const membershipAsOf = getGymLocalDayBoundary(asOf, gym.timezone)
     const result = await getOverviewSummary(
       gym.id,
       gym.currencyCode,
-      options,
+      { ...options, asOf, membershipAsOf },
       aggregateDb
     )
 
@@ -127,7 +130,15 @@ export const loadOverviewAlerts = cache(
       return null
     }
 
-    return getOverviewAlerts(gym.id, gym.currencyCode, options, aggregateDb)
+    const asOf = options.asOf ?? new Date()
+    const membershipAsOf = getGymLocalDayBoundary(asOf, gym.timezone)
+
+    return getOverviewAlerts(
+      gym.id,
+      gym.currencyCode,
+      { ...options, asOf, membershipAsOf },
+      aggregateDb
+    )
   }
 )
 
@@ -159,7 +170,8 @@ export const loadMemberRosterPage = cache(
       return null
     }
 
-    const where = getMemberRosterPageWhere(gym.id, filters, asOf)
+    const membershipAsOf = getGymLocalDayBoundary(asOf, gym.timezone)
+    const where = getMemberRosterPageWhere(gym.id, filters, membershipAsOf)
     const [planTiers, totalMembers, total] = await Promise.all([
       db.planTier.findMany(getPlanTiersQuery(gym.id)),
       db.member.count({
@@ -178,14 +190,14 @@ export const loadMemberRosterPage = cache(
       pageSize: pagination.pageSize,
     })
     const members = await db.member.findMany(
-      getMemberRosterPageQuery(where, skip, take, asOf)
+      getMemberRosterPageQuery(where, skip, take, membershipAsOf)
     )
 
     return {
       gym,
       planTiers: planTiers.map(mapPlanTier),
       members: {
-        rows: buildMemberRosterPageRows(members, asOf),
+        rows: buildMemberRosterPageRows(members, membershipAsOf),
         total,
         page,
         pageSize: take,
@@ -205,6 +217,7 @@ export const loadSubscriptionSummary = cache(async (asOf = new Date()) => {
 
   const planTiers = await db.planTier.findMany(getPlanTiersQuery(gym.id))
   const mappedPlanTiers = planTiers.map(mapPlanTier)
+  const revenueAsOf = getGymLocalDayBoundary(asOf, gym.timezone)
 
   return {
     gym,
@@ -212,6 +225,7 @@ export const loadSubscriptionSummary = cache(async (asOf = new Date()) => {
       gym.id,
       mappedPlanTiers,
       asOf,
+      revenueAsOf,
       aggregateDb
     ),
   } satisfies SubscriptionsSummaryDashboardData

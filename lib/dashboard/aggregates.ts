@@ -192,6 +192,7 @@ export type OverdueAgingSummary = OverdueAgingBucket[]
 
 export type OverviewAggregateOptions = {
   asOf?: Date
+  membershipAsOf?: Date
   expiringMonthlyWindowDays?: number
   expiringAnnualWindowDays?: number
   inactiveWindowDays?: number
@@ -201,6 +202,7 @@ export type OverviewAggregateOptions = {
 
 type OverviewDateRanges = {
   asOf: Date
+  membershipAsOf: Date
   monthStart: Date
   nextMonthStart: Date
   monthlyWindowEnd: Date
@@ -269,13 +271,18 @@ export function getNewSignUpsThisMonth(
   })
 }
 
-export async function getMembershipMrr(gymId: string, client: DashboardDb) {
+export async function getMembershipMrr(
+  gymId: string,
+  revenueAsOf: Date,
+  client: DashboardDb
+) {
   const [monthly, annual] = await Promise.all([
     client.membership.aggregate({
       where: {
         member: { gymId },
         status: "ACTIVE",
         billingInterval: "MONTHLY",
+        currentPeriodEndsAt: { gte: revenueAsOf },
       },
       _sum: { priceAmount: true },
     }),
@@ -284,6 +291,7 @@ export async function getMembershipMrr(gymId: string, client: DashboardDb) {
         member: { gymId },
         status: "ACTIVE",
         billingInterval: "ANNUAL",
+        currentPeriodEndsAt: { gte: revenueAsOf },
       },
       _sum: { priceAmount: true },
     }),
@@ -492,11 +500,11 @@ export async function getOverviewSummary(
       ranges.nextMonthStart,
       client
     ),
-    getMembershipMrr(gymId, client),
+    getMembershipMrr(gymId, ranges.membershipAsOf, client),
     getDropInRevenue(gymId, ranges.monthStart, ranges.nextMonthStart, client),
     getExpiringMembershipsCount(
       gymId,
-      ranges.asOf,
+      ranges.membershipAsOf,
       ranges.monthlyWindowEnd,
       ranges.annualWindowEnd,
       client
@@ -571,6 +579,7 @@ export async function getSubscriptionSummary(
   gymId: string,
   planTiers: PlanTier[],
   currentMonth: Date,
+  revenueAsOf: Date,
   client: DashboardDb
 ): Promise<SubscriptionSummary> {
   const { monthStart } = getUtcMonthWindow(currentMonth)
@@ -588,12 +597,13 @@ export async function getSubscriptionSummary(
     allPayments,
     allDropInTotal,
   ] = await Promise.all([
-    getPlanBreakdownAggregates(gymId, planTiers, client),
+    getPlanBreakdownAggregates(gymId, planTiers, revenueAsOf, client),
     getRevenueTrend(gymId, startMonth, monthStart, nextMonthAfterTrend, client),
     client.membership.count({
       where: {
         member: { gymId },
-        status: { in: ["ACTIVE", "PAST_DUE"] },
+        status: "ACTIVE",
+        currentPeriodEndsAt: { gte: revenueAsOf },
       },
     }),
     client.membership.count({ where: { member: { gymId } } }),
@@ -622,6 +632,7 @@ export async function getSubscriptionSummary(
 export async function getPlanBreakdownAggregates(
   gymId: string,
   planTiers: PlanTier[],
+  revenueAsOf: Date,
   client: DashboardDb
 ): Promise<SubscriptionPlanBreakdownRow[]> {
   const rows = await client.$queryRaw<PlanBreakdownRawRow[]>`
@@ -638,7 +649,8 @@ export async function getPlanBreakdownAggregates(
       ), 0)::float8 as "monthlyEquivalentRevenue"
     FROM "Membership"
     WHERE "memberId" IN (SELECT id FROM "Member" WHERE "gymId" = ${gymId})
-      AND "status" IN ('ACTIVE', 'PAST_DUE')
+      AND "status" = 'ACTIVE'
+      AND "currentPeriodEndsAt" >= ${revenueAsOf}
     GROUP BY "planTierId"
   `
   const rowByPlanId = new Map(rows.map((row) => [row.planTierId, row]))
@@ -744,7 +756,7 @@ export async function getOverviewAlerts(
     getOverduePaymentAlerts(gymId, ranges.asOf, ranges.alertLimit, client),
     getExpiringMembershipAlerts(
       gymId,
-      ranges.asOf,
+      ranges.membershipAsOf,
       "MONTHLY",
       ranges.monthlyWindowEnd,
       ranges.alertLimit,
@@ -752,7 +764,7 @@ export async function getOverviewAlerts(
     ),
     getExpiringMembershipAlerts(
       gymId,
-      ranges.asOf,
+      ranges.membershipAsOf,
       "ANNUAL",
       ranges.annualWindowEnd,
       ranges.alertLimit,
@@ -979,6 +991,7 @@ function getOverviewDateRanges(
   options: OverviewAggregateOptions
 ): OverviewDateRanges {
   const asOf = options.asOf ?? new Date()
+  const membershipAsOf = options.membershipAsOf ?? asOf
   const monthlyWindowDays = options.expiringMonthlyWindowDays ?? 7
   const annualWindowDays = options.expiringAnnualWindowDays ?? 30
   const inactiveWindowDays = options.inactiveWindowDays ?? 30
@@ -986,10 +999,11 @@ function getOverviewDateRanges(
 
   return {
     asOf,
+    membershipAsOf,
     monthStart,
     nextMonthStart,
-    monthlyWindowEnd: addDays(asOf, monthlyWindowDays),
-    annualWindowEnd: addDays(asOf, annualWindowDays),
+    monthlyWindowEnd: addDays(membershipAsOf, monthlyWindowDays),
+    annualWindowEnd: addDays(membershipAsOf, annualWindowDays),
     inactiveCutoff: addDays(asOf, -inactiveWindowDays),
     conversionVisitThreshold: options.conversionVisitThreshold ?? 5,
     alertLimit: options.alertLimit ?? OVERVIEW_ALERT_LIMIT,
