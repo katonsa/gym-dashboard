@@ -101,6 +101,12 @@ Example: if the gym-local date is `2026-04-19`, a membership ending on
 `2026-04-19` is still current for that business day and should not be treated as
 expired until the gym-local date advances to `2026-04-20`.
 
+The helper must accept both `asOf` and `gym.timezone`. Do not pass raw
+`new Date()` values directly into membership expiry, expiring-window, or revenue
+queries. Loaders should derive one canonical `membershipAsOf`/`revenueAsOf`
+instant from the gym timezone and pass that value through display helpers,
+query scopes, aggregate functions, and server actions.
+
 ### Period advancement rule
 
 | Membership state at renewal                           | Advance from                                                   |
@@ -154,7 +160,7 @@ differently from a current one.
 - [ ] Add `getMembershipDisplayStatus(membership, asOf)` to
       `lib/dashboard/calculations.ts`
   - Returns a display-level status: `"active"`, `"expiring"`, `"expired"`,
-    `"past_due"`, `"canceled"`, or `"inactive"`.
+    `"past_due"`, or `"canceled"`.
   - `"expiring"`: `ACTIVE` + `currentPeriodEndsAt` within renewal window.
   - `"expired"`: `ACTIVE` + `currentPeriodEndsAt` in the past (use `isExpired`).
   - Persisted `EXPIRED` memberships also display as `"expired"`.
@@ -166,6 +172,9 @@ differently from a current one.
   - Returns the start of that gym-local day as the canonical comparison instant.
   - Use the helper instead of direct full-timestamp comparisons in expired and
     expiring checks.
+  - Add tests for a non-UTC timezone such as `Asia/Jakarta`, proving that a
+    membership ending on the gym-local date is still current until the next
+    gym-local day.
 
 ### UI — member detail page
 
@@ -190,6 +199,14 @@ differently from a current one.
   - Add `"expired"` as a distinct billing risk state alongside `"expiring"` and
     `"overdue"`.
   - Filter bar: add `"Expired"` as a selectable risk filter value.
+  - Update `BillingRisk`, `RiskFilter`, and the `validRisks` parser in
+    `lib/dashboard/member-roster.ts`.
+  - Update roster membership query scopes so the selected membership includes
+    renewable `EXPIRED` rows where appropriate. A persisted `EXPIRED`
+    membership must not render as "No plan" only because roster queries still
+    filter to `ACTIVE`/`PAST_DUE`.
+  - Update `getMemberRosterRiskWhere` with an explicit expired-membership branch
+    using the same gym-local day boundary as the display helper.
 
 ### UI — overview alerts
 
@@ -201,6 +218,13 @@ differently from a current one.
   - Expired group uses a more urgent visual treatment (red vs amber).
   - Add a distinct `DashboardAlert` type: `EXPIRED_MEMBERSHIP`. Do not infer
     expired state from copy or severity alone.
+  - Add `expiredMembershipsCount` to `DashboardSummary`.
+  - Add `EXPIRED_MEMBERSHIP` to the `DashboardAlert["type"]` union.
+  - Update overview `alertSections`, `openAlertsCount`, and pinned-alert
+    filtering so expired alerts are counted and rendered separately.
+  - Update the "Expiring subs" summary card or add a second summary signal so
+    expired memberships are visible in top-level stats, not only in the alert
+    list.
 
 ### Verification
 
@@ -213,6 +237,8 @@ differently from a current one.
       can host the Renew action.
 - [ ] Overview splits expiring and expired into separate groups.
 - [ ] Expired overview alerts use the `EXPIRED_MEMBERSHIP` alert type.
+- [ ] Overview open-alert count includes expired membership alerts.
+- [ ] `DashboardSummary` exposes an `expiredMembershipsCount` value.
 - [ ] Roster filter correctly isolates expired members.
 - [ ] `npm run typecheck`, `npm run lint`, `npm run build`.
 
@@ -227,6 +253,12 @@ differently from a current one.
     `(values: RenewMembershipValues) => Promise<RenewMembershipActionResult>`
   - Input values:
     - `membershipId: string` — required. The membership to renew.
+    - `expectedStatus: "ACTIVE" | "EXPIRED"` — required. The status rendered
+      when the renewal dialog was opened.
+    - `expectedCurrentPeriodEndsAt: string` — required ISO date string. The
+      period end rendered when the renewal dialog was opened.
+    - `submissionId: string` — required stable client-generated idempotency key
+      for one renewal submit attempt.
     - `renewalDate: string` — optional `YYYY-MM-DD`. Defaults to today. Used
       as the basis for period advancement when the membership is already expired.
       Ignored (advancement uses `currentPeriodEndsAt`) when the membership is
@@ -247,18 +279,30 @@ differently from a current one.
   - In a transaction:
     - Re-read the membership by id, still scoped through the member's `gymId`,
       so status and period-end decisions are made against the latest row.
-    - Guard against duplicate renewal requests by updating with a conditional
-      `where` that includes the previously read `status` and
-      `currentPeriodEndsAt`, or by using an equivalent optimistic-concurrency
-      check inside the transaction.
-    - If the conditional update affects no row, return a conflict-style error
-      such as "This membership changed. Refresh and try again."
-    - Compute new `currentPeriodEndsAt` using `addBillingPeriod(basis,
-billingInterval)`.
+    - Before updating, check whether a payment already exists for this
+      `submissionId` using a renewal-specific payment note or metadata field if
+      one is added later. If it exists, return `{ success: true }` without
+      advancing the membership again.
+    - Guard against stale forms and concurrent renewal requests by updating with
+      a conditional `where` that includes `expectedStatus` and
+      `expectedCurrentPeriodEndsAt`, or by using an equivalent optimistic-
+      concurrency check inside the transaction.
+    - If the conditional update affects no row and no matching `submissionId`
+      payment exists, return a conflict-style error such as "This membership
+      changed. Refresh and try again."
+    - Compute new `currentPeriodEndsAt` using
+      `addBillingPeriod(basis, billingInterval)`.
     - Set `nextBillingDate` to new `currentPeriodEndsAt`.
     - Set `status` to `ACTIVE` if it was `EXPIRED`.
     - Create a `MembershipPayment`: `status: PENDING`, `dueAt` set to the
-      recording date, `amount: membership.priceAmount`.
+      recording date, `amount: membership.priceAmount`, with a note that embeds
+      the `submissionId` in a parseable format such as
+      `Renewal submission: <submissionId>`.
+    - Recommended follow-up schema hardening: add a nullable
+      `renewalSubmissionId` field to `MembershipPayment` and a unique index on
+      `[membershipId, renewalSubmissionId]`. The note-based guard is acceptable
+      for v1 if avoiding a migration is more important, but the unique index is
+      the stronger long-term duplicate guard.
   - `revalidatePath("/members")`.
   - `revalidatePath("/members/[memberId]")` for the member.
   - `revalidatePath("/subscriptions")` since MRR may change.
@@ -268,6 +312,9 @@ billingInterval)`.
 
 - [ ] Add `renew-membership-schema.ts` in `app/(dashboard)/members/`
   - `membershipId`: non-empty string.
+  - `expectedStatus`: enum of `"ACTIVE"` or `"EXPIRED"`.
+  - `expectedCurrentPeriodEndsAt`: valid ISO date string.
+  - `submissionId`: non-empty UUID or `crypto.randomUUID()`-compatible string.
   - `renewalDate`: optional valid `YYYY-MM-DD` string using `parseDateInput`.
     Must not be a future date. Backdating is allowed for expired memberships.
     The action ignores `renewalDate` for memberships still current through the
@@ -287,7 +334,11 @@ billingInterval)`.
 - [ ] Renewal creates a new `PENDING` payment for the correct amount.
 - [ ] Double-clicking or retrying renewal does not advance two periods or create
       duplicate pending payments.
+- [ ] Retrying the same `submissionId` after a successful renewal returns
+      success without creating another payment or extending another period.
 - [ ] Concurrent renewals return one success and one conflict-style error.
+- [ ] Submitting from a stale dialog after the membership changed returns a
+      conflict-style error.
 - [ ] `startedAt` is not modified by renewal.
 - [ ] Renewal is rejected for `PAST_DUE`, `CANCELED`, `INACTIVE` memberships.
 - [ ] Renewal is rejected for members with `SUSPENDED` status.
@@ -325,6 +376,12 @@ memberships, the Renew button must be available for both de facto expired
     to today) so the owner can backdate the renewal if needed.
   - Confirm button: "Renew membership."
   - Cancel button: "Cancel."
+  - Generate one `submissionId` when the dialog opens or when the form is
+    initialized. Reuse that id for retries of the same submit attempt; generate
+    a new id only after the dialog is reopened from freshly rendered membership
+    state.
+  - Include `expectedStatus` and `expectedCurrentPeriodEndsAt` from the rendered
+    membership card in the action payload.
 - [ ] On success:
   - Dialog closes.
   - Membership card updates: new period end date, `ACTIVE` badge, no expiry
@@ -406,8 +463,11 @@ its plan breakdown and active revenue setup state.
 - [ ] Update `getMembershipMrr` in `lib/dashboard/aggregates.ts` to exclude
       memberships whose `currentPeriodEndsAt` is before the gym-local `asOf`
       day boundary.
-  - Change the function signature to accept an `asOf`/`revenueAsOf` date.
-  - Pass the overview `ranges.asOf` value from `getOverviewSummary`.
+  - Change the function signature to accept a pre-normalized `revenueAsOf`
+    instant.
+  - Load the gym timezone before calling aggregate functions.
+  - Pass the gym-local day-boundary value from `loadOverviewSummary` into
+    `getOverviewSummary`, then pass it to `getMembershipMrr`.
   - Apply `currentPeriodEndsAt: { gte: revenueAsOf }` to both monthly and
     annual aggregate queries.
   - This makes MRR reflect only memberships that are currently in an active
@@ -421,13 +481,21 @@ its plan breakdown and active revenue setup state.
     membership definition.
   - Do not count `PAST_DUE` as active revenue. Current revenue counts only
     `ACTIVE` memberships whose period has not ended.
+  - Pass the same gym-local `revenueAsOf` from `loadSubscriptionSummary`.
 
 - [ ] Update `getPlanBreakdownAggregates`
-  - Add an `asOf`/`revenueAsOf` parameter.
+  - Add a pre-normalized `revenueAsOf` parameter.
   - Count only revenue memberships in the plan breakdown and monthly-equivalent
     revenue totals.
   - Keep historical revenue trend behavior unchanged unless a separate decision
     is made to redefine historical months.
+
+- [ ] Replace direct UTC membership-day comparisons in overview and roster
+      membership queries
+  - `getExpiringMembershipsCount`, `getExpiringMembershipAlerts`, and roster
+    risk filters should receive the same gym-local membership boundary.
+  - Leave unrelated drop-in daily/monthly revenue windows unchanged unless a
+    separate timezone cleanup is explicitly scoped.
 
 ```typescript
 // Add to the existing ACTIVE membership where clause:
@@ -497,6 +565,11 @@ Each phase is independently shippable and adds real value.
 - **One renewal adds one billing period.** If a membership expired multiple
   periods ago, the owner renews one period at a time. The UI should note when
   another renewal may be needed to bring the membership current.
+- **Retry behavior is idempotent, not another renewal.** A repeated submit with
+  the same `submissionId` must return the original success outcome without
+  advancing a second period or creating a second payment. If the owner wants to
+  renew another period, they should do it as a new explicit action after the page
+  reflects the latest membership state.
 - **Expired overview alerts use `EXPIRED_MEMBERSHIP`.** This keeps alert
   grouping, styling, and future filtering explicit.
 
