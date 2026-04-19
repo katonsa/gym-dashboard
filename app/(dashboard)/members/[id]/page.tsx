@@ -22,6 +22,7 @@ import {
   type MemberDetailMembership,
 } from "@/lib/dashboard/loaders"
 import { cn } from "@/lib/utils"
+import { MemberCheckInForm } from "../member-checkin-form"
 import { MemberPlanChangeForm } from "../member-plan-change-form"
 import { MemberStatusAction } from "../member-status-action"
 import { PaymentActions } from "../payment-actions"
@@ -244,6 +245,12 @@ export default async function MemberDetailPage({
       <InfoCard
         title={`Attendance log (${attendancePage.total})`}
         detail={getPageRangeDetail(attendancePage, "attendance entries")}
+        action={
+          <MemberCheckInForm
+            memberId={member.id}
+            initialDate={formatDateInput(new Date(), gym.timezone)}
+          />
+        }
       >
         {attendancePage.rows.length > 0 ? (
           <div className="grid gap-2">
@@ -400,11 +407,13 @@ function InfoCard({
   id,
   title,
   detail,
+  action,
   children,
 }: {
   id?: string
   title: string
   detail?: string
+  action?: React.ReactNode
   children: React.ReactNode
 }) {
   return (
@@ -412,11 +421,14 @@ function InfoCard({
       id={id}
       className="scroll-mt-20 rounded-lg border border-border bg-card p-4 text-card-foreground sm:p-5"
     >
-      <div className="mb-4">
-        <h2 className="text-base font-semibold">{title}</h2>
-        {detail ? (
-          <p className="mt-1 text-xs text-muted-foreground">{detail}</p>
-        ) : null}
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h2 className="text-base font-semibold">{title}</h2>
+          {detail ? (
+            <p className="mt-1 text-xs text-muted-foreground">{detail}</p>
+          ) : null}
+        </div>
+        {action ? <div className="shrink-0">{action}</div> : null}
       </div>
       {children}
     </section>

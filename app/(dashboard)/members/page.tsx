@@ -53,6 +53,7 @@ export default async function MembersPage({ searchParams }: MembersPageProps) {
       totalMembers={membersData.totalMembers}
       asOfLabel={formatDashboardDate(asOf, membersData.gym.timezone)}
       initialJoinDate={formatDateInput(asOf, membersData.gym.timezone)}
+      initialCheckInDate={formatDateInput(asOf, membersData.gym.timezone)}
     />
   )
 }

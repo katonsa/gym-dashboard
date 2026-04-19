@@ -18,6 +18,7 @@ import type {
 } from "@/lib/dashboard/member-roster"
 import { cn } from "@/lib/utils"
 import { MemberCreateForm } from "./member-create-form"
+import { MemberQuickCheckInAction } from "./member-quick-checkin-action"
 import { MemberStatusAction } from "./member-status-action"
 
 const statusOptions: StatusFilter[] = ["all", "ACTIVE", "INACTIVE", "SUSPENDED"]
@@ -45,6 +46,7 @@ export function MemberRoster({
   totalMembers,
   asOfLabel,
   initialJoinDate,
+  initialCheckInDate,
 }: {
   members: MemberRosterRow[]
   planTiers: PlanTier[]
@@ -58,6 +60,7 @@ export function MemberRoster({
   totalMembers: number
   asOfLabel: string
   initialJoinDate: string
+  initialCheckInDate: string
 }) {
   const router = useRouter()
   const [query, setQuery] = React.useState(filters.q)
@@ -231,6 +234,7 @@ export function MemberRoster({
                 <MemberCard
                   key={member.id}
                   member={member}
+                  checkInDate={initialCheckInDate}
                   onActionMessage={handleActionMessage}
                 />
               ))}
@@ -254,6 +258,7 @@ export function MemberRoster({
                     <MemberTableRow
                       key={member.id}
                       member={member}
+                      checkInDate={initialCheckInDate}
                       onActionMessage={handleActionMessage}
                     />
                   ))}
@@ -340,9 +345,11 @@ function FilterSelect({
 
 function MemberCard({
   member,
+  checkInDate,
   onActionMessage,
 }: {
   member: MemberRosterRow
+  checkInDate: string
   onActionMessage: (message: string) => void
 }) {
   return (
@@ -376,7 +383,11 @@ function MemberCard({
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <RiskBadge risk={member.billingRisk} />
-        <QuickActions member={member} onActionMessage={onActionMessage} />
+        <QuickActions
+          member={member}
+          checkInDate={checkInDate}
+          onActionMessage={onActionMessage}
+        />
       </div>
     </article>
   )
@@ -384,9 +395,11 @@ function MemberCard({
 
 function MemberTableRow({
   member,
+  checkInDate,
   onActionMessage,
 }: {
   member: MemberRosterRow
+  checkInDate: string
   onActionMessage: (message: string) => void
 }) {
   return (
@@ -426,6 +439,7 @@ function MemberTableRow({
       <td className="px-4 py-3 align-top">
         <QuickActions
           member={member}
+          checkInDate={checkInDate}
           onActionMessage={onActionMessage}
           compact
         />
@@ -447,15 +461,23 @@ function MemberField({ label, value }: { label: string; value: string }) {
 
 function QuickActions({
   member,
+  checkInDate,
   onActionMessage,
   compact = false,
 }: {
   member: MemberRosterRow
+  checkInDate: string
   onActionMessage: (message: string) => void
   compact?: boolean
 }) {
   return (
     <div className={cn("flex flex-wrap gap-2", compact && "grid")}>
+      <MemberQuickCheckInAction
+        memberId={member.id}
+        memberName={member.name}
+        checkInDate={checkInDate}
+        onResult={onActionMessage}
+      />
       <Button asChild variant="outline" size="sm" className="min-h-11">
         <Link href={`/members/${member.id}`}>View profile</Link>
       </Button>

@@ -1,6 +1,6 @@
 # Manual Check-In / Attendance Entry
 
-Status: Planning.
+Status: Implemented.
 
 Let the gym owner manually log a member attendance record from two surfaces:
 the member roster (quick action) and the member detail page. This closes the
@@ -11,16 +11,74 @@ already exist, but there is no way to create a record through the UI.
 
 ## Current State
 
-| Capability | Status |
-|------------|--------|
-| `AttendanceRecord` model in Prisma | ✅ Exists |
-| `loadMemberAttendancePage` loader | ✅ Exists (paginated, member detail) |
-| Attendance log display on member detail | ✅ Exists |
-| Sessions attended count on roster | ✅ Exists |
-| Inactive member alert (30+ days) | ✅ Exists (uses `Member.lastAttendedAt`) |
-| Server action to create `AttendanceRecord` | ❌ Missing |
-| Check-in UI on member detail page | ❌ Missing |
-| Check-in quick action on member roster | ❌ Missing |
+| Capability                                 | Status                                   |
+| ------------------------------------------ | ---------------------------------------- |
+| `AttendanceRecord` model in Prisma         | ✅ Exists                                |
+| `loadMemberAttendancePage` loader          | ✅ Exists (paginated, member detail)     |
+| Attendance log display on member detail    | ✅ Exists                                |
+| Sessions attended count on roster          | ✅ Exists                                |
+| Inactive member alert (30+ days)           | ✅ Exists (uses `Member.lastAttendedAt`) |
+| Server action to create `AttendanceRecord` | ✅ Exists                                |
+| Check-in UI on member detail page          | ✅ Exists                                |
+| Check-in quick action on member roster     | ✅ Exists                                |
+
+---
+
+## Implementation Summary
+
+Implemented on 2026-04-19.
+
+### Server-side write path
+
+- `app/(dashboard)/members/actions.ts`
+  - Added `logMemberCheckIn(values)`.
+  - Authenticates with `requireDashboardSession("/members")`.
+  - Looks up the authenticated owner's first gym before writing.
+  - Revalidates `/members`, `/members/${memberId}`, and `/`.
+- `app/(dashboard)/members/attendance-lifecycle.ts`
+  - Added `logMemberCheckInForGym`.
+  - Creates an `AttendanceRecord` with `source: "MANUAL"`.
+  - Updates `Member.lastAttendedAt` only when the new check-in date is more
+    recent than the stored value, or when no value exists.
+  - Rejects members outside the gym scope with a `not-found` result.
+- `app/(dashboard)/members/log-checkin-schema.ts`
+  - Added Zod validation for `memberId`, `attendedAt`, and `notes`.
+  - Reuses `parseDateInput`.
+  - Rejects future check-in dates and notes longer than 500 characters.
+
+### Member detail UI
+
+- `app/(dashboard)/members/member-checkin-form.tsx`
+  - Adds a "Log check-in" dialog for `/members/[id]`.
+  - Supports date and optional single-line notes.
+  - Defaults the date to the gym-local current date from the server-rendered
+    page.
+  - Disables submission while pending and shows success/error feedback.
+- `app/(dashboard)/members/[id]/page.tsx`
+  - Places the form in the attendance section header.
+
+### Roster quick action
+
+- `app/(dashboard)/members/member-quick-checkin-action.tsx`
+  - Adds a one-tap "Check in" action using today's gym-local date.
+  - Disables while pending to reduce double-submission risk.
+  - Reports success/error through the roster message area.
+- `app/(dashboard)/members/member-roster.tsx`
+  - Adds the quick action to each mobile card and desktop row.
+- `app/(dashboard)/members/page.tsx`
+  - Passes the gym-local check-in date to the roster.
+
+### Tests
+
+- `tests/member-log-checkin-schema.test.ts`
+  - Covers valid values, optional notes, missing member, invalid dates, future
+    dates, and notes length.
+- `tests/attendance-lifecycle-actions.integration.test.ts`
+  - Covers manual attendance creation, `source: "MANUAL"`, newer
+    `lastAttendedAt` updates, older check-ins preserving `lastAttendedAt`, and
+    cross-gym rejection.
+- `tests/run-tests.ts` and `tests/run-integration-tests.ts`
+  - Include the new tests.
 
 ---
 
@@ -64,7 +122,7 @@ slower and adds unnecessary complexity.
 
 ### Server action
 
-- [ ] Add `logMemberCheckIn` to `app/(dashboard)/members/actions.ts`
+- [x] Add `logMemberCheckIn` to `app/(dashboard)/members/actions.ts`
   - Signature:
     `(values: LogCheckInValues) => Promise<ActionResult>`
   - Input values:
@@ -87,7 +145,7 @@ slower and adds unnecessary complexity.
 
 ### Validation schema
 
-- [ ] Add `log-checkin-schema.ts` in `app/(dashboard)/members/`
+- [x] Add `log-checkin-schema.ts` in `app/(dashboard)/members/`
   - `memberId`: non-empty string.
   - `attendedAt`: valid `YYYY-MM-DD` string, reuse `parseDateInput`. Must not
     be a future date.
@@ -96,14 +154,14 @@ slower and adds unnecessary complexity.
 
 ### Verification
 
-- [ ] Check-in creates an `AttendanceRecord` with `source: "MANUAL"`.
-- [ ] Check-in with a date more recent than `lastAttendedAt` updates
-  `Member.lastAttendedAt`.
-- [ ] Check-in with a date older than `lastAttendedAt` does not update
-  `Member.lastAttendedAt`.
-- [ ] Check-in with a future date is rejected.
-- [ ] Action is scoped to the owner's gym.
-- [ ] `npm run typecheck`, `npm run lint`, `npm run build`.
+- [x] Check-in creates an `AttendanceRecord` with `source: "MANUAL"`.
+- [x] Check-in with a date more recent than `lastAttendedAt` updates
+      `Member.lastAttendedAt`.
+- [x] Check-in with a date older than `lastAttendedAt` does not update
+      `Member.lastAttendedAt`.
+- [x] Check-in with a future date is rejected.
+- [x] Action is scoped to the owner's gym.
+- [x] `npm run typecheck`, `npm run lint`, `npm run build`.
 
 ---
 
@@ -116,26 +174,26 @@ detail page (`/members/[id]`), next to the "Attendance log (N)" heading.
 
 ### Behavior
 
-- [ ] Button opens an inline form or dialog with:
+- [x] Button opens an inline form or dialog with:
   - **Date input** — defaults to today, cannot be a future date.
   - **Notes input** — optional, single line, max 500 characters.
   - **Submit button** — "Log check-in" / "Logging..." while pending.
-- [ ] On success:
+- [x] On success:
   - Show inline feedback: "Check-in logged for [date]."
   - Attendance log reloads with the new entry at the top.
   - Sessions count in the page header updates.
-- [ ] On error: show inline error message.
-- [ ] Disable submit while action is pending.
-- [ ] Keep 44px touch targets on mobile.
+- [x] On error: show inline error message.
+- [x] Disable submit while action is pending.
+- [x] Keep 44px touch targets on mobile.
 
 ### Verification
 
-- [ ] "Log check-in" button is visible on mobile and desktop.
-- [ ] Submitting adds a new row to the attendance log.
-- [ ] Sessions count increments.
-- [ ] `lastAttendedAt` updates if the check-in date is more recent.
-- [ ] Overview inactive alert clears if the member was previously flagged.
-- [ ] `npm run typecheck`, `npm run lint`, `npm run build`.
+- [x] "Log check-in" button is visible on mobile and desktop.
+- [x] Submitting adds a new row to the attendance log.
+- [x] Sessions count increments.
+- [x] `lastAttendedAt` updates if the check-in date is more recent.
+- [x] Overview inactive alert clears if the member was previously flagged.
+- [x] `npm run typecheck`, `npm run lint`, `npm run build`.
 
 ---
 
@@ -148,26 +206,26 @@ Add a **"Check in"** quick action button on each member row/card in the roster
 
 ### Behavior
 
-- [ ] Button immediately logs a check-in for **today** with no additional input.
+- [x] Button immediately logs a check-in for **today** with no additional input.
   - No dialog or form — one tap, done. This is the fast floor-level action.
   - If the owner needs to log a different date, they go to the member detail page.
-- [ ] On success:
+- [x] On success:
   - Show brief inline feedback on the row/card: "Checked in ✓"
   - Roster revalidates — sessions count and billing risk badge update.
-- [ ] On error: show brief inline error on the row/card.
-- [ ] Disable the button briefly while the action is pending to prevent
-  double-submission.
-- [ ] Keep 44px touch targets on mobile.
+- [x] On error: show brief inline error on the row/card.
+- [x] Disable the button briefly while the action is pending to prevent
+      double-submission.
+- [x] Keep 44px touch targets on mobile.
 
 ### Verification
 
-- [ ] "Check in" button appears on each member card (mobile) and row (desktop).
-- [ ] Tapping checks in the member for today with no extra steps.
-- [ ] Sessions count updates on the roster row.
-- [ ] `lastAttendedAt` updates.
-- [ ] Overview inactive alert clears if member was previously flagged.
-- [ ] Double-tap does not create duplicate records (button disabled while pending).
-- [ ] `npm run typecheck`, `npm run lint`, `npm run build`.
+- [x] "Check in" button appears on each member card (mobile) and row (desktop).
+- [x] Tapping checks in the member for today with no extra steps.
+- [x] Sessions count updates on the roster row.
+- [x] `lastAttendedAt` updates.
+- [x] Overview inactive alert clears if member was previously flagged.
+- [x] Double-tap does not create duplicate records (button disabled while pending).
+- [x] `npm run typecheck`, `npm run lint`, `npm run build`.
 
 ---
 

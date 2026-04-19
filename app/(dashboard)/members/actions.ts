@@ -18,6 +18,11 @@ import {
   type MarkPaidActionResult,
 } from "./mark-paid-schema"
 import {
+  logCheckInSchema,
+  type LogCheckInValues,
+  type LogCheckInActionResult,
+} from "./log-checkin-schema"
+import {
   voidPaymentSchema,
   type VoidPaymentValues,
   type VoidPaymentActionResult,
@@ -29,6 +34,7 @@ import {
   type CreateMemberActionResult,
   type CreateMemberValues,
 } from "./member-create-schema"
+import { logMemberCheckInForGym } from "./attendance-lifecycle"
 
 export type ActionResult = {
   success: boolean
@@ -239,6 +245,68 @@ export async function updateMemberStatus(
     return {
       success: false,
       error: "The member status could not be changed. Try again.",
+    }
+  }
+
+  revalidatePath("/members")
+  revalidatePath(`/members/${parsed.data.memberId}`)
+  revalidatePath("/")
+
+  return { success: true }
+}
+
+export async function logMemberCheckIn(
+  values: LogCheckInValues
+): Promise<LogCheckInActionResult> {
+  const session = await requireDashboardSession("/members")
+  const parsed = logCheckInSchema.safeParse(values)
+
+  if (!parsed.success) {
+    return {
+      success: false,
+      error:
+        parsed.error.issues[0]?.message ??
+        "Check the attendance details and try again.",
+    }
+  }
+
+  const gym = await db.gym.findFirst({
+    where: { ownerId: session.user.id },
+    select: { id: true },
+    orderBy: { createdAt: "asc" },
+  })
+
+  if (!gym) {
+    return {
+      success: false,
+      error: "Connect a gym to this owner account before logging attendance.",
+    }
+  }
+
+  const attendedAt = parseDateInput(parsed.data.attendedAt)
+  if (!attendedAt) {
+    return { success: false, error: "Choose a valid check-in date." }
+  }
+
+  try {
+    const result = await logMemberCheckInForGym({
+      client: db,
+      gymId: gym.id,
+      memberId: parsed.data.memberId,
+      attendedAt,
+      notes: parsed.data.notes,
+    })
+
+    if (result.status === "not-found") {
+      return {
+        success: false,
+        error: "This member does not exist or belongs to a different gym.",
+      }
+    }
+  } catch {
+    return {
+      success: false,
+      error: "The check-in could not be logged. Try again.",
     }
   }
 
