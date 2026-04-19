@@ -29,9 +29,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
       <p className="text-xs font-semibold text-primary uppercase">
         Owner access
       </p>
-      <h1 className="mt-2 text-2xl font-semibold tracking-normal">
-        Sign in
-      </h1>
+      <h1 className="mt-2 text-2xl font-semibold tracking-normal">Sign in</h1>
       <p className="mt-2 text-sm leading-6 text-muted-foreground">
         Enter the owner account provisioned for this gym.
       </p>

@@ -9,6 +9,7 @@ import {
   getMemberCountsByStatus,
   getMembershipMrr,
   getNewSignUpsThisMonth,
+  getOverdueAgingSummary,
   getOverduePaymentsCount,
   getPlanBreakdownAggregates,
   getRevenueTrend,
@@ -354,6 +355,33 @@ test("combines membership and drop-in raw rows into revenue trend", async () => 
     startMonth,
     nextMonthAfterTrend,
   ])
+})
+
+test("maps overdue payments into aging summary buckets", async () => {
+  const rawCalls: { strings: readonly string[]; values: unknown[] }[] = []
+  const db = mockDb({
+    $queryRaw: async (strings: TemplateStringsArray, ...values: unknown[]) => {
+      rawCalls.push({ strings: Array.from(strings), values })
+
+      return [
+        {
+          bucket: "1-7 days",
+          count: BigInt(1),
+          totalAmount: BigInt(450000),
+        },
+        { bucket: "8-14 days", count: 2, totalAmount: 700000 },
+      ]
+    },
+  })
+  const now = new Date("2026-04-16T02:00:00.000Z")
+
+  assert.deepEqual(await getOverdueAgingSummary("gym-1", now, db), [
+    { bucket: "1-7 days", count: 1, totalAmount: 450000 },
+    { bucket: "8-14 days", count: 2, totalAmount: 700000 },
+  ])
+  assert.deepEqual(rawCalls[0]?.values, [now, "gym-1", now])
+  assert.match(rawCalls[0]?.strings.join(" "), /status" = 'OVERDUE'/)
+  assert.match(rawCalls[0]?.strings.join(" "), /status" = 'PENDING'/)
 })
 
 type MockDbOverrides = Partial<

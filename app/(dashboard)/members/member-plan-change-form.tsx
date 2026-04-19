@@ -148,7 +148,9 @@ export function MemberPlanChangeForm({
   }
 
   const pendingPlanTier = pendingValues
-    ? activePlanTiers.find((planTier) => planTier.id === pendingValues.planTierId)
+    ? activePlanTiers.find(
+        (planTier) => planTier.id === pendingValues.planTierId
+      )
     : null
 
   return (

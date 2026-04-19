@@ -79,6 +79,12 @@ type CountRawRow = {
   count: number | bigint
 }
 
+type AgingBucketRawRow = {
+  bucket: string
+  count: number | bigint
+  totalAmount: number | bigint
+}
+
 type ConversionLeadRawRow = {
   visitorName: string
   visitorContact: string
@@ -175,6 +181,14 @@ export type SubscriptionSummary = {
   revenueTrend: SubscriptionRevenueTrendRow[]
   setupState: SubscriptionSetupState
 }
+
+export type OverdueAgingBucket = {
+  bucket: string
+  count: number
+  totalAmount: number
+}
+
+export type OverdueAgingSummary = OverdueAgingBucket[]
 
 export type OverviewAggregateOptions = {
   asOf?: Date
@@ -819,6 +833,43 @@ export async function getOverviewAlerts(
       } satisfies DashboardAlert
     }),
   ]
+}
+
+export async function getOverdueAgingSummary(
+  gymId: string,
+  now: Date,
+  client: DashboardDb
+): Promise<OverdueAgingSummary> {
+  const rows = await client.$queryRaw<AgingBucketRawRow[]>`
+    SELECT
+      CASE
+        WHEN age_days BETWEEN 1 AND 7 THEN '1-7 days'
+        WHEN age_days BETWEEN 8 AND 14 THEN '8-14 days'
+        WHEN age_days BETWEEN 15 AND 30 THEN '15-30 days'
+        ELSE '30+ days'
+      END as "bucket",
+      COUNT(*)::int as "count",
+      COALESCE(SUM("amount"), 0)::int as "totalAmount"
+    FROM (
+      SELECT
+        "amount",
+        GREATEST(1, EXTRACT(DAY FROM (${now}::timestamp - "dueAt"))::int) as age_days
+      FROM "MembershipPayment"
+      WHERE "gymId" = ${gymId}
+        AND (
+          "status" = 'OVERDUE'
+          OR ("status" = 'PENDING' AND "dueAt" < ${now})
+        )
+    ) as aged
+    GROUP BY "bucket"
+    ORDER BY MIN(age_days)
+  `
+
+  return rows.map((row) => ({
+    bucket: row.bucket,
+    count: toNumber(row.count),
+    totalAmount: toNumber(row.totalAmount),
+  }))
 }
 
 async function getExpiringMembershipAlerts(

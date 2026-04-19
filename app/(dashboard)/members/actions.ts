@@ -13,6 +13,17 @@ import {
   type ChangePlanActionResult,
 } from "./change-plan-schema"
 import {
+  markPaidSchema,
+  type MarkPaidValues,
+  type MarkPaidActionResult,
+} from "./mark-paid-schema"
+import {
+  voidPaymentSchema,
+  type VoidPaymentValues,
+  type VoidPaymentActionResult,
+} from "./void-payment-schema"
+import { markPaymentPaidForGym, voidPaymentForGym } from "./payment-lifecycle"
+import {
   createMemberSchema,
   parseDateInput,
   type CreateMemberActionResult,
@@ -375,6 +386,144 @@ export async function changeMemberPlan(
   revalidatePath(`/members/${parsed.data.memberId}`)
   revalidatePath("/subscriptions")
   revalidatePath("/")
+
+  return { success: true }
+}
+
+export async function markPaymentPaid(
+  values: MarkPaidValues
+): Promise<MarkPaidActionResult> {
+  const session = await requireDashboardSession("/members")
+  const parsed = markPaidSchema.safeParse(values)
+
+  if (!parsed.success) {
+    return {
+      success: false,
+      error:
+        parsed.error.issues[0]?.message ?? "Check the payment and try again.",
+    }
+  }
+
+  const gym = await db.gym.findFirst({
+    where: { ownerId: session.user.id },
+    select: { id: true },
+    orderBy: { createdAt: "asc" },
+  })
+
+  if (!gym) {
+    return {
+      success: false,
+      error: "Connect a gym to this owner account before managing payments.",
+    }
+  }
+
+  try {
+    const result = await markPaymentPaidForGym({
+      client: db,
+      gymId: gym.id,
+      paymentId: parsed.data.paymentId,
+    })
+
+    if (result.status === "not-found") {
+      return {
+        success: false,
+        error: "This payment does not exist or belongs to a different gym.",
+      }
+    }
+
+    if (result.status === "already-resolved") {
+      return {
+        success: false,
+        error: "This payment has already been resolved and cannot be changed.",
+      }
+    }
+
+    revalidatePath("/members")
+    revalidatePath(`/members/${result.memberId}`)
+    revalidatePath("/")
+  } catch {
+    return {
+      success: false,
+      error: "The payment could not be recorded. Try again.",
+    }
+  }
+
+  return { success: true }
+}
+
+export async function voidPayment(
+  values: VoidPaymentValues
+): Promise<VoidPaymentActionResult> {
+  const session = await requireDashboardSession("/members")
+  const parsed = voidPaymentSchema.safeParse(values)
+
+  if (!parsed.success) {
+    return {
+      success: false,
+      error:
+        parsed.error.issues[0]?.message ?? "Check the payment and try again.",
+    }
+  }
+
+  const gym = await db.gym.findFirst({
+    where: { ownerId: session.user.id },
+    select: { id: true },
+    orderBy: { createdAt: "asc" },
+  })
+
+  if (!gym) {
+    return {
+      success: false,
+      error: "Connect a gym to this owner account before managing payments.",
+    }
+  }
+
+  try {
+    const result = await voidPaymentForGym({
+      client: db,
+      gymId: gym.id,
+      paymentId: parsed.data.paymentId,
+      reason: parsed.data.reason,
+    })
+
+    if (result.status === "not-found") {
+      return {
+        success: false,
+        error: "This payment does not exist or belongs to a different gym.",
+      }
+    }
+
+    if (result.status === "already-paid") {
+      return {
+        success: false,
+        error:
+          "Paid payments cannot be voided. Contact support if a refund is needed.",
+      }
+    }
+
+    if (result.status === "already-void") {
+      return {
+        success: false,
+        error: "This payment has already been voided.",
+      }
+    }
+
+    if (result.status === "already-resolved") {
+      return {
+        success: false,
+        error: "This payment has already been resolved and cannot be changed.",
+      }
+    }
+
+    revalidatePath("/members")
+    revalidatePath(`/members/${result.memberId}`)
+    revalidatePath("/")
+  } catch {
+    return {
+      success: false,
+      error: "The payment could not be voided. Try again.",
+    }
+  }
 
   return { success: true }
 }

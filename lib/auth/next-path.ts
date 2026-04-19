@@ -4,9 +4,7 @@ const dashboardRouteHrefs = new Set<string>(
   dashboardRoutes.map((route) => route.href)
 )
 
-export function getSafeDashboardNextPath(
-  next: string | string[] | undefined
-) {
+export function getSafeDashboardNextPath(next: string | string[] | undefined) {
   const candidate = Array.isArray(next) ? next[0] : next
 
   if (!candidate || !candidate.startsWith("/") || candidate.startsWith("//")) {

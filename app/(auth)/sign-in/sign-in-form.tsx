@@ -129,11 +129,7 @@ export function SignInForm({ nextPath }: { nextPath: string }) {
         </p>
       ) : null}
 
-      <Button
-        type="submit"
-        className="min-h-11 w-full"
-        disabled={isSubmitting}
-      >
+      <Button type="submit" className="min-h-11 w-full" disabled={isSubmitting}>
         {isSubmitting ? "Signing in" : "Sign in"}
       </Button>
     </form>

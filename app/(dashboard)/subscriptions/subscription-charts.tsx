@@ -79,18 +79,9 @@ export function PlanComparisonChart({
           tickMargin={10}
           axisLine={false}
         />
-        <YAxis
-          tickLine={false}
-          axisLine={false}
-          tickMargin={8}
-          width={32}
-        />
+        <YAxis tickLine={false} axisLine={false} tickMargin={8} width={32} />
         <ChartTooltip content={<ChartTooltipContent />} />
-        <Bar
-          dataKey="members"
-          fill="var(--color-members)"
-          radius={4}
-        />
+        <Bar dataKey="members" fill="var(--color-members)" radius={4} />
         <Bar
           dataKey="revenueMillions"
           fill="var(--color-revenueMillions)"

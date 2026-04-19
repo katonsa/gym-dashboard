@@ -23,12 +23,12 @@ docker compose up -d
 
 The Compose service starts Postgres 17 and stores data in the `postgres-data` Docker volume. It uses these defaults unless overridden by environment variables:
 
-| Variable | Default |
-| --- | --- |
-| `POSTGRES_DB` | `gymdashboard` |
-| `POSTGRES_USER` | `gymdashboard` |
+| Variable            | Default        |
+| ------------------- | -------------- |
+| `POSTGRES_DB`       | `gymdashboard` |
+| `POSTGRES_USER`     | `gymdashboard` |
 | `POSTGRES_PASSWORD` | `gymdashboard` |
-| `POSTGRES_PORT` | `5432` |
+| `POSTGRES_PORT`     | `5432`         |
 
 ## Apply Migrations
 
@@ -60,12 +60,25 @@ npx tsx prisma/seed.ts
 
 The seed script creates the demo owner account through Better Auth's email/password API instead of inserting password records directly.
 
+## Run DB-Backed Integration Tests
+
+After Postgres is running and migrations are applied, run:
+
+```bash
+npm run test:integration
+```
+
+The integration runner loads `.env` before importing Prisma, creates isolated
+owner/gym/member/payment fixtures, and deletes those fixtures after each test.
+It currently covers payment lifecycle mutations: marking payments paid, voiding
+payments, owner-gym scoping, and `PAST_DUE` membership reactivation.
+
 ## Demo Owner Login
 
-| Field | Value |
-| --- | --- |
-| Email | `owner@jkt-strength.local` |
-| Password | `owner-password-123` |
+| Field    | Value                      |
+| -------- | -------------------------- |
+| Email    | `owner@jkt-strength.local` |
+| Password | `owner-password-123`       |
 
 These credentials are for local development only.
 

@@ -47,6 +47,19 @@ npm run db:seed
 npm run dev
 ```
 
+## Verification
+
+```bash
+npm test
+npm run test:integration
+npm run typecheck
+npm run lint
+npm run build
+```
+
+`npm run test:integration` requires the local Postgres service to be running and
+migrated. It creates and cleans up isolated database fixtures.
+
 To reset all data and re-seed:
 
 ```bash

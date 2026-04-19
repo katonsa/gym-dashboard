@@ -4,11 +4,13 @@ import { requireDashboardSession } from "@/lib/auth/server"
 import { db } from "@/lib/db"
 import {
   getDropInSummary,
+  getOverdueAgingSummary,
   getOverviewAlerts,
   getOverviewSummary,
   getSubscriptionSummary,
   type DashboardDb,
   type DropInSummary,
+  type OverdueAgingSummary,
   type OverviewAggregateOptions,
   type OverviewSetupState,
   type SubscriptionSummary,
@@ -126,6 +128,22 @@ export const loadOverviewAlerts = cache(
     }
 
     return getOverviewAlerts(gym.id, gym.currencyCode, options, aggregateDb)
+  }
+)
+
+export const loadOverdueAgingSummary = cache(
+  async (
+    options: { asOf?: Date } = {}
+  ): Promise<OverdueAgingSummary | null> => {
+    const gym = await requireOwnerGym("/")
+
+    if (!gym) {
+      return null
+    }
+
+    const asOf = options.asOf ?? new Date()
+
+    return getOverdueAgingSummary(gym.id, asOf, aggregateDb)
   }
 )
 

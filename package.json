@@ -8,6 +8,7 @@
     "build": "next build",
     "start": "next start",
     "test": "node --experimental-strip-types tests/run-tests.ts",
+    "test:integration": "node --experimental-strip-types tests/run-integration-tests.ts",
     "lint": "eslint",
     "format": "prettier --write \"**/*.{ts,tsx}\"",
     "typecheck": "tsc --noEmit",

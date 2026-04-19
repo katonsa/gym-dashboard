@@ -104,10 +104,7 @@ export function MemberCreateForm({
         ) : null}
       </div>
 
-      <form
-        onSubmit={form.handleSubmit(onSubmit)}
-        className="mt-4 grid gap-4"
-      >
+      <form onSubmit={form.handleSubmit(onSubmit)} className="mt-4 grid gap-4">
         <FieldGroup>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <Controller
@@ -335,7 +332,10 @@ export function MemberCreateForm({
         ) : null}
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <p aria-live="polite" className="min-h-5 text-xs text-muted-foreground">
+          <p
+            aria-live="polite"
+            className="min-h-5 text-xs text-muted-foreground"
+          >
             {result.success ? "Member saved." : ""}
           </p>
           <Button

@@ -1,6 +1,4 @@
-import {
-  parseMemberRosterFilters,
-} from "@/lib/dashboard/member-roster"
+import { parseMemberRosterFilters } from "@/lib/dashboard/member-roster"
 import { loadMemberRosterPage } from "@/lib/dashboard/loaders"
 import { parsePaginationParams } from "@/lib/dashboard"
 import { MemberRoster } from "./member-roster"

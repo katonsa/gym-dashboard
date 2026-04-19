@@ -101,8 +101,7 @@ export function MemberStatusAction({
   }
 
   return (
-    <AlertDialog open={isOpen} onOpenChange={handleOpenChange}
-    >
+    <AlertDialog open={isOpen} onOpenChange={handleOpenChange}>
       <AlertDialogTrigger asChild>
         <Button
           type="button"

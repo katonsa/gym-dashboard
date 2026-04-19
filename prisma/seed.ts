@@ -508,19 +508,59 @@ async function main() {
   await db.attendanceRecord.createMany({
     data: [
       // Ari — 2 visits
-      { gymId: gym.id, memberId: ari.id, attendedAt: daysAgo(3), source: "MANUAL" },
-      { gymId: gym.id, memberId: ari.id, attendedAt: hoursAgo(20), source: "MANUAL" },
+      {
+        gymId: gym.id,
+        memberId: ari.id,
+        attendedAt: daysAgo(3),
+        source: "MANUAL",
+      },
+      {
+        gymId: gym.id,
+        memberId: ari.id,
+        attendedAt: hoursAgo(20),
+        source: "MANUAL",
+      },
       // Sinta — 2 visits
-      { gymId: gym.id, memberId: sinta.id, attendedAt: daysAgo(9), source: "MANUAL" },
-      { gymId: gym.id, memberId: sinta.id, attendedAt: hoursAgo(44), source: "MANUAL" },
+      {
+        gymId: gym.id,
+        memberId: sinta.id,
+        attendedAt: daysAgo(9),
+        source: "MANUAL",
+      },
+      {
+        gymId: gym.id,
+        memberId: sinta.id,
+        attendedAt: hoursAgo(44),
+        source: "MANUAL",
+      },
       // Bayu — 1 visit (older, contributes to "inactive-ish" feel)
-      { gymId: gym.id, memberId: bayu.id, attendedAt: daysAgo(21), source: "MANUAL" },
+      {
+        gymId: gym.id,
+        memberId: bayu.id,
+        attendedAt: daysAgo(21),
+        source: "MANUAL",
+      },
       // Dewi — 1 visit
-      { gymId: gym.id, memberId: dewi.id, attendedAt: daysAgo(6), source: "MANUAL" },
+      {
+        gymId: gym.id,
+        memberId: dewi.id,
+        attendedAt: daysAgo(6),
+        source: "MANUAL",
+      },
       // Maya — 1 visit
-      { gymId: gym.id, memberId: maya.id, attendedAt: daysAgo(8), source: "MANUAL" },
+      {
+        gymId: gym.id,
+        memberId: maya.id,
+        attendedAt: daysAgo(8),
+        source: "MANUAL",
+      },
       // Lina — 1 visit
-      { gymId: gym.id, memberId: lina.id, attendedAt: hoursAgo(18), source: "MANUAL" },
+      {
+        gymId: gym.id,
+        memberId: lina.id,
+        attendedAt: hoursAgo(18),
+        source: "MANUAL",
+      },
     ],
   })
 

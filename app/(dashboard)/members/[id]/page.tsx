@@ -24,6 +24,7 @@ import {
 import { cn } from "@/lib/utils"
 import { MemberPlanChangeForm } from "../member-plan-change-form"
 import { MemberStatusAction } from "../member-status-action"
+import { PaymentActions } from "../payment-actions"
 
 type MemberDetailPageProps = {
   params: Promise<{
@@ -212,6 +213,7 @@ export default async function MemberDetailPage({
         </InfoCard>
 
         <InfoCard
+          id="payments"
           title="Payment history"
           detail={getPageRangeDetail(paymentsPage, "payments")}
         >
@@ -343,13 +345,15 @@ function PaymentHistoryItem({
   payment: MembershipPayment
   timeZone: string
 }) {
+  const formattedAmount = formatCurrency(payment.amount, currencyCode)
+  const isActionable =
+    payment.status === "PENDING" || payment.status === "OVERDUE"
+
   return (
     <article className="rounded-lg border border-border bg-background p-3">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="font-medium">
-            {formatCurrency(payment.amount, currencyCode)}
-          </p>
+          <p className="font-medium">{formattedAmount}</p>
           <p className="mt-1 text-xs text-muted-foreground">
             Due {formatDate(payment.dueAt, timeZone)}
           </p>
@@ -360,6 +364,15 @@ function PaymentHistoryItem({
         Paid{" "}
         {payment.paidAt ? formatDate(payment.paidAt, timeZone) : "not recorded"}
       </p>
+      {isActionable ? (
+        <div className="mt-3 border-t border-border pt-3">
+          <PaymentActions
+            paymentId={payment.id}
+            paymentStatus={payment.status}
+            formattedAmount={formattedAmount}
+          />
+        </div>
+      ) : null}
     </article>
   )
 }
@@ -384,16 +397,21 @@ function AttendanceLogItem({
 }
 
 function InfoCard({
+  id,
   title,
   detail,
   children,
 }: {
+  id?: string
   title: string
   detail?: string
   children: React.ReactNode
 }) {
   return (
-    <section className="rounded-lg border border-border bg-card p-4 text-card-foreground sm:p-5">
+    <section
+      id={id}
+      className="scroll-mt-20 rounded-lg border border-border bg-card p-4 text-card-foreground sm:p-5"
+    >
       <div className="mb-4">
         <h2 className="text-base font-semibold">{title}</h2>
         {detail ? (

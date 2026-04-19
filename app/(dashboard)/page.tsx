@@ -1,4 +1,7 @@
+import Link from "next/link"
+
 import {
+  loadOverdueAgingSummary,
   loadOverviewAlerts,
   loadOverviewSummary,
 } from "@/lib/dashboard/loaders"
@@ -21,9 +24,10 @@ const severityClasses: Record<DashboardAlertSeverity, string> = {
 
 export default async function Page() {
   const asOf = new Date()
-  const [overviewData, alerts] = await Promise.all([
+  const [overviewData, alerts, agingSummary] = await Promise.all([
     loadOverviewSummary({ asOf }),
     loadOverviewAlerts({ asOf }),
+    loadOverdueAgingSummary({ asOf }),
   ])
 
   if (!overviewData || !alerts) {
@@ -211,7 +215,24 @@ export default async function Page() {
                     ) : null}
                   </div>
                   <p className="mt-3 text-sm leading-5 font-medium">
-                    {firstAlert?.title ?? section.empty}
+                    {firstAlert ? (
+                      firstAlert.memberId ? (
+                        <Link
+                          href={
+                            firstAlert.type === "OVERDUE_PAYMENT"
+                              ? `/members/${firstAlert.memberId}#payments`
+                              : `/members/${firstAlert.memberId}`
+                          }
+                          className="underline underline-offset-3 hover:text-foreground"
+                        >
+                          {firstAlert.title}
+                        </Link>
+                      ) : (
+                        firstAlert.title
+                      )
+                    ) : (
+                      section.empty
+                    )}
                   </p>
                   {firstAlert ? (
                     <p className="mt-1 text-xs leading-5 text-muted-foreground">
@@ -328,31 +349,26 @@ export default async function Page() {
         </div>
 
         <div className="rounded-lg border border-border bg-card p-4 text-card-foreground">
-          <h2 className="text-base font-semibold">Priority queue</h2>
-          <div className="mt-4 grid gap-3 text-sm">
-            <div className="flex items-center justify-between gap-3 border-b border-border pb-3">
-              <span className="text-muted-foreground">Open alerts</span>
-              <span className="font-semibold">{openAlertsCount}</span>
+          <h2 className="text-base font-semibold">Billing health</h2>
+          {agingSummary && agingSummary.length > 0 ? (
+            <div className="mt-4 grid gap-3 text-sm">
+              {agingSummary.map((bucket) => (
+                <div
+                  key={bucket.bucket}
+                  className="flex items-center justify-between gap-3 border-b border-border pb-3 last:border-b-0 last:pb-0"
+                >
+                  <span className="text-muted-foreground">{bucket.bucket}</span>
+                  <span className="font-semibold">
+                    {bucket.count} · {moneyFormatter.format(bucket.totalAmount)}
+                  </span>
+                </div>
+              ))}
             </div>
-            <div className="flex items-center justify-between gap-3 border-b border-border pb-3">
-              <span className="text-muted-foreground">Billing follow-up</span>
-              <span className="font-semibold">
-                {summary.overduePaymentsCount}
-              </span>
-            </div>
-            <div className="flex items-center justify-between gap-3 border-b border-border pb-3">
-              <span className="text-muted-foreground">Churn risk</span>
-              <span className="font-semibold">
-                {summary.inactiveMembersCount}
-              </span>
-            </div>
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-muted-foreground">Drop-in leads</span>
-              <span className="font-semibold">
-                {summary.dropInConversionOpportunitiesCount}
-              </span>
-            </div>
-          </div>
+          ) : (
+            <p className="mt-4 text-sm text-muted-foreground">
+              No overdue payments.
+            </p>
+          )}
         </div>
       </section>
     </div>
