@@ -120,13 +120,10 @@ test("builds member roster filters and paginated query", () => {
     }
   )
   assert.deepEqual(
-    getMemberRosterPageQuery(where, 50, 25, asOf).select._count.select
-      .payments.where,
+    getMemberRosterPageQuery(where, 50, 25, asOf).select._count.select.payments
+      .where,
     {
-      OR: [
-        { status: "OVERDUE" },
-        { status: "PENDING", dueAt: { lt: asOf } },
-      ],
+      OR: [{ status: "OVERDUE" }, { status: "PENDING", dueAt: { lt: asOf } }],
     }
   )
   assert.ok(where.AND)
@@ -217,3 +214,104 @@ test("builds an expired member roster risk filter", () => {
     ],
   })
 })
+
+test("builds a combined member attention risk filter", () => {
+  const asOf = new Date("2026-04-16T00:00:00.000Z")
+  const where = getMemberRosterPageWhere(
+    "gym-1",
+    {
+      q: "",
+      status: "all",
+      plan: "all",
+      risk: "attention",
+    },
+    asOf
+  )
+
+  assert.equal(where.gymId, "gym-1")
+  assert.deepEqual(where.AND, [
+    {
+      OR: [
+        {
+          payments: {
+            some: {
+              OR: [
+                { status: "OVERDUE" },
+                { status: "PENDING", dueAt: { lt: asOf } },
+              ],
+            },
+          },
+        },
+        {
+          AND: [
+            { status: { not: "SUSPENDED" } },
+            {
+              NOT: {
+                payments: {
+                  some: {
+                    OR: [
+                      { status: "OVERDUE" },
+                      { status: "PENDING", dueAt: { lt: asOf } },
+                    ],
+                  },
+                },
+              },
+            },
+            {
+              memberships: {
+                some: {
+                  status: "ACTIVE",
+                  currentPeriodEndsAt: { gte: asOf },
+                  OR: [
+                    {
+                      billingInterval: "MONTHLY",
+                      currentPeriodEndsAt: { lte: addDays(asOf, 7) },
+                    },
+                    {
+                      billingInterval: "ANNUAL",
+                      currentPeriodEndsAt: { lte: addDays(asOf, 30) },
+                    },
+                  ],
+                },
+              },
+            },
+          ],
+        },
+        {
+          AND: [
+            { status: { not: "SUSPENDED" } },
+            {
+              NOT: {
+                payments: {
+                  some: {
+                    OR: [
+                      { status: "OVERDUE" },
+                      { status: "PENDING", dueAt: { lt: asOf } },
+                    ],
+                  },
+                },
+              },
+            },
+            {
+              memberships: {
+                some: {
+                  OR: [
+                    { status: "EXPIRED" },
+                    {
+                      status: "ACTIVE",
+                      currentPeriodEndsAt: { lt: asOf },
+                    },
+                  ],
+                },
+              },
+            },
+          ],
+        },
+      ],
+    },
+  ])
+})
+
+function addDays(date: Date, days: number) {
+  return new Date(date.getTime() + days * 24 * 60 * 60 * 1000)
+}

@@ -12,7 +12,7 @@ import type { BillingRisk } from "./status-styles.ts"
 export type { BillingRisk } from "./status-styles.ts"
 export type StatusFilter = "all" | MemberStatus
 export type PlanFilter = "all" | PlanTierName | "No plan"
-export type RiskFilter = "all" | BillingRisk
+export type RiskFilter = "all" | BillingRisk | "attention"
 
 export type MemberRosterFilters = {
   q: string
@@ -76,6 +76,7 @@ const validStatuses = new Set<StatusFilter>([
 ])
 const validRisks = new Set<RiskFilter>([
   "all",
+  "attention",
   "clear",
   "expired",
   "expiring",

@@ -31,9 +31,11 @@ const billingIntervals: BillingInterval[] = ["MONTHLY", "ANNUAL"]
 export function MemberCreateForm({
   planTiers,
   initialJoinDate,
+  onSaved,
 }: {
   planTiers: PlanTier[]
   initialJoinDate: string
+  onSaved?: () => void
 }) {
   const [isPending, startTransition] = React.useTransition()
   const defaultValues = React.useMemo<CreateMemberValues>(
@@ -69,6 +71,7 @@ export function MemberCreateForm({
       if (actionResult.success) {
         form.reset(defaultValues)
         toast.success("Member saved.")
+        onSaved?.()
         return
       }
 
@@ -81,32 +84,16 @@ export function MemberCreateForm({
   }
 
   return (
-    <section
-      aria-labelledby="add-member"
-      className="rounded-lg border border-border bg-card p-4 text-card-foreground"
-    >
-      <div className="grid gap-2 lg:grid-cols-[1fr_auto] lg:items-start">
-        <div className="min-w-0">
-          <p className="text-xs font-semibold text-primary uppercase">
-            Owner entry
-          </p>
-          <h2 id="add-member" className="mt-2 text-base font-semibold">
-            Add member
-          </h2>
-          <p className="mt-1 text-xs leading-5 text-muted-foreground">
-            Create a roster record and start billing when a plan is selected.
-          </p>
-        </div>
-        {activePlanTiers.length === 0 ? (
-          <p className="rounded-lg border border-border bg-muted px-3 py-2 text-xs text-muted-foreground">
-            Add an active plan before starting memberships.
-          </p>
-        ) : null}
-      </div>
+    <div className="grid gap-4 text-card-foreground">
+      {activePlanTiers.length === 0 ? (
+        <p className="rounded-lg border border-border bg-muted px-3 py-2 text-xs text-muted-foreground">
+          Add an active plan before starting memberships.
+        </p>
+      ) : null}
 
-      <form onSubmit={form.handleSubmit(onSubmit)} className="mt-4 grid gap-4">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4">
         <FieldGroup>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-3 sm:grid-cols-2">
             <Controller
               name="firstName"
               control={form.control}
@@ -119,7 +106,7 @@ export function MemberCreateForm({
                     autoComplete="given-name"
                     aria-invalid={fieldState.invalid}
                     disabled={isSubmitting}
-                    className="min-h-11"
+                    className="min-h-11 border-foreground/10 bg-input/30 shadow-inner shadow-foreground/5"
                   />
                   {fieldState.invalid ? (
                     <FieldError errors={[fieldState.error]} />
@@ -140,7 +127,7 @@ export function MemberCreateForm({
                     autoComplete="family-name"
                     aria-invalid={fieldState.invalid}
                     disabled={isSubmitting}
-                    className="min-h-11"
+                    className="min-h-11 border-foreground/10 bg-input/30 shadow-inner shadow-foreground/5"
                   />
                   {fieldState.invalid ? (
                     <FieldError errors={[fieldState.error]} />
@@ -164,7 +151,7 @@ export function MemberCreateForm({
                     placeholder="Optional"
                     aria-invalid={fieldState.invalid}
                     disabled={isSubmitting}
-                    className="min-h-11"
+                    className="min-h-11 border-foreground/10 bg-input/30 shadow-inner shadow-foreground/5"
                   />
                   {fieldState.invalid ? (
                     <FieldError errors={[fieldState.error]} />
@@ -187,7 +174,7 @@ export function MemberCreateForm({
                     placeholder="Optional"
                     aria-invalid={fieldState.invalid}
                     disabled={isSubmitting}
-                    className="min-h-11"
+                    className="min-h-11 border-foreground/10 bg-input/30 shadow-inner shadow-foreground/5"
                   />
                   {fieldState.invalid ? (
                     <FieldError errors={[fieldState.error]} />
@@ -197,7 +184,7 @@ export function MemberCreateForm({
             />
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-3 sm:grid-cols-2">
             <Controller
               name="status"
               control={form.control}
@@ -209,7 +196,7 @@ export function MemberCreateForm({
                     id={field.name}
                     aria-invalid={fieldState.invalid}
                     disabled={isSubmitting}
-                    className="min-h-11 rounded-lg border border-input bg-background px-3 text-sm font-normal text-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
+                    className="min-h-11 rounded-lg border border-foreground/10 bg-input/30 px-3 text-sm font-normal text-foreground shadow-inner shadow-foreground/5 outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
                   >
                     {memberStatuses.map((status) => (
                       <option key={status} value={status}>
@@ -236,7 +223,7 @@ export function MemberCreateForm({
                     type="date"
                     aria-invalid={fieldState.invalid}
                     disabled={isSubmitting}
-                    className="min-h-11"
+                    className="min-h-11 border-foreground/10 bg-input/30 shadow-inner shadow-foreground/5"
                   />
                   {fieldState.invalid ? (
                     <FieldError errors={[fieldState.error]} />
@@ -256,7 +243,7 @@ export function MemberCreateForm({
                     id={field.name}
                     aria-invalid={fieldState.invalid}
                     disabled={isSubmitting || activePlanTiers.length === 0}
-                    className="min-h-11 rounded-lg border border-input bg-background px-3 text-sm font-normal text-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/40 disabled:opacity-70"
+                    className="min-h-11 rounded-lg border border-foreground/10 bg-input/30 px-3 text-sm font-normal text-foreground shadow-inner shadow-foreground/5 outline-none focus-visible:ring-3 focus-visible:ring-ring/40 disabled:opacity-70"
                   >
                     <option value="">No plan yet</option>
                     {activePlanTiers.map((planTier) => (
@@ -283,7 +270,7 @@ export function MemberCreateForm({
                     id={field.name}
                     aria-invalid={fieldState.invalid}
                     disabled={isSubmitting}
-                    className="min-h-11 rounded-lg border border-input bg-background px-3 text-sm font-normal text-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
+                    className="min-h-11 rounded-lg border border-foreground/10 bg-input/30 px-3 text-sm font-normal text-foreground shadow-inner shadow-foreground/5 outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
                   >
                     {billingIntervals.map((billingInterval) => (
                       <option key={billingInterval} value={billingInterval}>
@@ -312,7 +299,7 @@ export function MemberCreateForm({
                   placeholder="Optional"
                   aria-invalid={fieldState.invalid}
                   disabled={isSubmitting}
-                  className="min-h-24 w-full min-w-0 resize-none rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-3 focus-visible:ring-ring/40"
+                  className="min-h-24 w-full min-w-0 resize-none rounded-lg border border-foreground/10 bg-input/30 px-3 py-2 text-sm shadow-inner shadow-foreground/5 outline-none placeholder:text-muted-foreground focus-visible:ring-3 focus-visible:ring-ring/40"
                 />
                 {fieldState.invalid ? (
                   <FieldError errors={[fieldState.error]} />
@@ -342,6 +329,6 @@ export function MemberCreateForm({
           </Button>
         </div>
       </form>
-    </section>
+    </div>
   )
 }

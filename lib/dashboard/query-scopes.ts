@@ -246,33 +246,41 @@ function getMemberRosterRiskWhere(
       some: getExpiredMemberMembershipWhere(membershipAsOf),
     },
   }
+  const expiringRiskWhere: Prisma.MemberWhereInput = {
+    AND: [
+      renewableMemberWhere,
+      {
+        NOT: overdueWhere,
+      },
+      expiringWhere,
+    ],
+  }
+  const expiredRiskWhere: Prisma.MemberWhereInput = {
+    AND: [
+      renewableMemberWhere,
+      {
+        NOT: overdueWhere,
+      },
+      expiredWhere,
+    ],
+  }
 
   if (risk === "overdue") {
     return overdueWhere
   }
 
-  if (risk === "expiring") {
+  if (risk === "attention") {
     return {
-      AND: [
-        renewableMemberWhere,
-        {
-          NOT: overdueWhere,
-        },
-        expiringWhere,
-      ],
+      OR: [overdueWhere, expiringRiskWhere, expiredRiskWhere],
     }
   }
 
+  if (risk === "expiring") {
+    return expiringRiskWhere
+  }
+
   if (risk === "expired") {
-    return {
-      AND: [
-        renewableMemberWhere,
-        {
-          NOT: overdueWhere,
-        },
-        expiredWhere,
-      ],
-    }
+    return expiredRiskWhere
   }
 
   return {

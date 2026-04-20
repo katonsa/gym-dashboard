@@ -74,6 +74,7 @@ export type MemberRosterPageData = {
   planTiers: PlanTier[]
   members: PaginatedResult<MemberRosterRow>
   totalMembers: number
+  attentionMembers: number
 }
 
 export type SubscriptionsSummaryDashboardData = {
@@ -181,15 +182,23 @@ export const loadMemberRosterPage = cache(
       asOf,
       membershipAsOf
     )
-    const [planTiers, totalMembers, total] = await Promise.all([
-      db.planTier.findMany(getPlanTiersQuery(gym.id)),
-      db.member.count({
-        where: {
-          gymId: gym.id,
-        },
-      }),
-      db.member.count({ where }),
-    ])
+    const attentionWhere = getMemberRosterPageWhere(
+      gym.id,
+      { q: "", status: "all", plan: "all", risk: "attention" },
+      asOf,
+      membershipAsOf
+    )
+    const [planTiers, totalMembers, attentionMembers, total] =
+      await Promise.all([
+        db.planTier.findMany(getPlanTiersQuery(gym.id)),
+        db.member.count({
+          where: {
+            gymId: gym.id,
+          },
+        }),
+        db.member.count({ where: attentionWhere }),
+        db.member.count({ where }),
+      ])
     const pageCount =
       total === 0 ? 0 : Math.ceil(total / Math.max(1, pagination.pageSize))
     const page =
@@ -213,6 +222,7 @@ export const loadMemberRosterPage = cache(
         pageCount,
       },
       totalMembers,
+      attentionMembers,
     }
   }
 )

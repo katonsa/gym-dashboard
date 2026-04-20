@@ -3,12 +3,20 @@
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import * as React from "react"
-import { Search } from "lucide-react"
+import { Plus, Search } from "lucide-react"
 
 import { RiskBadge, StatusBadge } from "@/components/dashboard/badges"
 import { DetailField } from "@/components/dashboard/detail-field"
 import { EmptyState } from "@/components/dashboard/empty-state"
 import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 import { PaginationNav } from "@/components/ui/pagination-nav"
 import {
   formatMembershipStatus,
@@ -30,6 +38,7 @@ import { MemberStatusAction } from "./member-status-action"
 const statusOptions: StatusFilter[] = ["all", "ACTIVE", "INACTIVE", "SUSPENDED"]
 const riskOptions: RiskFilter[] = [
   "all",
+  "attention",
   "overdue",
   "expired",
   "expiring",
@@ -44,6 +53,7 @@ export function MemberRoster({
   pagination,
   totalMatchingMembers,
   totalMembers,
+  attentionMembers,
   asOfLabel,
   initialJoinDate,
   initialCheckInDate,
@@ -58,12 +68,14 @@ export function MemberRoster({
   }
   totalMatchingMembers: number
   totalMembers: number
+  attentionMembers: number
   asOfLabel: string
   initialJoinDate: string
   initialCheckInDate: string
 }) {
   const router = useRouter()
   const [query, setQuery] = React.useState(filters.q)
+  const [isCreateOpen, setIsCreateOpen] = React.useState(false)
 
   React.useEffect(() => {
     setQuery(filters.q)
@@ -105,10 +117,14 @@ export function MemberRoster({
     activeFiltersCount,
   })
   const preservedSearchParams = getPaginationSearchParams(filters)
+  const attentionLabel =
+    attentionMembers === 1
+      ? "1 member needs attention"
+      : `${attentionMembers} members need attention`
 
   return (
     <div className="grid gap-5 lg:gap-6">
-      <section className="grid gap-4 lg:grid-cols-[1fr_19rem] lg:items-end">
+      <section className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0">
           <p className="text-xs font-semibold text-primary uppercase">
             {asOfLabel}
@@ -116,105 +132,125 @@ export function MemberRoster({
           <h1 className="mt-2 text-2xl font-semibold tracking-normal text-balance sm:text-3xl">
             Members
           </h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-            Search the roster, spot billing risk, and prepare account actions.
-          </p>
-        </div>
-        <div className="rounded-lg border border-border bg-card px-4 py-3 text-card-foreground">
-          <p className="text-xs font-medium text-muted-foreground uppercase">
-            Visible members
-          </p>
-          <p className="mt-1 text-2xl font-semibold">
-            {totalMatchingMembers} of {totalMembers}
-          </p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            {activeFiltersCount} active filters
-          </p>
-        </div>
-      </section>
-
-      <MemberCreateForm
-        planTiers={planTiers}
-        initialJoinDate={initialJoinDate}
-      />
-
-      <section
-        aria-labelledby="member-filters"
-        className="rounded-lg border border-border bg-card p-3 text-card-foreground sm:p-4"
-      >
-        <form
-          action="/members"
-          className="flex flex-col gap-3 lg:flex-row lg:items-end"
-          onSubmit={handleSearchSubmit}
-        >
-          <div className="min-w-0 flex-1">
-            <h2 id="member-filters" className="text-sm font-semibold">
-              Find a member
-            </h2>
-            <label className="mt-3 flex min-h-11 items-center gap-2 rounded-lg border border-input bg-background px-3 text-sm focus-within:ring-3 focus-within:ring-ring/40">
-              <Search className="size-4 shrink-0 text-muted-foreground" />
-              <span className="sr-only">Search by name, email, or phone</span>
-              <input
-                name="q"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Name, email, or phone"
-                className="min-w-0 flex-1 bg-transparent py-2 text-sm outline-none placeholder:text-muted-foreground"
-              />
-            </label>
-          </div>
-
-          <FilterSelect
-            label="Status"
-            name="status"
-            value={filters.status}
-            options={statusOptions}
-            formatOption={formatStatusFilter}
-            onChange={(value) =>
-              navigateFilters({ status: value as StatusFilter })
-            }
-          />
-          <FilterSelect
-            label="Plan"
-            name="plan"
-            value={filters.plan}
-            options={planOptions}
-            formatOption={formatPlanFilter}
-            onChange={(value) => navigateFilters({ plan: value as PlanFilter })}
-          />
-          <FilterSelect
-            label="Billing risk"
-            name="risk"
-            value={filters.risk}
-            options={riskOptions}
-            formatOption={formatRiskFilter}
-            onChange={(value) => navigateFilters({ risk: value as RiskFilter })}
-          />
-
-          <Button
-            type="submit"
-            variant="default"
-            size="lg"
-            className="min-h-11"
+          <Link
+            href="/members?risk=attention"
+            className="mt-2 inline-flex rounded-sm text-sm leading-6 text-muted-foreground outline-none hover:text-foreground hover:underline focus-visible:ring-3 focus-visible:ring-ring/40"
           >
-            Search
-          </Button>
-          <Button asChild variant="outline" size="lg" className="min-h-11">
-            <Link href="/members">Reset</Link>
-          </Button>
-        </form>
+            {attentionLabel}
+          </Link>
+        </div>
+        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+          <DialogTrigger asChild>
+            <Button size="lg" className="min-h-11 sm:self-end">
+              <Plus />
+              Add member
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="!top-0 !right-0 !left-auto !h-dvh !max-w-full !translate-x-0 !translate-y-0 content-start overflow-y-auto rounded-none border-l border-border bg-card p-5 shadow-2xl sm:!max-w-md data-open:slide-in-from-right data-closed:slide-out-to-right">
+            <DialogHeader className="pr-8">
+              <DialogTitle>Add member</DialogTitle>
+              <DialogDescription>
+                Create a roster record and start billing when a plan is
+                selected.
+              </DialogDescription>
+            </DialogHeader>
+            <MemberCreateForm
+              planTiers={planTiers}
+              initialJoinDate={initialJoinDate}
+              onSaved={() => setIsCreateOpen(false)}
+            />
+          </DialogContent>
+        </Dialog>
       </section>
 
-      <section aria-labelledby="member-roster" className="grid gap-3">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <h2 id="member-roster" className="text-base font-semibold">
-              Member roster
-            </h2>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Plans, account status, renewal timing, and attendance.
+      <section aria-labelledby="member-roster" className="grid gap-0">
+        <div className="rounded-t-lg border border-border bg-card p-3 text-card-foreground sm:p-4">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 id="member-roster" className="text-base font-semibold">
+                Member roster
+                <span className="font-normal text-muted-foreground">
+                  {" "}
+                  · {totalMatchingMembers} of {totalMembers}
+                </span>
+              </h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Plans, account status, renewal timing, and attendance.
+              </p>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {activeFiltersCount} active filters
             </p>
           </div>
+
+          <form
+            action="/members"
+            className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-end"
+            onSubmit={handleSearchSubmit}
+          >
+            <div className="min-w-0 flex-1">
+              <label className="flex min-h-11 items-center gap-2 rounded-lg border border-foreground/10 bg-input/30 px-3 text-sm shadow-inner shadow-foreground/5 focus-within:ring-3 focus-within:ring-ring/40">
+                <Search className="size-4 shrink-0 text-muted-foreground" />
+                <span className="sr-only">Search by name, email, or phone</span>
+                <input
+                  name="q"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="Name, email, or phone"
+                  className="min-w-0 flex-1 bg-transparent py-2 text-sm outline-none placeholder:text-muted-foreground"
+                />
+              </label>
+            </div>
+
+            <FilterSelect
+              label="Status"
+              name="status"
+              value={filters.status}
+              options={statusOptions}
+              formatOption={formatStatusFilter}
+              onChange={(value) =>
+                navigateFilters({ status: value as StatusFilter })
+              }
+            />
+            <FilterSelect
+              label="Plan"
+              name="plan"
+              value={filters.plan}
+              options={planOptions}
+              formatOption={formatPlanFilter}
+              onChange={(value) =>
+                navigateFilters({ plan: value as PlanFilter })
+              }
+            />
+            <FilterSelect
+              label="Billing risk"
+              name="risk"
+              value={filters.risk}
+              options={riskOptions}
+              formatOption={formatRiskFilter}
+              onChange={(value) =>
+                navigateFilters({ risk: value as RiskFilter })
+              }
+            />
+
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <Button
+                type="submit"
+                variant="default"
+                size="lg"
+                className="min-h-11"
+              >
+                <Search />
+                Search
+              </Button>
+              <Link
+                href="/members"
+                className="inline-flex min-h-11 items-center justify-center rounded-sm px-2 text-sm font-medium text-muted-foreground outline-none hover:text-foreground hover:underline focus-visible:ring-3 focus-visible:ring-ring/40"
+              >
+                Reset
+              </Link>
+            </div>
+          </form>
         </div>
 
         {members.length > 0 ? (
@@ -229,7 +265,7 @@ export function MemberRoster({
               ))}
             </div>
 
-            <div className="hidden overflow-hidden rounded-lg border border-border bg-card text-card-foreground md:block">
+            <div className="hidden overflow-hidden rounded-b-lg border-x border-b border-border bg-card text-card-foreground md:block">
               <table className="w-full table-fixed text-left text-sm">
                 <thead className="border-b border-border bg-muted/60 text-xs text-muted-foreground uppercase">
                   <tr>
@@ -295,7 +331,7 @@ function FilterSelect({
         name={name}
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="min-h-11 rounded-lg border border-input bg-background px-3 text-sm font-normal text-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
+        className="min-h-11 rounded-lg border border-foreground/10 bg-input/30 px-3 text-sm font-normal text-foreground shadow-inner shadow-foreground/5 outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
       >
         {options.map((option) => (
           <option key={option} value={option}>
@@ -450,6 +486,10 @@ function formatPlanFilter(value: string) {
 function formatRiskFilter(value: string) {
   if (value === "all") {
     return "All risks"
+  }
+
+  if (value === "attention") {
+    return "Needs attention"
   }
 
   if (value === "clear") {
