@@ -5,7 +5,7 @@ import * as React from "react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
-import { logMemberCheckIn, type ActionResult } from "./actions"
+import { logMemberCheckIn, type ActionResult } from "./member-actions"
 
 export function MemberQuickCheckInAction({
   memberId,

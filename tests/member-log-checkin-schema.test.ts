@@ -1,7 +1,7 @@
 import assert from "node:assert/strict"
 import test from "node:test"
 
-import { logCheckInSchema } from "../app/(dashboard)/members/log-checkin-schema.ts"
+import { logCheckInSchema } from "../lib/dashboard/schemas/log-checkin-schema.ts"
 
 const validValues = {
   memberId: "member-1",

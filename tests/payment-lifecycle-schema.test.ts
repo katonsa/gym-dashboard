@@ -1,8 +1,8 @@
 import assert from "node:assert/strict"
 import test from "node:test"
 
-import { markPaidSchema } from "../app/(dashboard)/members/mark-paid-schema.ts"
-import { voidPaymentSchema } from "../app/(dashboard)/members/void-payment-schema.ts"
+import { markPaidSchema } from "../lib/dashboard/schemas/mark-paid-schema.ts"
+import { voidPaymentSchema } from "../lib/dashboard/schemas/void-payment-schema.ts"
 
 test("validates mark-paid payment ids", () => {
   assert.deepEqual(markPaidSchema.parse({ paymentId: " payment-1 " }), {

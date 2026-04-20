@@ -17,7 +17,7 @@ import { createDropInVisit } from "./actions"
 import {
   createDropInSchema,
   type CreateDropInValues,
-} from "./drop-in-create-schema"
+} from "@/lib/dashboard/schemas/drop-in-create-schema"
 
 export function DropInEntryForm({
   defaultAmount,

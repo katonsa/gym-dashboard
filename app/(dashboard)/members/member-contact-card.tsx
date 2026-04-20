@@ -7,6 +7,7 @@ import * as React from "react"
 import { Controller, useForm } from "react-hook-form"
 import { toast } from "sonner"
 
+import { DetailField } from "@/components/dashboard/detail-field"
 import { Button } from "@/components/ui/button"
 import {
   Field,
@@ -15,11 +16,11 @@ import {
   FieldLabel,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { updateMemberContact } from "./actions"
+import { updateMemberContact } from "./member-actions"
 import {
   updateMemberContactSchema,
   type UpdateMemberContactValues,
-} from "./update-member-contact-schema"
+} from "@/lib/dashboard/schemas/update-member-contact-schema"
 
 type MemberContactCardProps = {
   member: {
@@ -294,16 +295,5 @@ export function MemberContactCard({
         </div>
       )}
     </section>
-  )
-}
-
-function DetailField({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="min-w-0">
-      <p className="text-xs font-medium text-muted-foreground uppercase">
-        {label}
-      </p>
-      <p className="mt-1 text-sm font-medium break-words">{value}</p>
-    </div>
   )
 }

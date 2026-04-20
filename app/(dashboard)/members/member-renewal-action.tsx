@@ -21,9 +21,15 @@ import { Label } from "@/components/ui/label"
 import { addBillingPeriod } from "@/lib/dashboard/billing"
 import { getDaysBetween } from "@/lib/dashboard/calculations"
 import type { MembershipDisplayStatus } from "@/lib/dashboard/calculations"
+import {
+  formatDate,
+  formatDateInputForDisplay,
+  parseDateInput,
+  titleCase,
+} from "@/lib/dashboard/formatters"
 import type { BillingInterval, MembershipStatus } from "@/lib/dashboard/types"
-import { renewMembership } from "./actions"
-import type { RenewMembershipActionResult } from "./renew-membership-schema"
+import { renewMembership } from "./membership-actions"
+import type { RenewMembershipActionResult } from "@/lib/dashboard/schemas/renew-membership-schema"
 
 type MemberRenewalActionProps = {
   membershipId: string
@@ -201,59 +207,6 @@ export function MemberRenewalAction({
   )
 }
 
-function parseDateInput(value: string) {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
-
-  if (!match) {
-    return null
-  }
-
-  const year = Number(match[1])
-  const monthIndex = Number(match[2]) - 1
-  const day = Number(match[3])
-  const date = new Date(Date.UTC(year, monthIndex, day))
-
-  if (
-    date.getUTCFullYear() !== year ||
-    date.getUTCMonth() !== monthIndex ||
-    date.getUTCDate() !== day
-  ) {
-    return null
-  }
-
-  return date
-}
-
 function formatDaysExpired(days: number) {
   return days === 1 ? "1 day ago" : `${days} days ago`
-}
-
-function formatDate(date: Date, timeZone: string) {
-  return new Intl.DateTimeFormat("en", {
-    month: "short",
-    day: "numeric",
-    timeZone,
-    year: "numeric",
-  }).format(date)
-}
-
-function formatDateInputForDisplay(value: string) {
-  const date = parseDateInput(value)
-
-  if (!date) {
-    return value || "the selected renewal date"
-  }
-
-  return new Intl.DateTimeFormat("en", {
-    dateStyle: "medium",
-    timeZone: "UTC",
-  }).format(date)
-}
-
-function titleCase(value: string) {
-  return value
-    .toLowerCase()
-    .split("_")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ")
 }

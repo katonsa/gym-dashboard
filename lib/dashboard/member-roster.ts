@@ -7,8 +7,9 @@ import type {
   PlanTierName,
 } from "./types.ts"
 import { getMembershipDisplayStatus, isExpired } from "./calculations.ts"
+import type { BillingRisk } from "./status-styles.ts"
 
-export type BillingRisk = "clear" | "expired" | "expiring" | "overdue"
+export type { BillingRisk } from "./status-styles.ts"
 export type StatusFilter = "all" | MemberStatus
 export type PlanFilter = "all" | PlanTierName | "No plan"
 export type RiskFilter = "all" | BillingRisk

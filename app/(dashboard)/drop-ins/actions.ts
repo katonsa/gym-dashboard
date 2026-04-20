@@ -2,64 +2,50 @@
 
 import { revalidatePath } from "next/cache"
 
-import { requireDashboardSession } from "@/lib/auth/server"
+import { withGymAction } from "@/lib/dashboard/action-helpers"
 import { db } from "@/lib/db"
 import {
   createDropInSchema,
   normalizeCreateDropInValues,
   type CreateDropInActionResult,
   type CreateDropInValues,
-} from "./drop-in-create-schema"
+} from "@/lib/dashboard/schemas/drop-in-create-schema"
 
 export async function createDropInVisit(
   values: CreateDropInValues
 ): Promise<CreateDropInActionResult> {
-  const session = await requireDashboardSession("/drop-ins")
-  const parsed = createDropInSchema.safeParse(values)
+  return withGymAction({
+    schema: createDropInSchema,
+    values,
+    redirectPath: "/drop-ins",
+    validationError: "Check the drop-in details and try again.",
+    missingGymError:
+      "Connect a gym to this owner account before adding drop-ins.",
+    failureError:
+      "The drop-in could not be saved. Check the details and try again.",
+    gymSelect: { id: true, defaultDropInFeeAmount: true },
+    handler: async ({ parsed, gym, gymId }) => {
+      const dropInValues = normalizeCreateDropInValues(parsed)
+      const defaultAmount = gym.defaultDropInFeeAmount
 
-  if (!parsed.success) {
-    return {
-      success: false,
-      error:
-        parsed.error.issues[0]?.message ??
-        "Check the drop-in details and try again.",
-    }
-  }
+      if (defaultAmount === undefined) {
+        throw new Error("Default drop-in amount was not selected.")
+      }
 
-  const gym = await db.gym.findFirst({
-    where: { ownerId: session.user.id },
-    select: { id: true, defaultDropInFeeAmount: true },
-    orderBy: { createdAt: "asc" },
+      await db.dropInVisit.create({
+        data: {
+          gymId,
+          visitorName: dropInValues.visitorName,
+          visitorContact: dropInValues.visitorContact,
+          visitCount: dropInValues.visitCount,
+          amount: dropInValues.amount ?? defaultAmount,
+          notes: dropInValues.notes,
+        },
+      })
+
+      revalidatePath("/drop-ins")
+
+      return { success: true }
+    },
   })
-
-  if (!gym) {
-    return {
-      success: false,
-      error: "Connect a gym to this owner account before adding drop-ins.",
-    }
-  }
-
-  const dropInValues = normalizeCreateDropInValues(parsed.data)
-
-  try {
-    await db.dropInVisit.create({
-      data: {
-        gymId: gym.id,
-        visitorName: dropInValues.visitorName,
-        visitorContact: dropInValues.visitorContact,
-        visitCount: dropInValues.visitCount,
-        amount: dropInValues.amount ?? gym.defaultDropInFeeAmount,
-        notes: dropInValues.notes,
-      },
-    })
-  } catch {
-    return {
-      success: false,
-      error: "The drop-in could not be saved. Check the details and try again.",
-    }
-  }
-
-  revalidatePath("/drop-ins")
-
-  return { success: true }
 }

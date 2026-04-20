@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import type { MemberStatus } from "@/lib/dashboard"
-import { updateMemberStatus, type ActionResult } from "./actions"
+import { updateMemberStatus, type ActionResult } from "./member-actions"
 
 type StatusActionStatus = Extract<MemberStatus, "ACTIVE" | "SUSPENDED">
 

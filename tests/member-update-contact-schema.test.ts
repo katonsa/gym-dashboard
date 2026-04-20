@@ -1,7 +1,7 @@
 import assert from "node:assert/strict"
 import test from "node:test"
 
-import { updateMemberContactSchema } from "../app/(dashboard)/members/update-member-contact-schema.ts"
+import { updateMemberContactSchema } from "../lib/dashboard/schemas/update-member-contact-schema.ts"
 
 const validValues = {
   memberId: "member-1",

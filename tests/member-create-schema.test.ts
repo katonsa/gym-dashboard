@@ -1,7 +1,7 @@
 import assert from "node:assert/strict"
 import test from "node:test"
 
-import { createMemberSchema } from "../app/(dashboard)/members/member-create-schema.ts"
+import { createMemberSchema } from "../lib/dashboard/schemas/member-create-schema.ts"
 
 const validValues = {
   firstName: "Ari",

@@ -1,3 +1,5 @@
+import { EmptyState } from "@/components/dashboard/empty-state"
+import { formatDashboardDate } from "@/lib/dashboard/formatters"
 import { loadSubscriptionSummary } from "@/lib/dashboard/loaders"
 import {
   PlanComparisonChart,
@@ -17,7 +19,7 @@ export default async function SubscriptionsPage() {
 
   if (!subscriptionsData) {
     return (
-      <SubscriptionEmptyState
+      <EmptyState
         title="No gym is connected to this owner account."
         detail="Create or assign a gym for this owner before subscription data can appear."
       />
@@ -108,7 +110,7 @@ export default async function SubscriptionsPage() {
           </div>
           <div className="grid gap-3 md:grid-cols-3">
             {setupGaps.map((gap) => (
-              <SubscriptionEmptyState
+              <EmptyState
                 key={gap.title}
                 title={gap.title}
                 detail={gap.detail}
@@ -167,7 +169,7 @@ export default async function SubscriptionsPage() {
             ))}
           </div>
         ) : (
-          <SubscriptionEmptyState
+          <EmptyState
             title="No plans configured."
             detail="Plan tiers will appear here after they are added to this gym."
           />
@@ -185,7 +187,7 @@ export default async function SubscriptionsPage() {
           {planChartData.length > 0 ? (
             <PlanComparisonChart data={planChartData} />
           ) : (
-            <SubscriptionEmptyState
+            <EmptyState
               title="No plans configured."
               detail="Plan comparison starts after plan tiers are added."
             />
@@ -202,7 +204,7 @@ export default async function SubscriptionsPage() {
           {setupState.hasRevenueRecords ? (
             <RevenueTrendChart data={revenueTrend} />
           ) : (
-            <SubscriptionEmptyState
+            <EmptyState
               title="No revenue records."
               detail="The six-month trend will start at zero until billing or drop-in records exist."
             />
@@ -243,21 +245,6 @@ export default async function SubscriptionsPage() {
   )
 }
 
-function SubscriptionEmptyState({
-  title,
-  detail,
-}: {
-  title: string
-  detail: string
-}) {
-  return (
-    <div className="rounded-lg border border-border bg-card p-5 text-card-foreground">
-      <p className="text-sm font-medium">{title}</p>
-      <p className="mt-1 text-xs leading-5 text-muted-foreground">{detail}</p>
-    </div>
-  )
-}
-
 function PlanMetric({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between gap-3 border-b border-border pb-3 last:border-b-0 last:pb-0">
@@ -277,13 +264,4 @@ function formatSignedPercent(value: number) {
   const sign = value > 0 ? "+" : ""
 
   return `${sign}${percentFormatter.format(value)}`
-}
-
-function formatDashboardDate(date: Date, timeZone: string) {
-  return new Intl.DateTimeFormat("en", {
-    weekday: "long",
-    month: "short",
-    day: "numeric",
-    timeZone,
-  }).format(date)
 }

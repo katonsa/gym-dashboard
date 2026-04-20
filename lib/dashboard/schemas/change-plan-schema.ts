@@ -1,6 +1,6 @@
 import * as z from "zod"
 
-import { parseDateInput } from "./member-create-schema.ts"
+import { parseDateInput } from "../formatters.ts"
 
 export type ChangePlanActionResult = {
   success: boolean

@@ -7,8 +7,8 @@ import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import type { MembershipStatus } from "@/lib/dashboard"
-import { renewMembership } from "./members/actions"
-import type { RenewMembershipActionResult } from "./members/renew-membership-schema"
+import { renewMembership } from "./members/membership-actions"
+import type { RenewMembershipActionResult } from "@/lib/dashboard/schemas/renew-membership-schema"
 
 type OverviewRenewalActionProps = {
   membershipId: string

@@ -13,12 +13,17 @@ import {
   FieldLabel,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import type { BillingInterval, MemberStatus, PlanTier } from "@/lib/dashboard"
-import { createMember } from "./actions"
+import {
+  titleCase,
+  type BillingInterval,
+  type MemberStatus,
+  type PlanTier,
+} from "@/lib/dashboard"
+import { createMember } from "./member-actions"
 import {
   createMemberSchema,
   type CreateMemberValues,
-} from "./member-create-schema"
+} from "@/lib/dashboard/schemas/member-create-schema"
 
 const memberStatuses: MemberStatus[] = ["ACTIVE", "INACTIVE", "SUSPENDED"]
 const billingIntervals: BillingInterval[] = ["MONTHLY", "ANNUAL"]
@@ -339,12 +344,4 @@ export function MemberCreateForm({
       </form>
     </section>
   )
-}
-
-function titleCase(value: string) {
-  return value
-    .toLowerCase()
-    .split("_")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ")
 }

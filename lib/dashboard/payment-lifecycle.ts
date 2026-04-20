@@ -1,8 +1,8 @@
-import { addBillingPeriod } from "../../../lib/dashboard/billing.ts"
+import { addBillingPeriod } from "./billing.ts"
 import type {
   BillingInterval,
   PrismaClient,
-} from "../../../lib/generated/prisma/client.ts"
+} from "../generated/prisma/client.ts"
 
 type PaymentLifecycleDb = Pick<PrismaClient, "$transaction">
 type PaymentLifecycleTx = Parameters<

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict"
 import test from "node:test"
 
-import { renewMembershipSchema } from "../app/(dashboard)/members/renew-membership-schema.ts"
+import { renewMembershipSchema } from "../lib/dashboard/schemas/renew-membership-schema.ts"
 
 const validValues = {
   membershipId: "membership-1",

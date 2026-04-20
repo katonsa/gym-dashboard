@@ -4,7 +4,7 @@ import test from "node:test"
 import {
   getRenewalSubmissionNote,
   renewMembershipForGym,
-} from "../app/(dashboard)/members/renewal-lifecycle.ts"
+} from "../lib/dashboard/renewal-lifecycle.ts"
 import {
   getMembershipMrr,
   type DashboardDb,

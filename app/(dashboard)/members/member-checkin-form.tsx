@@ -23,8 +23,12 @@ import {
   FieldLabel,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { logMemberCheckIn } from "./actions"
-import { logCheckInSchema, type LogCheckInValues } from "./log-checkin-schema"
+import { formatDateInputForDisplay } from "@/lib/dashboard/formatters"
+import { logMemberCheckIn } from "./member-actions"
+import {
+  logCheckInSchema,
+  type LogCheckInValues,
+} from "@/lib/dashboard/schemas/log-checkin-schema"
 
 export function MemberCheckInForm({
   memberId,
@@ -66,7 +70,9 @@ export function MemberCheckInForm({
       if (actionResult.success) {
         form.reset(defaultValues)
         setIsOpen(false)
-        toast.success(`Check-in logged for ${formatDate(values.attendedAt)}.`)
+        toast.success(
+          `Check-in logged for ${formatDateInputForDisplay(values.attendedAt)}.`
+        )
         return
       }
 
@@ -164,16 +170,4 @@ export function MemberCheckInForm({
       </AlertDialog>
     </div>
   )
-}
-
-function formatDate(value: string) {
-  const date = new Date(`${value}T00:00:00`)
-
-  if (Number.isNaN(date.getTime())) {
-    return value
-  }
-
-  return new Intl.DateTimeFormat("en", {
-    dateStyle: "medium",
-  }).format(date)
 }

@@ -16,7 +16,11 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import type { PaymentStatus } from "@/lib/dashboard"
-import { markPaymentPaid, voidPayment, type ActionResult } from "./actions"
+import {
+  markPaymentPaid,
+  voidPayment,
+  type ActionResult,
+} from "./payment-actions.server"
 
 type PaymentActionsProps = {
   paymentId: string

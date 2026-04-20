@@ -1,7 +1,7 @@
 import assert from "node:assert/strict"
 import test from "node:test"
 
-import { logMemberCheckInForGym } from "../app/(dashboard)/members/attendance-lifecycle.ts"
+import { logMemberCheckInForGym } from "../lib/dashboard/attendance-lifecycle.ts"
 import { db } from "../lib/db.ts"
 
 test("manual check-in creates attendance and updates newer last attendance", async () => {

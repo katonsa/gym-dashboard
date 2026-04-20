@@ -1,22 +1,17 @@
 import Link from "next/link"
-import type * as React from "react"
 
+import { RiskBadge, StatusBadge } from "@/components/dashboard/badges"
+import { EmptyText, InfoCard } from "@/components/dashboard/info-card"
 import { Button } from "@/components/ui/button"
 import { PaginationNav } from "@/components/ui/pagination-nav"
 import {
-  getDaysBetween,
+  formatDate,
+  formatDateInput,
+  formatMemberName,
+  formatPageRange,
   getMembershipDisplayStatus,
   parsePaginationParams,
-  type AttendanceRecord,
-  type AttendanceSource,
-  type BillingInterval,
-  type Member,
-  type MemberStatus,
-  type MembershipPayment,
-  type MembershipStatus,
-  type PaymentStatus,
 } from "@/lib/dashboard"
-import type { MembershipDisplayStatus } from "@/lib/dashboard/calculations"
 import { getGymLocalDayBoundary } from "@/lib/dashboard/date-boundaries"
 import {
   loadMemberAttendancePage,
@@ -24,13 +19,15 @@ import {
   loadMemberPaymentsPage,
   type MemberDetailMembership,
 } from "@/lib/dashboard/loaders"
-import { cn } from "@/lib/utils"
+import type { BillingRisk } from "@/lib/dashboard/status-styles"
+import { AttendanceLogItem } from "../attendance-log-item"
+import { CurrentMembershipSummary } from "../current-membership-summary"
 import { MemberCheckInForm } from "../member-checkin-form"
 import { MemberContactCard } from "../member-contact-card"
 import { MemberPlanChangeForm } from "../member-plan-change-form"
-import { MemberRenewalAction } from "../member-renewal-action"
+import { MembershipHistoryItem } from "../membership-history-item"
+import { PaymentHistoryItem } from "../payment-history-item"
 import { MemberStatusAction } from "../member-status-action"
-import { PaymentActions } from "../payment-actions"
 
 type MemberDetailPageProps = {
   params: Promise<{
@@ -40,43 +37,6 @@ type MemberDetailPageProps = {
     pp?: string | string[]
     ap?: string | string[]
   }>
-}
-
-type BillingRisk = "clear" | "expired" | "expiring" | "overdue"
-
-const statusClasses: Record<MemberStatus, string> = {
-  ACTIVE: "border-status/45 bg-status/12 text-status",
-  INACTIVE: "border-chart-3/45 bg-chart-3/12 text-chart-3",
-  SUSPENDED: "border-alert/45 bg-alert/12 text-alert",
-}
-
-const riskClasses: Record<BillingRisk, string> = {
-  clear: "border-border bg-muted text-muted-foreground",
-  expired: "border-alert/45 bg-alert/12 text-alert",
-  expiring: "border-chart-3/45 bg-chart-3/12 text-chart-3",
-  overdue: "border-alert/45 bg-alert/12 text-alert",
-}
-
-const membershipDisplayClasses: Record<MembershipDisplayStatus, string> = {
-  active: "border-status/45 bg-status/12 text-status",
-  canceled: "border-muted-foreground/35 bg-muted text-muted-foreground",
-  expired: "border-alert/45 bg-alert/12 text-alert",
-  expiring: "border-chart-3/45 bg-chart-3/12 text-chart-3",
-  past_due: "border-alert/45 bg-alert/12 text-alert",
-}
-
-const membershipClasses: Record<MembershipStatus, string> = {
-  ACTIVE: "border-status/45 bg-status/12 text-status",
-  CANCELED: "border-muted-foreground/35 bg-muted text-muted-foreground",
-  EXPIRED: "border-muted-foreground/35 bg-muted text-muted-foreground",
-  PAST_DUE: "border-alert/45 bg-alert/12 text-alert",
-}
-
-const paymentClasses: Record<PaymentStatus, string> = {
-  OVERDUE: "border-alert/45 bg-alert/12 text-alert",
-  PAID: "border-status/45 bg-status/12 text-status",
-  PENDING: "border-chart-3/45 bg-chart-3/12 text-chart-3",
-  VOID: "border-muted-foreground/35 bg-muted text-muted-foreground",
 }
 
 export default async function MemberDetailPage({
@@ -232,7 +192,7 @@ export default async function MemberDetailPage({
         <InfoCard
           id="payments"
           title="Payment history"
-          detail={getPageRangeDetail(paymentsPage, "payments")}
+          detail={formatPageRange(paymentsPage, "payments")}
         >
           {paymentsPage.rows.length > 0 ? (
             <div className="grid gap-3">
@@ -260,7 +220,7 @@ export default async function MemberDetailPage({
 
       <InfoCard
         title={`Attendance log (${attendancePage.total})`}
-        detail={getPageRangeDetail(attendancePage, "attendance entries")}
+        detail={formatPageRange(attendancePage, "attendance entries")}
         action={
           <MemberCheckInForm
             memberId={member.id}
@@ -293,291 +253,6 @@ export default async function MemberDetailPage({
   )
 }
 
-function CurrentMembershipSummary({
-  currencyCode,
-  membership,
-  asOf,
-  timeZone,
-}: {
-  currencyCode: string
-  membership: MemberDetailMembership
-  asOf: Date
-  timeZone: string
-}) {
-  const displayStatus = getMembershipDisplayStatus(membership, asOf)
-  const periodDetail = getMembershipPeriodDetail(
-    membership,
-    displayStatus,
-    asOf
-  )
-  const canRenew =
-    (displayStatus === "expiring" || displayStatus === "expired") &&
-    (membership.status === "ACTIVE" || membership.status === "EXPIRED")
-
-  return (
-    <div className="grid gap-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <p className="text-lg font-semibold">{membership.planTier.name}</p>
-        <MembershipDisplayBadge status={displayStatus} />
-      </div>
-      {periodDetail ? (
-        <p className="text-sm font-medium text-muted-foreground">
-          {periodDetail}
-        </p>
-      ) : null}
-      <div className="grid gap-3 sm:grid-cols-2">
-        <DetailField
-          label="Interval"
-          value={formatBillingInterval(membership.billingInterval)}
-        />
-        <DetailField
-          label="Price"
-          value={formatCurrency(membership.priceAmount, currencyCode)}
-        />
-        <DetailField
-          label="Period ends"
-          value={formatDate(membership.currentPeriodEndsAt, timeZone)}
-        />
-        <DetailField
-          label="Next billing"
-          value={formatDate(membership.nextBillingDate, timeZone)}
-        />
-      </div>
-      <div className="flex flex-col gap-2 border-t border-border pt-3 sm:flex-row sm:flex-wrap sm:items-start">
-        <MemberRenewalAction
-          membershipId={membership.id}
-          expectedStatus={
-            membership.status === "EXPIRED" ? "EXPIRED" : "ACTIVE"
-          }
-          expectedCurrentPeriodEndsAt={membership.currentPeriodEndsAt}
-          canRenew={canRenew}
-          displayStatus={displayStatus}
-          planName={membership.planTier.name}
-          billingInterval={membership.billingInterval}
-          formattedAmount={formatCurrency(membership.priceAmount, currencyCode)}
-          defaultRenewalDate={formatDateInput(new Date(), timeZone)}
-          asOf={asOf.toISOString()}
-          timeZone={timeZone}
-        />
-        <Button
-          asChild
-          type="button"
-          variant="outline"
-          size="sm"
-          className="min-h-11"
-        >
-          <Link href="#plan-change">Edit plan</Link>
-        </Button>
-      </div>
-    </div>
-  )
-}
-
-function MembershipHistoryItem({
-  currencyCode,
-  membership,
-  timeZone,
-}: {
-  currencyCode: string
-  membership: MemberDetailMembership
-  timeZone: string
-}) {
-  return (
-    <article className="rounded-lg border border-border bg-background p-3">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          <p className="font-medium">{membership.planTier.name}</p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            {formatBillingInterval(membership.billingInterval)} |{" "}
-            {formatCurrency(membership.priceAmount, currencyCode)}
-          </p>
-        </div>
-        <MembershipBadge status={membership.status} />
-      </div>
-      <p className="mt-3 text-sm text-muted-foreground">
-        {formatDate(membership.startedAt, timeZone)} to{" "}
-        {formatDate(membership.currentPeriodEndsAt, timeZone)}
-      </p>
-    </article>
-  )
-}
-
-function PaymentHistoryItem({
-  currencyCode,
-  payment,
-  timeZone,
-}: {
-  currencyCode: string
-  payment: MembershipPayment
-  timeZone: string
-}) {
-  const formattedAmount = formatCurrency(payment.amount, currencyCode)
-  const isActionable =
-    payment.status === "PENDING" || payment.status === "OVERDUE"
-
-  return (
-    <article className="rounded-lg border border-border bg-background p-3">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <p className="font-medium">{formattedAmount}</p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Due {formatDate(payment.dueAt, timeZone)}
-          </p>
-        </div>
-        <PaymentBadge status={payment.status} />
-      </div>
-      <p className="mt-3 text-sm text-muted-foreground">
-        Paid{" "}
-        {payment.paidAt ? formatDate(payment.paidAt, timeZone) : "not recorded"}
-      </p>
-      {isActionable ? (
-        <div className="mt-3 border-t border-border pt-3">
-          <PaymentActions
-            paymentId={payment.id}
-            paymentStatus={payment.status}
-            formattedAmount={formattedAmount}
-          />
-        </div>
-      ) : null}
-    </article>
-  )
-}
-
-function AttendanceLogItem({
-  record,
-  timeZone,
-}: {
-  record: AttendanceRecord
-  timeZone: string
-}) {
-  return (
-    <article className="flex min-h-11 flex-col justify-center rounded-lg border border-border bg-background px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
-      <p className="text-sm font-medium">
-        {formatDate(record.attendedAt, timeZone)}
-      </p>
-      <p className="text-xs text-muted-foreground">
-        {formatAttendanceSource(record.source)}
-      </p>
-    </article>
-  )
-}
-
-function InfoCard({
-  id,
-  title,
-  detail,
-  action,
-  children,
-}: {
-  id?: string
-  title: string
-  detail?: string
-  action?: React.ReactNode
-  children: React.ReactNode
-}) {
-  return (
-    <section
-      id={id}
-      className="scroll-mt-20 rounded-lg border border-border bg-card p-4 text-card-foreground sm:p-5"
-    >
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          <h2 className="text-base font-semibold">{title}</h2>
-          {detail ? (
-            <p className="mt-1 text-xs text-muted-foreground">{detail}</p>
-          ) : null}
-        </div>
-        {action ? <div className="shrink-0">{action}</div> : null}
-      </div>
-      {children}
-    </section>
-  )
-}
-
-function DetailField({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="min-w-0">
-      <p className="text-xs font-medium text-muted-foreground uppercase">
-        {label}
-      </p>
-      <p className="mt-1 text-sm font-medium break-words">{value}</p>
-    </div>
-  )
-}
-
-function EmptyText({ children }: { children: React.ReactNode }) {
-  return <p className="text-sm text-muted-foreground">{children}</p>
-}
-
-function StatusBadge({ status }: { status: MemberStatus }) {
-  return (
-    <span
-      className={cn(
-        "inline-flex w-fit items-center rounded-lg border px-2 py-1 text-[0.7rem] font-medium uppercase",
-        statusClasses[status]
-      )}
-    >
-      {titleCase(status)}
-    </span>
-  )
-}
-
-function RiskBadge({ risk }: { risk: BillingRisk }) {
-  return (
-    <span
-      className={cn(
-        "inline-flex w-fit items-center rounded-lg border px-2 py-1 text-[0.7rem] font-medium uppercase",
-        riskClasses[risk]
-      )}
-    >
-      {risk === "clear" ? "No risk" : titleCase(risk)}
-    </span>
-  )
-}
-
-function MembershipDisplayBadge({
-  status,
-}: {
-  status: MembershipDisplayStatus
-}) {
-  return (
-    <span
-      className={cn(
-        "inline-flex w-fit items-center rounded-lg border px-2 py-1 text-[0.7rem] font-medium uppercase",
-        membershipDisplayClasses[status]
-      )}
-    >
-      {status === "expiring" ? "Expiring soon" : titleCase(status)}
-    </span>
-  )
-}
-
-function MembershipBadge({ status }: { status: MembershipStatus }) {
-  return (
-    <span
-      className={cn(
-        "inline-flex w-fit items-center rounded-lg border px-2 py-1 text-[0.7rem] font-medium uppercase",
-        membershipClasses[status]
-      )}
-    >
-      {titleCase(status.replace("_", " "))}
-    </span>
-  )
-}
-
-function PaymentBadge({ status }: { status: PaymentStatus }) {
-  return (
-    <span
-      className={cn(
-        "inline-flex w-fit items-center rounded-lg border px-2 py-1 text-[0.7rem] font-medium uppercase",
-        paymentClasses[status]
-      )}
-    >
-      {titleCase(status)}
-    </span>
-  )
-}
-
 function getBillingRisk(
   membership: MemberDetailMembership | undefined,
   hasOverduePayments: boolean,
@@ -604,36 +279,6 @@ function getBillingRisk(
   return "clear"
 }
 
-function getMembershipPeriodDetail(
-  membership: MemberDetailMembership,
-  displayStatus: MembershipDisplayStatus,
-  asOf: Date
-) {
-  if (displayStatus === "expiring") {
-    const daysRemaining = Math.max(
-      0,
-      getDaysBetween(asOf, membership.currentPeriodEndsAt)
-    )
-
-    return daysRemaining === 1
-      ? "Expires in 1 day."
-      : `Expires in ${daysRemaining} days.`
-  }
-
-  if (displayStatus === "expired") {
-    const daysOverdue = Math.max(
-      1,
-      getDaysBetween(membership.currentPeriodEndsAt, asOf)
-    )
-
-    return daysOverdue === 1
-      ? "Expired 1 day ago."
-      : `Expired ${daysOverdue} days ago.`
-  }
-
-  return null
-}
-
 function getPreservedPaginationParams(searchParams: {
   pp?: string | string[]
   ap?: string | string[]
@@ -642,72 +287,4 @@ function getPreservedPaginationParams(searchParams: {
     ap: searchParams.ap,
     pp: searchParams.pp,
   }
-}
-
-function getPageRangeDetail(
-  pageData: {
-    page: number
-    pageSize: number
-    total: number
-  },
-  label: string
-) {
-  if (pageData.total === 0) {
-    return undefined
-  }
-
-  const start = (pageData.page - 1) * pageData.pageSize + 1
-  const end = Math.min(pageData.total, pageData.page * pageData.pageSize)
-
-  return `Showing ${start}-${end} of ${pageData.total} ${label}.`
-}
-
-function formatMemberName(member: Pick<Member, "firstName" | "lastName">) {
-  return `${member.firstName} ${member.lastName}`
-}
-
-function formatDate(date: string, timeZone: string) {
-  return new Intl.DateTimeFormat("en", {
-    month: "short",
-    day: "numeric",
-    timeZone,
-    year: "numeric",
-  }).format(new Date(date))
-}
-
-function formatDateInput(date: Date, timeZone: string) {
-  const dateParts = new Intl.DateTimeFormat("en", {
-    day: "2-digit",
-    month: "2-digit",
-    timeZone,
-    year: "numeric",
-  }).formatToParts(date)
-  const partValue = (type: Intl.DateTimeFormatPartTypes) =>
-    dateParts.find((part) => part.type === type)?.value ?? ""
-
-  return `${partValue("year")}-${partValue("month")}-${partValue("day")}`
-}
-
-function formatCurrency(amount: number, currencyCode: string) {
-  return new Intl.NumberFormat("en", {
-    currency: currencyCode,
-    maximumFractionDigits: 0,
-    style: "currency",
-  }).format(amount)
-}
-
-function formatBillingInterval(interval: BillingInterval) {
-  return titleCase(interval)
-}
-
-function formatAttendanceSource(source: AttendanceSource) {
-  return titleCase(source.replace("_", " "))
-}
-
-function titleCase(value: string) {
-  return value
-    .toLowerCase()
-    .split(" ")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ")
 }

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict"
 import test from "node:test"
 
-import { updateMemberContactForGym } from "../app/(dashboard)/members/member-contact-lifecycle.ts"
+import { updateMemberContactForGym } from "../lib/dashboard/member-contact-lifecycle.ts"
 import { db } from "../lib/db.ts"
 
 test("updating member contact changes scoped member fields", async () => {

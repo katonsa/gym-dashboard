@@ -1,6 +1,11 @@
+import { EmptyState } from "@/components/dashboard/empty-state"
 import { parseMemberRosterFilters } from "@/lib/dashboard/member-roster"
 import { loadMemberRosterPage } from "@/lib/dashboard/loaders"
-import { parsePaginationParams } from "@/lib/dashboard"
+import {
+  formatDashboardDate,
+  formatDateInput,
+  parsePaginationParams,
+} from "@/lib/dashboard"
 import { MemberRoster } from "./member-roster"
 
 type MembersPageProps = {
@@ -22,7 +27,7 @@ export default async function MembersPage({ searchParams }: MembersPageProps) {
 
   if (!membersData) {
     return (
-      <MembersEmptyState
+      <EmptyState
         title="No gym is connected to this owner account."
         detail="Create or assign a gym for this owner before member records can appear."
       />
@@ -55,42 +60,5 @@ export default async function MembersPage({ searchParams }: MembersPageProps) {
       initialJoinDate={formatDateInput(asOf, membersData.gym.timezone)}
       initialCheckInDate={formatDateInput(asOf, membersData.gym.timezone)}
     />
-  )
-}
-
-function formatDashboardDate(date: Date, timeZone: string) {
-  return new Intl.DateTimeFormat("en", {
-    weekday: "long",
-    month: "short",
-    day: "numeric",
-    timeZone,
-  }).format(date)
-}
-
-function formatDateInput(date: Date, timeZone: string) {
-  const dateParts = new Intl.DateTimeFormat("en", {
-    day: "2-digit",
-    month: "2-digit",
-    timeZone,
-    year: "numeric",
-  }).formatToParts(date)
-  const partValue = (type: Intl.DateTimeFormatPartTypes) =>
-    dateParts.find((part) => part.type === type)?.value ?? ""
-
-  return `${partValue("year")}-${partValue("month")}-${partValue("day")}`
-}
-
-function MembersEmptyState({
-  title,
-  detail,
-}: {
-  title: string
-  detail: string
-}) {
-  return (
-    <div className="rounded-lg border border-border bg-card p-5 text-card-foreground">
-      <p className="text-sm font-medium">{title}</p>
-      <p className="mt-1 text-xs leading-5 text-muted-foreground">{detail}</p>
-    </div>
   )
 }

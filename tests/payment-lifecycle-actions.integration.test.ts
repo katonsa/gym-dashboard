@@ -4,7 +4,7 @@ import test from "node:test"
 import {
   markPaymentPaidForGym,
   voidPaymentForGym,
-} from "../app/(dashboard)/members/payment-lifecycle.ts"
+} from "../lib/dashboard/payment-lifecycle.ts"
 import { db } from "../lib/db.ts"
 
 test("marking the last unpaid payment paid reactivates the membership", async () => {

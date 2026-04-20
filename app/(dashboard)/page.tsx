@@ -1,27 +1,12 @@
-import Link from "next/link"
-
+import { EmptyState } from "@/components/dashboard/empty-state"
 import {
   loadOverdueAgingSummary,
   loadOverviewAlerts,
   loadOverviewSummary,
 } from "@/lib/dashboard/loaders"
-import type { DashboardAlert, DashboardAlertSeverity } from "@/lib/dashboard"
-import { OverviewRenewalAction } from "./overview-renewal-action"
-
-const toneClasses: Record<string, string> = {
-  alert: "bg-alert",
-  chart: "bg-chart-1",
-  opportunity: "bg-opportunity",
-  revenue: "bg-revenue",
-  status: "bg-status",
-}
-
-const severityClasses: Record<DashboardAlertSeverity, string> = {
-  critical: "border-alert/45 bg-alert/12 text-alert",
-  warning: "border-chart-3/45 bg-chart-3/12 text-chart-3",
-  opportunity: "border-opportunity/45 bg-opportunity/12 text-opportunity",
-  info: "border-chart-1/45 bg-chart-1/12 text-chart-1",
-}
+import { formatDashboardDate } from "@/lib/dashboard/formatters"
+import { OverviewPinnedAlerts } from "./overview-pinned-alerts"
+import { OverviewStatsSection } from "./overview-stats-section"
 
 export default async function Page() {
   const asOf = new Date()
@@ -33,9 +18,10 @@ export default async function Page() {
 
   if (!overviewData || !alerts) {
     return (
-      <OverviewEmptyState
+      <EmptyState
         title="No gym is connected to this owner account."
         detail="Create or assign a gym for this owner before dashboard data can appear."
+        dashed
       />
     )
   }
@@ -129,8 +115,6 @@ export default async function Page() {
     (total, section) => total + section.count,
     0
   )
-  const getAlertsByType = (type: DashboardAlert["type"]) =>
-    alerts.filter((alert) => alert.type === type)
   const setupGaps = [
     !setupState.hasMembers
       ? {
@@ -182,92 +166,19 @@ export default async function Page() {
         </div>
       </section>
 
-      <section aria-labelledby="pinned-alerts" className="grid gap-3">
-        <div className="flex items-end justify-between gap-3">
-          <div>
-            <h2 id="pinned-alerts" className="text-base font-semibold">
-              Pinned alerts
-            </h2>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Work the highest-risk accounts first.
-            </p>
-          </div>
-          <span className="rounded-lg bg-alert/12 px-2 py-1 text-xs font-medium text-alert">
-            Database records
-          </span>
-        </div>
+      <OverviewPinnedAlerts
+        alertSections={alertSections}
+        alerts={alerts}
+        numberFormatter={numberFormatter}
+        openAlertsCount={openAlertsCount}
+      />
 
-        {openAlertsCount > 0 ? (
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            {alertSections.map((section) => {
-              const sectionAlerts = getAlertsByType(section.type)
-              const firstAlert = sectionAlerts[0]
-              const capped =
-                section.count > 0 && sectionAlerts.length < section.count
-
-              return (
-                <PinnedAlertCard
-                  key={section.type}
-                  alert={firstAlert}
-                  capped={capped}
-                  count={section.count}
-                  empty={section.empty}
-                  label={section.label}
-                  renderedCount={sectionAlerts.length}
-                  numberFormatter={numberFormatter}
-                />
-              )
-            })}
-          </div>
-        ) : (
-          <OverviewEmptyState
-            title="No open alerts."
-            detail="Renewals, payment risks, stale attendance, and drop-in follow-ups will appear here."
-          />
-        )}
-      </section>
-
-      <section aria-labelledby="overview-stats" className="grid gap-3">
-        <div>
-          <h2 id="overview-stats" className="text-base font-semibold">
-            Overview stats
-          </h2>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Current membership and revenue snapshot.
-          </p>
-        </div>
-        {summary.totalMembers > 0 ||
-        summary.dropInRevenueThisMonthAmount > 0 ? (
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-7">
-            {stats.map((stat) => (
-              <article
-                key={stat.label}
-                className="min-h-36 rounded-lg border border-border bg-card p-3 text-card-foreground sm:p-4"
-              >
-                <div
-                  className={`mb-3 h-1.5 w-14 rounded-full ${
-                    toneClasses[stat.tone]
-                  }`}
-                />
-                <p className="text-xs font-medium text-muted-foreground uppercase">
-                  {stat.label}
-                </p>
-                <p className="mt-2 text-lg leading-7 font-semibold break-words sm:text-xl">
-                  {stat.value}
-                </p>
-                <p className="mt-2 text-xs leading-5 text-muted-foreground">
-                  {stat.detail}
-                </p>
-              </article>
-            ))}
-          </div>
-        ) : (
-          <OverviewEmptyState
-            title="No dashboard activity yet."
-            detail="Add members, memberships, or drop-ins to populate the overview."
-          />
-        )}
-      </section>
+      <OverviewStatsSection
+        stats={stats}
+        hasActivity={
+          summary.totalMembers > 0 || summary.dropInRevenueThisMonthAmount > 0
+        }
+      />
 
       {setupGaps.length > 0 ? (
         <section aria-labelledby="setup-gaps" className="grid gap-3">
@@ -281,10 +192,11 @@ export default async function Page() {
           </div>
           <div className="grid gap-3 md:grid-cols-3">
             {setupGaps.map((gap) => (
-              <OverviewEmptyState
+              <EmptyState
                 key={gap.title}
                 title={gap.title}
                 detail={gap.detail}
+                dashed
               />
             ))}
           </div>
@@ -349,156 +261,4 @@ export default async function Page() {
       </section>
     </div>
   )
-}
-
-function PinnedAlertCard({
-  alert,
-  capped,
-  count,
-  empty,
-  label,
-  renderedCount,
-  numberFormatter,
-}: {
-  alert?: DashboardAlert
-  capped: boolean
-  count: number
-  empty: string
-  label: string
-  renderedCount: number
-  numberFormatter: Intl.NumberFormat
-}) {
-  const href = getAlertHref(alert)
-  const isCardLink =
-    href &&
-    (alert?.type === "EXPIRING_MEMBERSHIP" ||
-      alert?.type === "EXPIRED_MEMBERSHIP")
-  const renewalAction =
-    isCardLink && alert?.membershipId && alert.membershipStatus && alert.dueAt
-      ? {
-          membershipId: alert.membershipId,
-          expectedStatus: alert.membershipStatus,
-          expectedCurrentPeriodEndsAt: alert.dueAt,
-        }
-      : null
-  const className =
-    "relative min-h-36 rounded-lg border border-border bg-card p-3 text-card-foreground transition-colors sm:p-4"
-  const interactiveClassName = isCardLink
-    ? `${className} hover:border-primary/45 hover:bg-muted/40`
-    : className
-  const content = (
-    <>
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-xs font-medium text-muted-foreground uppercase">
-            {label}
-          </p>
-          <p className="mt-2 text-2xl font-semibold">
-            {numberFormatter.format(count)}
-          </p>
-        </div>
-        {alert ? (
-          <span
-            className={`shrink-0 rounded-lg border px-2 py-1 text-[0.7rem] font-medium uppercase ${severityClasses[alert.severity]}`}
-          >
-            {alert.severity}
-          </span>
-        ) : null}
-      </div>
-      <p className="mt-3 text-sm leading-5 font-medium">
-        {alert ? (
-          href && !isCardLink ? (
-            <Link
-              href={href}
-              className="underline underline-offset-3 hover:text-foreground"
-            >
-              {alert.title}
-            </Link>
-          ) : (
-            alert.title
-          )
-        ) : (
-          empty
-        )}
-      </p>
-      {alert ? (
-        <p className="mt-1 text-xs leading-5 text-muted-foreground">
-          {alert.detail}
-        </p>
-      ) : null}
-      {capped ? (
-        <p className="mt-2 text-xs leading-5 text-muted-foreground">
-          Showing {numberFormatter.format(renderedCount)} of{" "}
-          {numberFormatter.format(count)}.
-        </p>
-      ) : null}
-      {renewalAction ? (
-        <OverviewRenewalAction
-          membershipId={renewalAction.membershipId}
-          expectedStatus={renewalAction.expectedStatus}
-          expectedCurrentPeriodEndsAt={
-            renewalAction.expectedCurrentPeriodEndsAt
-          }
-        />
-      ) : null}
-    </>
-  )
-
-  if (isCardLink) {
-    return (
-      <article className={interactiveClassName}>
-        <Link
-          href={href}
-          aria-label={`Open ${alert.title}`}
-          className="absolute inset-0 rounded-lg focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
-        />
-        {content}
-      </article>
-    )
-  }
-
-  return <article className={interactiveClassName}>{content}</article>
-}
-
-function getAlertHref(alert?: DashboardAlert) {
-  if (!alert?.memberId) {
-    return null
-  }
-
-  if (
-    alert.type === "EXPIRING_MEMBERSHIP" ||
-    alert.type === "EXPIRED_MEMBERSHIP"
-  ) {
-    return `/members/${alert.memberId}#current-membership`
-  }
-
-  if (alert.type === "OVERDUE_PAYMENT") {
-    return `/members/${alert.memberId}#payments`
-  }
-
-  return `/members/${alert.memberId}`
-}
-
-function OverviewEmptyState({
-  title,
-  detail,
-}: {
-  title: string
-  detail: string
-}) {
-  return (
-    <article className="rounded-lg border border-dashed border-border bg-card p-4 text-card-foreground">
-      <p className="text-sm font-medium">{title}</p>
-      <p className="mt-1 text-xs leading-5 text-muted-foreground">{detail}</p>
-    </article>
-  )
-}
-
-function formatDashboardDate(date: Date, timeZone: string) {
-  return new Intl.DateTimeFormat("en", {
-    weekday: "long",
-    month: "short",
-    day: "numeric",
-    timeZone,
-  }).format(date)
 }

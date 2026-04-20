@@ -1,7 +1,7 @@
 import assert from "node:assert/strict"
 import test from "node:test"
 
-import { changePlanSchema } from "../app/(dashboard)/members/change-plan-schema.ts"
+import { changePlanSchema } from "../lib/dashboard/schemas/change-plan-schema.ts"
 
 const validValues = {
   memberId: "member-1",

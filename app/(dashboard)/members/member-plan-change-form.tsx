@@ -23,12 +23,18 @@ import {
   FieldLabel,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import type { BillingInterval, PlanTier } from "@/lib/dashboard"
-import { changeMemberPlan } from "./actions"
+import {
+  formatCurrency,
+  formatDateInputForDisplay,
+  titleCase,
+  type BillingInterval,
+  type PlanTier,
+} from "@/lib/dashboard"
+import { changeMemberPlan } from "./membership-actions"
 import {
   changePlanSchema,
   type ChangeMemberPlanValues,
-} from "./change-plan-schema"
+} from "@/lib/dashboard/schemas/change-plan-schema"
 
 type CurrentPlan = {
   planName: string
@@ -307,7 +313,7 @@ export function MemberPlanChangeForm({
               {pendingPlanTier
                 ? `This will end the current membership and move the member to ${pendingPlanTier.name} (${titleCase(
                     pendingValues?.billingInterval ?? "MONTHLY"
-                  )}) starting ${formatDate(
+                  )}) starting ${formatDateInputForDisplay(
                     pendingValues?.effectiveDate ?? initialEffectiveDate
                   )}.`
                 : "This will end the current membership and create a new one with the selected billing details."}
@@ -333,32 +339,4 @@ function getPlanPrice(planTier: PlanTier, billingInterval: BillingInterval) {
   return billingInterval === "ANNUAL"
     ? planTier.annualPriceAmount
     : planTier.monthlyPriceAmount
-}
-
-function formatCurrency(amount: number, currencyCode: string) {
-  return new Intl.NumberFormat("en", {
-    currency: currencyCode,
-    maximumFractionDigits: 0,
-    style: "currency",
-  }).format(amount)
-}
-
-function formatDate(value: string) {
-  const date = new Date(`${value}T00:00:00`)
-
-  if (Number.isNaN(date.getTime())) {
-    return value
-  }
-
-  return new Intl.DateTimeFormat("en", {
-    dateStyle: "medium",
-  }).format(date)
-}
-
-function titleCase(value: string) {
-  return value
-    .toLowerCase()
-    .split("_")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ")
 }
