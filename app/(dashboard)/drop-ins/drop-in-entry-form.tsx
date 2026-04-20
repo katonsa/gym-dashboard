@@ -1,11 +1,20 @@
 "use client"
 
 import { zodResolver } from "@hookform/resolvers/zod"
+import { ChevronsUpDown } from "lucide-react"
 import * as React from "react"
-import { Controller, useForm } from "react-hook-form"
+import { Controller, useForm, useWatch } from "react-hook-form"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command"
 import {
   Field,
   FieldError,
@@ -13,6 +22,12 @@ import {
   FieldLabel,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import type { DropInVisitorLookupOption } from "@/lib/dashboard/drop-in-visitor-lookup"
 import { createDropInVisit } from "./actions"
 import {
   createDropInSchema,
@@ -22,10 +37,16 @@ import {
 export function DropInEntryForm({
   defaultAmount,
   formattedDefaultAmount,
+  visitorLookupOptions,
 }: {
   defaultAmount: number
   formattedDefaultAmount: string
+  visitorLookupOptions: DropInVisitorLookupOption[]
 }) {
+  const [isLookupOpen, setIsLookupOpen] = React.useState(false)
+  const [selectedVisitorId, setSelectedVisitorId] = React.useState<
+    string | undefined
+  >()
   const [isPending, startTransition] = React.useTransition()
   const defaultValues = React.useMemo<CreateDropInValues>(
     () => ({
@@ -42,6 +63,44 @@ export function DropInEntryForm({
     defaultValues,
   })
   const isSubmitting = form.formState.isSubmitting || isPending
+  const visitorName = useWatch({
+    control: form.control,
+    name: "visitorName",
+  })
+  const visitorContact = useWatch({
+    control: form.control,
+    name: "visitorContact",
+  })
+  const selectedVisitor = visitorLookupOptions.find(
+    (visitor) => visitor.id === selectedVisitorId
+  )
+
+  React.useEffect(() => {
+    if (!selectedVisitor) {
+      return
+    }
+
+    const matchesSelectedVisitor =
+      visitorName === (selectedVisitor.visitorName ?? "") &&
+      visitorContact === (selectedVisitor.visitorContact ?? "")
+
+    if (!matchesSelectedVisitor) {
+      setSelectedVisitorId(undefined)
+    }
+  }, [selectedVisitor, visitorContact, visitorName])
+
+  function selectVisitor(visitor: DropInVisitorLookupOption) {
+    setSelectedVisitorId(visitor.id)
+    form.setValue("visitorName", visitor.visitorName ?? "", {
+      shouldDirty: true,
+      shouldValidate: true,
+    })
+    form.setValue("visitorContact", visitor.visitorContact ?? "", {
+      shouldDirty: true,
+      shouldValidate: true,
+    })
+    setIsLookupOpen(false)
+  }
 
   function onSubmit(values: CreateDropInValues) {
     form.clearErrors("root")
@@ -51,6 +110,7 @@ export function DropInEntryForm({
 
       if (actionResult.success) {
         form.reset(defaultValues)
+        setSelectedVisitorId(undefined)
         toast.success("Drop-in saved.")
         return
       }
@@ -82,6 +142,68 @@ export function DropInEntryForm({
 
       <form onSubmit={form.handleSubmit(onSubmit)} className="mt-4 grid gap-4">
         <FieldGroup>
+          <Field>
+            <FieldLabel htmlFor="visitor-lookup">Visitor lookup</FieldLabel>
+            <Popover open={isLookupOpen} onOpenChange={setIsLookupOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  id="visitor-lookup"
+                  type="button"
+                  variant="outline"
+                  size="lg"
+                  role="combobox"
+                  aria-expanded={isLookupOpen}
+                  disabled={isSubmitting || visitorLookupOptions.length === 0}
+                  className="min-h-11 w-full justify-between"
+                >
+                  <span className="min-w-0 truncate text-left">
+                    {selectedVisitor?.label ??
+                      (visitorLookupOptions.length > 0
+                        ? "Select returning visitor"
+                        : "No returning visitors")}
+                  </span>
+                  <ChevronsUpDown className="size-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent
+                align="start"
+                className="w-[var(--radix-popover-trigger-width)] p-0"
+              >
+                <Command>
+                  <CommandInput placeholder="Search visitors..." />
+                  <CommandList>
+                    <CommandEmpty>No visitor found.</CommandEmpty>
+                    <CommandGroup>
+                      {visitorLookupOptions.map((visitor) => (
+                        <CommandItem
+                          key={visitor.id}
+                          value={`${visitor.visitorName ?? ""} ${
+                            visitor.visitorContact ?? ""
+                          }`}
+                          data-checked={selectedVisitorId === visitor.id}
+                          onSelect={() => selectVisitor(visitor)}
+                        >
+                          <span className="grid min-w-0 gap-0.5">
+                            <span className="truncate">
+                              {visitor.visitorName ??
+                                visitor.visitorContact ??
+                                "Identified visitor"}
+                            </span>
+                            {visitor.visitorContact && visitor.visitorName ? (
+                              <span className="truncate text-xs text-muted-foreground">
+                                {visitor.visitorContact}
+                              </span>
+                            ) : null}
+                          </span>
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+          </Field>
+
           <Controller
             name="visitorName"
             control={form.control}

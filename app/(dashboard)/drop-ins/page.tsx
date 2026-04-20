@@ -1,6 +1,10 @@
 import { EmptyState } from "@/components/dashboard/empty-state"
 import { formatDashboardDate, parsePaginationParams } from "@/lib/dashboard"
-import { loadDropInLogPage, loadDropInSummary } from "@/lib/dashboard/loaders"
+import {
+  loadDropInLogPage,
+  loadDropInSummary,
+  loadDropInVisitorLookupOptions,
+} from "@/lib/dashboard/loaders"
 import { DropInEntryForm } from "./drop-in-entry-form"
 import { DropInLog } from "./drop-in-log"
 import { DropInSummarySection } from "./drop-in-summary"
@@ -14,12 +18,13 @@ type DropInsPageProps = {
 export default async function DropInsPage({ searchParams }: DropInsPageProps) {
   const pagination = await parsePaginationParams(searchParams)
   const asOf = new Date()
-  const [dropInsData, dropInLogPage] = await Promise.all([
+  const [dropInsData, dropInLogPage, visitorLookupOptions] = await Promise.all([
     loadDropInSummary({ asOf, conversionVisitThreshold: 5 }),
     loadDropInLogPage(pagination),
+    loadDropInVisitorLookupOptions(),
   ])
 
-  if (!dropInsData || !dropInLogPage) {
+  if (!dropInsData || !dropInLogPage || !visitorLookupOptions) {
     return (
       <EmptyState
         title="No gym is connected to this owner account."
@@ -112,6 +117,7 @@ export default async function DropInsPage({ searchParams }: DropInsPageProps) {
           formattedDefaultAmount={moneyFormatter.format(
             dropInsData.gym.defaultDropInFeeAmount
           )}
+          visitorLookupOptions={visitorLookupOptions}
         />
       </section>
     </div>

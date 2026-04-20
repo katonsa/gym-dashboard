@@ -30,6 +30,10 @@ import {
   type MemberRosterRow,
 } from "@/lib/dashboard/member-roster"
 import {
+  buildDropInVisitorLookupOptions,
+  type DropInVisitorLookupOption,
+} from "@/lib/dashboard/drop-in-visitor-lookup"
+import {
   getPrismaOffsetArgs,
   type PaginatedResult,
   type PaginationParams,
@@ -287,6 +291,32 @@ export const loadDropInLogPage = cache(
       pageSize: take,
       pageCount,
     }
+  }
+)
+
+export const loadDropInVisitorLookupOptions = cache(
+  async (): Promise<DropInVisitorLookupOption[] | null> => {
+    const gym = await requireOwnerGym("/drop-ins")
+
+    if (!gym) {
+      return null
+    }
+
+    const dropIns = await db.dropInVisit.findMany({
+      where: {
+        gymId: gym.id,
+        OR: [{ visitorName: { not: null } }, { visitorContact: { not: null } }],
+      },
+      orderBy: [{ visitedAt: "desc" }, { id: "desc" }],
+      take: 250,
+      select: {
+        visitorName: true,
+        visitorContact: true,
+        visitedAt: true,
+      },
+    })
+
+    return buildDropInVisitorLookupOptions(dropIns)
   }
 )
 
