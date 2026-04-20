@@ -3,6 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as React from "react"
 import { Controller, useForm } from "react-hook-form"
+import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -15,7 +16,6 @@ import { Input } from "@/components/ui/input"
 import { createDropInVisit } from "./actions"
 import {
   createDropInSchema,
-  type CreateDropInActionResult,
   type CreateDropInValues,
 } from "./drop-in-create-schema"
 
@@ -26,9 +26,6 @@ export function DropInEntryForm({
   defaultAmount: number
   formattedDefaultAmount: string
 }) {
-  const [result, setResult] = React.useState<CreateDropInActionResult>({
-    success: false,
-  })
   const [isPending, startTransition] = React.useTransition()
   const defaultValues = React.useMemo<CreateDropInValues>(
     () => ({
@@ -48,15 +45,13 @@ export function DropInEntryForm({
 
   function onSubmit(values: CreateDropInValues) {
     form.clearErrors("root")
-    setResult({ success: false })
 
     startTransition(async () => {
       const actionResult = await createDropInVisit(values)
 
-      setResult(actionResult)
-
       if (actionResult.success) {
         form.reset(defaultValues)
+        toast.success("Drop-in saved.")
         return
       }
 
@@ -228,13 +223,6 @@ export function DropInEntryForm({
           >
             {isSubmitting ? "Saving drop-in" : "Save drop-in"}
           </Button>
-
-          <p
-            aria-live="polite"
-            className="min-h-5 text-xs text-muted-foreground"
-          >
-            {result.success ? "Drop-in saved." : ""}
-          </p>
         </div>
       </form>
     </aside>

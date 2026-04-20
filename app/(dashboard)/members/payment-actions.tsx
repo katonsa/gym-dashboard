@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { toast } from "sonner"
 
 import {
   AlertDialog,
@@ -74,6 +75,8 @@ function MarkPaidAction({
 
       if (actionResult.success) {
         setIsOpen(false)
+        toast.success("Payment marked paid.")
+        return
       }
     })
   }
@@ -151,6 +154,8 @@ function VoidPaymentAction({
 
       if (actionResult.success) {
         setIsOpen(false)
+        toast.success("Payment voided.")
+        return
       }
     })
   }

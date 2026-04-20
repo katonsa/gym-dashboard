@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { toast } from "sonner"
 
 import {
   AlertDialog,
@@ -24,13 +25,11 @@ export function MemberStatusAction({
   memberName,
   status,
   compact = false,
-  onResult,
 }: {
   memberId: string
   memberName: string
   status: MemberStatus
   compact?: boolean
-  onResult?: (message: string) => void
 }) {
   const [isOpen, setIsOpen] = React.useState(false)
   const [result, setResult] = React.useState<ActionResult>({
@@ -56,21 +55,17 @@ export function MemberStatusAction({
 
     if (open) {
       setResult({ success: false })
-      onResult?.(confirmation)
       return
     }
 
     if (!isPending) {
       setResult({ success: false })
     }
-
-    onResult?.("")
   }
 
   function handleOpenConfirmation() {
     setResult({ success: false })
     setIsOpen(true)
-    onResult?.(confirmation)
   }
 
   function handleConfirm() {
@@ -86,17 +81,13 @@ export function MemberStatusAction({
 
       if (actionResult.success) {
         setIsOpen(false)
-        onResult?.(
+        toast.success(
           nextStatus === "SUSPENDED"
             ? `${memberName} is suspended.`
             : `${memberName} is active. Assign a new plan when ready.`
         )
         return
       }
-
-      onResult?.(
-        actionResult.error ?? "The member status could not be changed."
-      )
     })
   }
 

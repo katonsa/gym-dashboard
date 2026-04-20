@@ -3,6 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as React from "react"
 import { Controller, useForm } from "react-hook-form"
+import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -16,7 +17,6 @@ import type { BillingInterval, MemberStatus, PlanTier } from "@/lib/dashboard"
 import { createMember } from "./actions"
 import {
   createMemberSchema,
-  type CreateMemberActionResult,
   type CreateMemberValues,
 } from "./member-create-schema"
 
@@ -30,9 +30,6 @@ export function MemberCreateForm({
   planTiers: PlanTier[]
   initialJoinDate: string
 }) {
-  const [result, setResult] = React.useState<CreateMemberActionResult>({
-    success: false,
-  })
   const [isPending, startTransition] = React.useTransition()
   const defaultValues = React.useMemo<CreateMemberValues>(
     () => ({
@@ -60,15 +57,13 @@ export function MemberCreateForm({
 
   function onSubmit(values: CreateMemberValues) {
     form.clearErrors("root")
-    setResult({ success: false })
 
     startTransition(async () => {
       const actionResult = await createMember(values)
 
-      setResult(actionResult)
-
       if (actionResult.success) {
         form.reset(defaultValues)
+        toast.success("Member saved.")
         return
       }
 
@@ -331,13 +326,7 @@ export function MemberCreateForm({
           </p>
         ) : null}
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <p
-            aria-live="polite"
-            className="min-h-5 text-xs text-muted-foreground"
-          >
-            {result.success ? "Member saved." : ""}
-          </p>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
           <Button
             type="submit"
             size="lg"

@@ -71,15 +71,11 @@ export function MemberRoster({
 }) {
   const router = useRouter()
   const [query, setQuery] = React.useState(filters.q)
-  const [actionMessage, setActionMessage] = React.useState("")
 
   React.useEffect(() => {
     setQuery(filters.q)
   }, [filters.q])
 
-  const handleActionMessage = React.useCallback((message: string) => {
-    setActionMessage(message)
-  }, [])
   const navigateFilters = React.useCallback(
     (nextFilters: Partial<MemberRosterFilters>) => {
       const href = getMemberRosterHref({
@@ -226,12 +222,6 @@ export function MemberRoster({
               Plans, account status, renewal timing, and attendance.
             </p>
           </div>
-          <p
-            aria-live="polite"
-            className="min-h-5 text-xs text-muted-foreground"
-          >
-            {actionMessage}
-          </p>
         </div>
 
         {members.length > 0 ? (
@@ -242,7 +232,6 @@ export function MemberRoster({
                   key={member.id}
                   member={member}
                   checkInDate={initialCheckInDate}
-                  onActionMessage={handleActionMessage}
                 />
               ))}
             </div>
@@ -266,7 +255,6 @@ export function MemberRoster({
                       key={member.id}
                       member={member}
                       checkInDate={initialCheckInDate}
-                      onActionMessage={handleActionMessage}
                     />
                   ))}
                 </tbody>
@@ -353,11 +341,9 @@ function FilterSelect({
 function MemberCard({
   member,
   checkInDate,
-  onActionMessage,
 }: {
   member: MemberRosterRow
   checkInDate: string
-  onActionMessage: (message: string) => void
 }) {
   return (
     <article className="rounded-lg border border-border bg-card p-4 text-card-foreground">
@@ -390,11 +376,7 @@ function MemberCard({
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <RiskBadge risk={member.billingRisk} />
-        <QuickActions
-          member={member}
-          checkInDate={checkInDate}
-          onActionMessage={onActionMessage}
-        />
+        <QuickActions member={member} checkInDate={checkInDate} />
       </div>
     </article>
   )
@@ -403,11 +385,9 @@ function MemberCard({
 function MemberTableRow({
   member,
   checkInDate,
-  onActionMessage,
 }: {
   member: MemberRosterRow
   checkInDate: string
-  onActionMessage: (message: string) => void
 }) {
   return (
     <tr>
@@ -444,12 +424,7 @@ function MemberTableRow({
         {member.sessionsAttended}
       </td>
       <td className="px-4 py-3 align-top">
-        <QuickActions
-          member={member}
-          checkInDate={checkInDate}
-          onActionMessage={onActionMessage}
-          compact
-        />
+        <QuickActions member={member} checkInDate={checkInDate} compact />
       </td>
     </tr>
   )
@@ -469,12 +444,10 @@ function MemberField({ label, value }: { label: string; value: string }) {
 function QuickActions({
   member,
   checkInDate,
-  onActionMessage,
   compact = false,
 }: {
   member: MemberRosterRow
   checkInDate: string
-  onActionMessage: (message: string) => void
   compact?: boolean
 }) {
   return (
@@ -483,7 +456,6 @@ function QuickActions({
         memberId={member.id}
         memberName={member.name}
         checkInDate={checkInDate}
-        onResult={onActionMessage}
       />
       <Button asChild variant="outline" size="sm" className="min-h-11">
         <Link href={`/members/${member.id}`}>View profile</Link>
@@ -496,7 +468,6 @@ function QuickActions({
         memberName={member.name}
         status={member.status}
         compact={compact}
-        onResult={onActionMessage}
       />
     </div>
   )

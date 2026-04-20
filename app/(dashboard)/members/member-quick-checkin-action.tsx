@@ -2,6 +2,7 @@
 
 import { CheckCircle2 } from "lucide-react"
 import * as React from "react"
+import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { logMemberCheckIn, type ActionResult } from "./actions"
@@ -10,12 +11,10 @@ export function MemberQuickCheckInAction({
   memberId,
   memberName,
   checkInDate,
-  onResult,
 }: {
   memberId: string
   memberName: string
   checkInDate: string
-  onResult: (message: string) => void
 }) {
   const [result, setResult] = React.useState<ActionResult>({
     success: false,
@@ -24,7 +23,6 @@ export function MemberQuickCheckInAction({
 
   function handleCheckIn() {
     setResult({ success: false })
-    onResult(`Checking in ${memberName}...`)
 
     startTransition(async () => {
       const actionResult = await logMemberCheckIn({
@@ -35,11 +33,11 @@ export function MemberQuickCheckInAction({
       setResult(actionResult)
 
       if (actionResult.success) {
-        onResult(`${memberName} checked in.`)
+        toast.success(`${memberName} checked in.`)
         return
       }
 
-      onResult(actionResult.error ?? "The check-in could not be logged.")
+      toast.error(actionResult.error ?? "The check-in could not be logged.")
     })
   }
 

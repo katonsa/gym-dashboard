@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation"
 import * as React from "react"
+import { toast } from "sonner"
 
 import {
   AlertDialog,
@@ -58,7 +59,6 @@ export function MemberRenewalAction({
   const [result, setResult] = React.useState<RenewMembershipActionResult>({
     success: false,
   })
-  const [successMessage, setSuccessMessage] = React.useState("")
   const [isPending, startTransition] = React.useTransition()
   const isExpired = displayStatus === "expired"
   const periodEndDate = React.useMemo(
@@ -87,7 +87,6 @@ export function MemberRenewalAction({
       setSubmissionId(crypto.randomUUID())
       setRenewalDate(defaultRenewalDate)
       setResult({ success: false })
-      setSuccessMessage("")
     }
   }
 
@@ -97,7 +96,6 @@ export function MemberRenewalAction({
     }
 
     setResult({ success: false })
-    setSuccessMessage("")
 
     startTransition(async () => {
       const actionResult = await renewMembership({
@@ -116,8 +114,9 @@ export function MemberRenewalAction({
           : ""
 
         setIsOpen(false)
-        setSuccessMessage(`Membership renewed.${nextPeriodDetail}`)
+        toast.success(`Membership renewed.${nextPeriodDetail}`)
         router.refresh()
+        return
       }
     })
   }
@@ -198,10 +197,6 @@ export function MemberRenewalAction({
           </AlertDialogContent>
         </AlertDialog>
       ) : null}
-
-      <p aria-live="polite" className="min-h-5 text-xs text-muted-foreground">
-        {successMessage}
-      </p>
     </>
   )
 }

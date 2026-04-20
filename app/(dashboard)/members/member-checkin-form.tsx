@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { CheckCircle2 } from "lucide-react"
 import * as React from "react"
 import { Controller, useForm } from "react-hook-form"
+import { toast } from "sonner"
 
 import {
   AlertDialog,
@@ -23,11 +24,7 @@ import {
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { logMemberCheckIn } from "./actions"
-import {
-  logCheckInSchema,
-  type LogCheckInActionResult,
-  type LogCheckInValues,
-} from "./log-checkin-schema"
+import { logCheckInSchema, type LogCheckInValues } from "./log-checkin-schema"
 
 export function MemberCheckInForm({
   memberId,
@@ -45,10 +42,6 @@ export function MemberCheckInForm({
     [initialDate, memberId]
   )
   const [isOpen, setIsOpen] = React.useState(false)
-  const [result, setResult] = React.useState<LogCheckInActionResult>({
-    success: false,
-  })
-  const [successMessage, setSuccessMessage] = React.useState("")
   const [isPending, startTransition] = React.useTransition()
   const form = useForm<LogCheckInValues>({
     resolver: zodResolver(logCheckInSchema),
@@ -60,27 +53,20 @@ export function MemberCheckInForm({
     setIsOpen(open)
 
     if (open) {
-      setResult({ success: false })
       form.clearErrors()
     }
   }
 
   function onSubmit(values: LogCheckInValues) {
     form.clearErrors("root")
-    setResult({ success: false })
-    setSuccessMessage("")
 
     startTransition(async () => {
       const actionResult = await logMemberCheckIn(values)
 
-      setResult(actionResult)
-
       if (actionResult.success) {
         form.reset(defaultValues)
         setIsOpen(false)
-        setSuccessMessage(
-          `Check-in logged for ${formatDate(values.attendedAt)}.`
-        )
+        toast.success(`Check-in logged for ${formatDate(values.attendedAt)}.`)
         return
       }
 
@@ -176,10 +162,6 @@ export function MemberCheckInForm({
           </form>
         </AlertDialogContent>
       </AlertDialog>
-
-      <p aria-live="polite" className="min-h-4 text-xs text-muted-foreground">
-        {result.success ? successMessage : ""}
-      </p>
     </div>
   )
 }

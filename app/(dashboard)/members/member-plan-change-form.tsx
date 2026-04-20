@@ -3,6 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as React from "react"
 import { Controller, useForm, useWatch } from "react-hook-form"
+import { toast } from "sonner"
 
 import {
   AlertDialog,
@@ -27,7 +28,6 @@ import { changeMemberPlan } from "./actions"
 import {
   changePlanSchema,
   type ChangeMemberPlanValues,
-  type ChangePlanActionResult,
 } from "./change-plan-schema"
 
 type CurrentPlan = {
@@ -74,10 +74,6 @@ export function MemberPlanChangeForm({
       memberId,
     ]
   )
-  const [result, setResult] = React.useState<ChangePlanActionResult>({
-    success: false,
-  })
-  const [successMessage, setSuccessMessage] = React.useState("")
   const [isConfirmOpen, setIsConfirmOpen] = React.useState(false)
   const [pendingValues, setPendingValues] =
     React.useState<ChangeMemberPlanValues | null>(null)
@@ -114,8 +110,6 @@ export function MemberPlanChangeForm({
     }
 
     form.clearErrors("root")
-    setResult({ success: false })
-    setSuccessMessage("")
 
     const selectedPlan = activePlanTiers.find(
       (planTier) => planTier.id === pendingValues.planTierId
@@ -124,12 +118,10 @@ export function MemberPlanChangeForm({
     startTransition(async () => {
       const actionResult = await changeMemberPlan(pendingValues)
 
-      setResult(actionResult)
-
       if (actionResult.success) {
         setIsConfirmOpen(false)
         setPendingValues(null)
-        setSuccessMessage(
+        toast.success(
           selectedPlan
             ? `Plan changed to ${selectedPlan.name} (${titleCase(
                 pendingValues.billingInterval
@@ -286,13 +278,7 @@ export function MemberPlanChangeForm({
           </p>
         ) : null}
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <p
-            aria-live="polite"
-            className="min-h-5 text-xs text-muted-foreground"
-          >
-            {result.success ? successMessage : ""}
-          </p>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
           <Button
             type="submit"
             size="lg"

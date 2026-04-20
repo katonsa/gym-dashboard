@@ -5,6 +5,7 @@ import { Pencil, Save } from "lucide-react"
 import { useRouter } from "next/navigation"
 import * as React from "react"
 import { Controller, useForm } from "react-hook-form"
+import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -17,7 +18,6 @@ import { Input } from "@/components/ui/input"
 import { updateMemberContact } from "./actions"
 import {
   updateMemberContactSchema,
-  type UpdateMemberContactActionResult,
   type UpdateMemberContactValues,
 } from "./update-member-contact-schema"
 
@@ -41,10 +41,6 @@ export function MemberContactCard({
 }: MemberContactCardProps) {
   const router = useRouter()
   const [isEditing, setIsEditing] = React.useState(false)
-  const [result, setResult] = React.useState<UpdateMemberContactActionResult>({
-    success: false,
-  })
-  const [successMessage, setSuccessMessage] = React.useState("")
   const [isPending, startTransition] = React.useTransition()
   const defaultValues = React.useMemo<UpdateMemberContactValues>(
     () => ({
@@ -71,32 +67,25 @@ export function MemberContactCard({
 
   function startEditing() {
     setIsEditing(true)
-    setResult({ success: false })
-    setSuccessMessage("")
     form.clearErrors()
     form.reset(defaultValues)
   }
 
   function cancelEditing() {
     setIsEditing(false)
-    setResult({ success: false })
     form.clearErrors()
     form.reset(defaultValues)
   }
 
   function onSubmit(values: UpdateMemberContactValues) {
     form.clearErrors("root")
-    setResult({ success: false })
-    setSuccessMessage("")
 
     startTransition(async () => {
       const actionResult = await updateMemberContact(values)
 
-      setResult(actionResult)
-
       if (actionResult.success) {
         setIsEditing(false)
-        setSuccessMessage("Contact details updated.")
+        toast.success("Contact details updated.")
         router.refresh()
         return
       }
@@ -114,9 +103,6 @@ export function MemberContactCard({
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <h2 className="text-base font-semibold">Contact</h2>
-          <p aria-live="polite" className="mt-1 min-h-4 text-xs text-status">
-            {result.success ? successMessage : ""}
-          </p>
         </div>
         {!isEditing ? (
           <Button

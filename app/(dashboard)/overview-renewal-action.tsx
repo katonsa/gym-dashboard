@@ -3,6 +3,7 @@
 import { RefreshCw } from "lucide-react"
 import { useRouter } from "next/navigation"
 import * as React from "react"
+import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import type { MembershipStatus } from "@/lib/dashboard"
@@ -44,7 +45,13 @@ export function OverviewRenewalAction({
       setResult(actionResult)
 
       if (actionResult.success) {
+        toast.success("Membership renewed.")
         router.refresh()
+        return
+      }
+
+      if (actionResult.error) {
+        toast.error(actionResult.error)
       }
     })
   }
