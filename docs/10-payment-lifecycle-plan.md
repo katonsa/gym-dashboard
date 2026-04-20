@@ -233,7 +233,7 @@ Bridge the gap between "seeing the alert" and "resolving it".
 
 ### Inline action (stretch goal)
 
-- [ ] Render a small "Mark paid" button directly inside the overview alert card.
+- [x] Render a small "Mark paid" button directly inside the overview alert card.
   - Reuses the same `markPaymentPaid` server action.
   - On success, the alert disappears on the next revalidation.
 
@@ -245,7 +245,7 @@ later if owners find the extra click frustrating.
 
 - [x] Clicking an overdue payment alert navigates to the correct member detail
       page.
-- [ ] (Stretch) Inline "Mark paid" on the overview resolves the alert.
+- [x] (Stretch) Inline "Mark paid" on the overview resolves the alert.
 - [x] `npm run typecheck`, `npm run lint`, `npm run build`.
 
 ---

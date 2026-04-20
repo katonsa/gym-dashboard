@@ -149,6 +149,7 @@ export type DashboardAlert = {
   membershipId?: string
   membershipStatus?: Extract<MembershipStatus, "ACTIVE" | "EXPIRED">
   paymentId?: string
+  paymentAmount?: number
   visitorContact?: string
   dueAt?: DateString
 }

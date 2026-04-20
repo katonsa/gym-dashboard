@@ -133,14 +133,14 @@ The dashboard tracks two distinct revenue streams:
 
 | Layer | Technology |
 |-------|------------|
-| **Frontend** | React (Web) |
-| **Styling** | Tailwind CSS |
+| **Frontend** | Next.js 16 (App Router, Server Components) |
+| **Styling** | Tailwind CSS 4 |
 | **Charts** | Recharts |
-| **Data** | Mock data (v1); REST API-ready architecture |
-| **State** | React useState / useReducer |
+| **Data** | PostgreSQL + Prisma ORM; Better Auth for authentication |
+| **State** | React Server Components (default); client components for interactive controls |
 | **Responsive** | Mobile-first; responsive breakpoints for tablet and desktop |
-| **Import** | Manual entry / mock data in v1; CSV import deferred |
-| **Notifications** | In-app alerts in v1; email notifications deferred |
+| **Import** | Manual entry in v1; CSV import deferred |
+| **Notifications** | In-app alerts + Sonner toasts in v1; email notifications deferred |
 
 ---
 
@@ -186,11 +186,11 @@ The dashboard is designed **mobile-first** for an admin on the gym floor:
 | Phase | Deliverable | Status |
 |-------|-------------|--------|
 | Phase 1 | Project Brief | ✅ Complete |
-| Phase 2 | UI Design & Component Architecture | 🔲 Pending |
-| Phase 3 | Core Dashboard — Stats + Member Table | 🔲 Pending |
-| Phase 4 | Alerts Panel + Subscription Breakdown | 🔲 Pending |
-| Phase 5 | Revenue Trend Chart + Drop-in Log | 🔲 Pending |
-| Phase 6 | Polish, QA, and Handoff | 🔲 Pending |
+| Phase 2 | UI Design & Component Architecture | ✅ Complete |
+| Phase 3 | Core Dashboard — Stats + Member Table | ✅ Complete |
+| Phase 4 | Alerts Panel + Subscription Breakdown | ✅ Complete |
+| Phase 5 | Revenue Trend Chart + Drop-in Log | ✅ Complete |
+| Phase 6 | Polish, QA, and Handoff | ✅ Complete |
 
 ---
 

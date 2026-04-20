@@ -178,6 +178,7 @@ export async function getOverviewAlerts(
         memberId: payment.memberId,
         membershipId: payment.membershipId,
         paymentId: payment.id,
+        paymentAmount: payment.amount,
         dueAt: toDateString(payment.dueAt),
       } satisfies DashboardAlert
     }),

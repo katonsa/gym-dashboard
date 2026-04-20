@@ -444,9 +444,9 @@ owners find the extra navigation step frustrating.
 - [x] Clicking an expired alert navigates to the correct member detail page.
 - [x] Expired alert deep links land near the current membership card or renewal
       action on mobile.
-- [ ] (Stretch) Inline "Renew" on the overview resolves the alert.
-- [ ] Overview expiring and expired counts decrease after renewal.
-- [ ] `npm run typecheck`, `npm run lint`, `npm run build`.
+- [x] (Stretch) Inline "Renew" on the overview resolves the alert.
+- [x] Overview expiring and expired counts decrease after renewal.
+- [x] `npm run typecheck`, `npm run lint`, `npm run build`.
 
 ---
 

@@ -2,7 +2,9 @@ import Link from "next/link"
 
 import { EmptyState } from "@/components/dashboard/empty-state"
 import type { DashboardAlert } from "@/lib/dashboard"
+import { formatCurrency } from "@/lib/dashboard/formatters"
 import { severityClasses } from "@/lib/dashboard/status-styles"
+import { OverviewMarkPaidAction } from "./overview-mark-paid-action"
 import { OverviewRenewalAction } from "./overview-renewal-action"
 
 export type OverviewAlertSection = {
@@ -15,11 +17,13 @@ export type OverviewAlertSection = {
 export function OverviewPinnedAlerts({
   alertSections,
   alerts,
+  currencyCode,
   numberFormatter,
   openAlertsCount,
 }: {
   alertSections: readonly OverviewAlertSection[]
   alerts: DashboardAlert[]
+  currencyCode: string
   numberFormatter: Intl.NumberFormat
   openAlertsCount: number
 }) {
@@ -56,6 +60,7 @@ export function OverviewPinnedAlerts({
                 alert={firstAlert}
                 capped={capped}
                 count={section.count}
+                currencyCode={currencyCode}
                 empty={section.empty}
                 label={section.label}
                 renderedCount={sectionAlerts.length}
@@ -79,6 +84,7 @@ function PinnedAlertCard({
   alert,
   capped,
   count,
+  currencyCode,
   empty,
   label,
   renderedCount,
@@ -87,6 +93,7 @@ function PinnedAlertCard({
   alert?: DashboardAlert
   capped: boolean
   count: number
+  currencyCode: string
   empty: string
   label: string
   renderedCount: number
@@ -96,13 +103,24 @@ function PinnedAlertCard({
   const isCardLink =
     href &&
     (alert?.type === "EXPIRING_MEMBERSHIP" ||
-      alert?.type === "EXPIRED_MEMBERSHIP")
+      alert?.type === "EXPIRED_MEMBERSHIP" ||
+      alert?.type === "OVERDUE_PAYMENT")
   const renewalAction =
     isCardLink && alert?.membershipId && alert.membershipStatus && alert.dueAt
       ? {
           membershipId: alert.membershipId,
           expectedStatus: alert.membershipStatus,
           expectedCurrentPeriodEndsAt: alert.dueAt,
+        }
+      : null
+  const markPaidAction =
+    alert?.type === "OVERDUE_PAYMENT" && alert.paymentId
+      ? {
+          paymentId: alert.paymentId,
+          formattedAmount: formatCurrency(
+            alert.paymentAmount ?? 0,
+            currencyCode
+          ),
         }
       : null
   const className =
@@ -163,6 +181,12 @@ function PinnedAlertCard({
           expectedCurrentPeriodEndsAt={
             renewalAction.expectedCurrentPeriodEndsAt
           }
+        />
+      ) : null}
+      {markPaidAction ? (
+        <OverviewMarkPaidAction
+          paymentId={markPaidAction.paymentId}
+          formattedAmount={markPaidAction.formattedAmount}
         />
       ) : null}
     </>

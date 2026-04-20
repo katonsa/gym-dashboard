@@ -169,6 +169,7 @@ export default async function Page() {
       <OverviewPinnedAlerts
         alertSections={alertSections}
         alerts={alerts}
+        currencyCode={summary.currencyCode}
         numberFormatter={numberFormatter}
         openAlertsCount={openAlertsCount}
       />
