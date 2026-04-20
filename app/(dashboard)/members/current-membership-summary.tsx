@@ -9,6 +9,7 @@ import {
   formatDate,
   formatDateInput,
   getDaysBetween,
+  getExpiringMembershipPeriodText,
   getMembershipDisplayStatus,
 } from "@/lib/dashboard"
 import type { MembershipDisplayStatus } from "@/lib/dashboard/calculations"
@@ -106,9 +107,7 @@ function getMembershipPeriodDetail(
       getDaysBetween(asOf, membership.currentPeriodEndsAt)
     )
 
-    return daysRemaining === 1
-      ? "Expires in 1 day."
-      : `Expires in ${daysRemaining} days.`
+    return getExpiringMembershipPeriodText(daysRemaining)
   }
 
   if (displayStatus === "expired") {

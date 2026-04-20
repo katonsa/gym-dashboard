@@ -89,6 +89,27 @@ export function getMembershipDisplayStatus(
     : "active"
 }
 
+export function getCurrentDisplayMembership<
+  T extends {
+    status: Membership["status"]
+  },
+>(memberships: T[]) {
+  return memberships.find(
+    (membership) =>
+      membership.status === "ACTIVE" || membership.status === "EXPIRED"
+  )
+}
+
+export function getExpiringMembershipPeriodText(daysRemaining: number) {
+  if (daysRemaining === 0) {
+    return "Expires today."
+  }
+
+  return daysRemaining === 1
+    ? "Expires in 1 day."
+    : `Expires in ${daysRemaining} days.`
+}
+
 export function getDaysBetween(start: Date | string, end: Date | string) {
   const startTime = new Date(start).getTime()
   const endTime = new Date(end).getTime()

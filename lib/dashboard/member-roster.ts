@@ -6,7 +6,11 @@ import type {
   PlanTier,
   PlanTierName,
 } from "./types.ts"
-import { getMembershipDisplayStatus, isExpired } from "./calculations.ts"
+import {
+  getCurrentDisplayMembership,
+  getMembershipDisplayStatus,
+  isExpired,
+} from "./calculations.ts"
 import type { BillingRisk } from "./status-styles.ts"
 
 export type { BillingRisk } from "./status-styles.ts"
@@ -141,7 +145,7 @@ function getMemberRosterPageBillingRisk(
     return "overdue"
   }
 
-  const membership = member.memberships[0]
+  const membership = getCurrentDisplayMembership(member.memberships)
 
   if (!membership) {
     return "clear"

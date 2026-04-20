@@ -2,7 +2,9 @@ import assert from "node:assert/strict"
 import test from "node:test"
 
 import {
+  getCurrentDisplayMembership,
   getExpiringMemberships,
+  getExpiringMembershipPeriodText,
   getMembershipDisplayStatus,
   isExpired,
 } from "../lib/dashboard/calculations.ts"
@@ -135,6 +137,92 @@ test("builds paginated member roster rows from per-member query data", () => {
       ["expired-member", 0, "expired"],
     ]
   )
+})
+
+test("uses the active or expired membership for roster risk display", () => {
+  assert.deepEqual(
+    buildMemberRosterPageRows(
+      [
+        memberRosterPageMember({
+          id: "past-due-masks-expiring-member",
+          memberships: [
+            memberRosterMembership({
+              id: "newer-past-due-membership",
+              status: "PAST_DUE",
+              currentPeriodEndsAt: "2026-05-20T23:59:59.000+07:00",
+            }),
+            memberRosterMembership({
+              id: "older-expiring-membership",
+              currentPeriodEndsAt: "2026-04-16T23:59:59.000+07:00",
+            }),
+          ],
+        }),
+        memberRosterPageMember({
+          id: "past-due-masks-expired-member",
+          memberships: [
+            memberRosterMembership({
+              id: "newer-past-due-membership",
+              status: "PAST_DUE",
+              currentPeriodEndsAt: "2026-05-20T23:59:59.000+07:00",
+            }),
+            memberRosterMembership({
+              id: "older-expired-membership",
+              currentPeriodEndsAt: "2026-04-10T23:59:59.000+07:00",
+            }),
+          ],
+        }),
+        memberRosterPageMember({
+          id: "overdue-payment-member",
+          memberships: [
+            memberRosterMembership({
+              id: "newer-past-due-membership",
+              status: "PAST_DUE",
+              currentPeriodEndsAt: "2026-05-20T23:59:59.000+07:00",
+            }),
+            memberRosterMembership({
+              id: "older-expiring-membership",
+              currentPeriodEndsAt: "2026-04-16T23:59:59.000+07:00",
+            }),
+          ],
+          _count: {
+            attendanceRecords: 0,
+            payments: 1,
+          },
+        }),
+      ],
+      asOf
+    ).map((row) => [row.id, row.billingRisk]),
+    [
+      ["past-due-masks-expiring-member", "expiring"],
+      ["past-due-masks-expired-member", "expired"],
+      ["overdue-payment-member", "overdue"],
+    ]
+  )
+})
+
+test("selects the same current display membership for roster and profile data", () => {
+  const memberships = [
+    memberRosterMembership({
+      id: "newer-past-due-membership",
+      status: "PAST_DUE",
+      currentPeriodEndsAt: "2026-05-20T23:59:59.000+07:00",
+    }),
+    memberRosterMembership({
+      id: "older-active-membership",
+      currentPeriodEndsAt: "2026-04-16T23:59:59.000+07:00",
+    }),
+  ]
+
+  assert.equal(
+    getCurrentDisplayMembership(memberships)?.id,
+    "older-active-membership"
+  )
+})
+
+test("formats same-day expiring membership period text", () => {
+  assert.equal(getExpiringMembershipPeriodText(0), "Expires today.")
+  assert.equal(getExpiringMembershipPeriodText(1), "Expires in 1 day.")
+  assert.equal(getExpiringMembershipPeriodText(2), "Expires in 2 days.")
 })
 
 test("parses member roster filters from URL search params", () => {

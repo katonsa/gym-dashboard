@@ -174,7 +174,6 @@ export function getMemberRosterPageQuery(
           },
         },
         orderBy: [{ startedAt: descending }, { id: descending }],
-        take: 1,
         select: {
           ...membershipSelect,
           planTier: {

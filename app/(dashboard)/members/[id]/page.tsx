@@ -9,6 +9,7 @@ import {
   formatDateInput,
   formatMemberName,
   formatPageRange,
+  getCurrentDisplayMembership,
   getMembershipDisplayStatus,
   parsePaginationParams,
 } from "@/lib/dashboard"
@@ -81,10 +82,7 @@ export default async function MemberDetailPage({
   const { gym, member, planTiers, memberships, hasOverduePayments } = data
   const memberName = formatMemberName(member)
   const membershipAsOf = getGymLocalDayBoundary(new Date(), gym.timezone)
-  const currentMembership = memberships.find(
-    (membership) =>
-      membership.status === "ACTIVE" || membership.status === "EXPIRED"
-  )
+  const currentMembership = getCurrentDisplayMembership(memberships)
   const billingRisk = getBillingRisk(
     currentMembership,
     hasOverduePayments,
