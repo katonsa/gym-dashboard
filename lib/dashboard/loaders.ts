@@ -171,7 +171,12 @@ export const loadMemberRosterPage = cache(
     }
 
     const membershipAsOf = getGymLocalDayBoundary(asOf, gym.timezone)
-    const where = getMemberRosterPageWhere(gym.id, filters, membershipAsOf)
+    const where = getMemberRosterPageWhere(
+      gym.id,
+      filters,
+      asOf,
+      membershipAsOf
+    )
     const [planTiers, totalMembers, total] = await Promise.all([
       db.planTier.findMany(getPlanTiersQuery(gym.id)),
       db.member.count({
@@ -190,7 +195,7 @@ export const loadMemberRosterPage = cache(
       pageSize: pagination.pageSize,
     })
     const members = await db.member.findMany(
-      getMemberRosterPageQuery(where, skip, take, membershipAsOf)
+      getMemberRosterPageQuery(where, skip, take, asOf)
     )
 
     return {

@@ -110,7 +110,8 @@ export function getPlanTiersQuery(gymId: string) {
 export function getMemberRosterPageWhere(
   gymId: string,
   filters: MemberRosterFilters,
-  asOf: Date
+  paymentAsOf: Date,
+  membershipAsOf = paymentAsOf
 ): Prisma.MemberWhereInput {
   const where: Prisma.MemberWhereInput = { gymId }
   const and: Prisma.MemberWhereInput[] = []
@@ -137,7 +138,9 @@ export function getMemberRosterPageWhere(
   }
 
   if (filters.risk !== "all") {
-    and.push(getMemberRosterRiskWhere(filters.risk, asOf))
+    and.push(
+      getMemberRosterRiskWhere(filters.risk, paymentAsOf, membershipAsOf)
+    )
   }
 
   if (and.length > 0) {
@@ -220,7 +223,8 @@ function getMemberRosterPlanWhere(plan: string): Prisma.MemberWhereInput {
 
 function getMemberRosterRiskWhere(
   risk: MemberRosterFilters["risk"],
-  asOf: Date
+  paymentAsOf: Date,
+  membershipAsOf = paymentAsOf
 ): Prisma.MemberWhereInput {
   const renewableMemberWhere: Prisma.MemberWhereInput = {
     status: {
@@ -229,17 +233,17 @@ function getMemberRosterRiskWhere(
   }
   const overdueWhere: Prisma.MemberWhereInput = {
     payments: {
-      some: getOverdueMemberPaymentWhere(asOf),
+      some: getOverdueMemberPaymentWhere(paymentAsOf),
     },
   }
   const expiringWhere: Prisma.MemberWhereInput = {
     memberships: {
-      some: getExpiringMemberMembershipWhere(asOf),
+      some: getExpiringMemberMembershipWhere(membershipAsOf),
     },
   }
   const expiredWhere: Prisma.MemberWhereInput = {
     memberships: {
-      some: getExpiredMemberMembershipWhere(asOf),
+      some: getExpiredMemberMembershipWhere(membershipAsOf),
     },
   }
 

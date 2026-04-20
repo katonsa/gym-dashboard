@@ -119,7 +119,49 @@ test("builds member roster filters and paginated query", () => {
       },
     }
   )
+  assert.deepEqual(
+    getMemberRosterPageQuery(where, 50, 25, asOf).select._count.select
+      .payments.where,
+    {
+      OR: [
+        { status: "OVERDUE" },
+        { status: "PENDING", dueAt: { lt: asOf } },
+      ],
+    }
+  )
   assert.ok(where.AND)
+})
+
+test("builds member roster overdue risk from exact request time", () => {
+  const paymentAsOf = new Date("2026-04-20T09:30:00.000Z")
+  const membershipAsOf = new Date("2026-04-19T17:00:00.000Z")
+  const where = getMemberRosterPageWhere(
+    "gym-1",
+    {
+      q: "",
+      status: "all",
+      plan: "all",
+      risk: "overdue",
+    },
+    paymentAsOf,
+    membershipAsOf
+  )
+
+  assert.deepEqual(where, {
+    gymId: "gym-1",
+    AND: [
+      {
+        payments: {
+          some: {
+            OR: [
+              { status: "OVERDUE" },
+              { status: "PENDING", dueAt: { lt: paymentAsOf } },
+            ],
+          },
+        },
+      },
+    ],
+  })
 })
 
 test("builds an expired member roster risk filter", () => {
