@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from "node:fs"
 loadDotenv()
 
 await import("./attendance-lifecycle-actions.integration.test.ts")
+await import("./member-contact-lifecycle-actions.integration.test.ts")
 await import("./payment-lifecycle-actions.integration.test.ts")
 await import("./renewal-lifecycle-actions.integration.test.ts")
 

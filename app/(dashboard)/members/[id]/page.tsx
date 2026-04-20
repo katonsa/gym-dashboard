@@ -26,6 +26,7 @@ import {
 } from "@/lib/dashboard/loaders"
 import { cn } from "@/lib/utils"
 import { MemberCheckInForm } from "../member-checkin-form"
+import { MemberContactCard } from "../member-contact-card"
 import { MemberPlanChangeForm } from "../member-plan-change-form"
 import { MemberRenewalAction } from "../member-renewal-action"
 import { MemberStatusAction } from "../member-status-action"
@@ -161,27 +162,22 @@ export default async function MemberDetailPage({
       </header>
 
       <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,0.8fr)]">
-        <InfoCard title="Contact">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <DetailField label="Email" value={member.email ?? "Not provided"} />
-            <DetailField label="Phone" value={member.phone ?? "Not provided"} />
-            <DetailField
-              label="Join date"
-              value={formatDate(member.joinDate, gym.timezone)}
-            />
-            <DetailField
-              label="Last attended"
-              value={
-                member.lastAttendedAt
-                  ? formatDate(member.lastAttendedAt, gym.timezone)
-                  : "No attendance recorded"
-              }
-            />
-          </div>
-          <div className="mt-4">
-            <DetailField label="Notes" value={member.notes ?? "No notes"} />
-          </div>
-        </InfoCard>
+        <MemberContactCard
+          member={{
+            id: member.id,
+            firstName: member.firstName,
+            lastName: member.lastName,
+            email: member.email,
+            phone: member.phone,
+            notes: member.notes,
+          }}
+          joinDateLabel={formatDate(member.joinDate, gym.timezone)}
+          lastAttendedLabel={
+            member.lastAttendedAt
+              ? formatDate(member.lastAttendedAt, gym.timezone)
+              : "No attendance recorded"
+          }
+        />
 
         <InfoCard id="current-membership" title="Current membership">
           {currentMembership ? (

@@ -10,17 +10,27 @@ export const billingIntervalSchema = z.enum(["MONTHLY", "ANNUAL"])
 
 export const createMemberSchema = z
   .object({
-    firstName: z.string().trim().min(1, "Enter a first name."),
-    lastName: z.string().trim().min(1, "Enter a last name."),
+    firstName: z
+      .string()
+      .trim()
+      .min(1, "Enter a first name.")
+      .max(100, "First name must be 100 characters or fewer."),
+    lastName: z
+      .string()
+      .trim()
+      .min(1, "Enter a last name.")
+      .max(100, "Last name must be 100 characters or fewer."),
     email: z
       .string()
       .trim()
+      .max(255, "Email must be 255 characters or fewer.")
       .optional()
       .transform((value) => value || undefined)
       .pipe(z.string().email("Enter a valid email address.").optional()),
     phone: z
       .string()
       .trim()
+      .max(50, "Phone must be 50 characters or fewer.")
       .optional()
       .transform((value) => value || undefined),
     status: memberStatusSchema,
@@ -44,6 +54,7 @@ export const createMemberSchema = z
     notes: z
       .string()
       .trim()
+      .max(1000, "Notes must be 1000 characters or fewer.")
       .optional()
       .transform((value) => value || undefined),
   })

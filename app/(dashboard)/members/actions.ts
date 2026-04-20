@@ -41,6 +41,12 @@ import {
   type CreateMemberValues,
 } from "./member-create-schema"
 import { logMemberCheckInForGym } from "./attendance-lifecycle"
+import { updateMemberContactForGym } from "./member-contact-lifecycle"
+import {
+  updateMemberContactSchema,
+  type UpdateMemberContactActionResult,
+  type UpdateMemberContactValues,
+} from "./update-member-contact-schema"
 
 export type ActionResult = {
   success: boolean
@@ -251,6 +257,66 @@ export async function updateMemberStatus(
     return {
       success: false,
       error: "The member status could not be changed. Try again.",
+    }
+  }
+
+  revalidatePath("/members")
+  revalidatePath(`/members/${parsed.data.memberId}`)
+  revalidatePath("/")
+
+  return { success: true }
+}
+
+export async function updateMemberContact(
+  values: UpdateMemberContactValues
+): Promise<UpdateMemberContactActionResult> {
+  const session = await requireDashboardSession("/members")
+  const parsed = updateMemberContactSchema.safeParse(values)
+
+  if (!parsed.success) {
+    return {
+      success: false,
+      error:
+        parsed.error.issues[0]?.message ??
+        "Check the contact details and try again.",
+    }
+  }
+
+  const gym = await db.gym.findFirst({
+    where: { ownerId: session.user.id },
+    select: { id: true },
+    orderBy: { createdAt: "asc" },
+  })
+
+  if (!gym) {
+    return {
+      success: false,
+      error: "Connect a gym to this owner account before changing members.",
+    }
+  }
+
+  try {
+    const result = await updateMemberContactForGym({
+      client: db,
+      gymId: gym.id,
+      memberId: parsed.data.memberId,
+      firstName: parsed.data.firstName,
+      lastName: parsed.data.lastName,
+      email: parsed.data.email,
+      phone: parsed.data.phone,
+      notes: parsed.data.notes,
+    })
+
+    if (result.status === "not-found") {
+      return {
+        success: false,
+        error: "This member does not exist or belongs to a different gym.",
+      }
+    }
+  } catch {
+    return {
+      success: false,
+      error: "The contact details could not be saved. Try again.",
     }
   }
 
