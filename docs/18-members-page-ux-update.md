@@ -18,15 +18,45 @@ the main day-to-day task warranted.
 - Rendered the create form inside a right-side slide-over dialog.
 - Closed the slide-over after a successful member save.
 - Removed the `Owner entry` label from the create form.
-- Replaced the descriptive page subtitle with a live attention stat.
+- Added an operations-focused header with a roster queue summary and supporting
+  copy.
+- Added a compact summary strip for matching members, total members, members
+  needing attention, and active filters.
 - Added a `risk=attention` roster filter for the attention stat and filter UI.
-- Moved the visible-member count into the roster heading:
-  `Member roster · X of Y`.
-- Combined roster heading, search, filters, and table into one continuous roster
-  area.
+- Kept the attention summary card linked to `/members?risk=attention`.
+- Reworked the roster controls into a mobile-first search and filter panel.
+- Added a visible `Search` label so the search input aligns with the status,
+  plan, and billing-risk controls.
 - Changed `Reset` from an outline button to a quieter text-style action.
 - Gave search, select, and create-form fields a slightly lighter fill and subtle
   inner depth for better contrast on the dark surface.
+- Made mobile/tablet member cards the primary roster presentation through the
+  `xl` breakpoint.
+- Kept the desktop table as the wide-screen adaptation, with member, plan,
+  health, joined, next bill, visits, and actions columns.
+- Grouped row/card quick actions consistently: check in, view profile, edit
+  plan, and suspend/unsuspend where applicable.
+
+## Mobile-First Roster Layout
+
+The `/members` page should treat the card list as the default experience. Small
+and medium viewports render stacked member cards with:
+
+- name and contact details first
+- status, billing risk, and membership state badges near the top
+- plan, next bill, joined date, and visit count in a two-column detail grid
+- full-width, wrapping quick actions with 44px touch targets
+
+The table is intentionally reserved for `xl` and wider screens so tablet widths
+do not inherit a cramped seven-column grid.
+
+The filter panel is also mobile-first:
+
+- controls stack by default
+- the search field spans the two-column tablet grid
+- all controls use visible uppercase labels
+- Search and Reset remain in one compact action group
+- no decorative filter icon is shown inside the panel
 
 ## Attention Filter
 
@@ -78,6 +108,9 @@ Runtime checks:
 
 - Next.js dev server reported no config or session errors.
 - Browser automation loaded `/members`.
+- Browser automation signed in with the seeded owner account and verified the
+  redesigned roster rendered with no horizontal overflow at the checked desktop
+  viewport.
 - Browser automation opened the `Add member` slide-over and verified it rendered
   at the right edge without horizontal page overflow.
 - Browser automation clicked the attention stat and verified navigation to
@@ -91,3 +124,7 @@ Keep the roster as the primary first-screen task on `/members`. Member creation
 should remain available from the header, but it should not displace roster
 search, filtering, and triage unless the owner explicitly opens the creation
 flow.
+
+Design future `/members` changes mobile-first. Start with the stacked card and
+control experience, then adapt upward to desktop density only when the viewport
+can support it without cramped text or horizontal overflow.
