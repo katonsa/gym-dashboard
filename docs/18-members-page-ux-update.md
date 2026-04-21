@@ -34,8 +34,10 @@ the main day-to-day task warranted.
   `xl` breakpoint.
 - Kept the desktop table as the wide-screen adaptation, with member, plan,
   health, joined, next bill, visits, and actions columns.
-- Grouped row/card quick actions consistently: check in, view profile, edit
-  plan, and suspend/unsuspend where applicable.
+- Kept mobile card quick actions visible: check in, view profile, edit plan,
+  and suspend/unsuspend where applicable.
+- Replaced the desktop table's inline action button stack with a shadcn
+  `DropdownMenu` action trigger so dense rows stay scannable.
 
 ## Mobile-First Roster Layout
 
@@ -49,6 +51,16 @@ and medium viewports render stacked member cards with:
 
 The table is intentionally reserved for `xl` and wider screens so tablet widths
 do not inherit a cramped seven-column grid.
+
+On desktop, table rows optimize for density:
+
+- smaller table typography and tighter cell padding
+- inline health badges instead of vertically stacked badges
+- a single actions trigger per row
+- action menu items for check-in, profile, plan edit, and status changes
+
+Status changes from the dropdown still open the confirmation dialog before
+suspending or unsuspending a member.
 
 The filter panel is also mobile-first:
 
@@ -89,6 +101,7 @@ The changed UI files are:
 - `app/(dashboard)/members/page.tsx`
 - `app/(dashboard)/members/member-roster.tsx`
 - `app/(dashboard)/members/member-create-form.tsx`
+- `components/ui/dropdown-menu.tsx`
 
 ## Regression Coverage
 

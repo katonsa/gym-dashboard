@@ -3,11 +3,31 @@
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import * as React from "react"
-import { AlertCircle, Plus, Search, Users } from "lucide-react"
+import {
+  AlertCircle,
+  CheckCircle2,
+  MoreHorizontal,
+  PencilLine,
+  Plus,
+  Search,
+  UserRound,
+  Users,
+} from "lucide-react"
+import { toast } from "sonner"
 
 import { RiskBadge, StatusBadge } from "@/components/dashboard/badges"
 import { DetailField } from "@/components/dashboard/detail-field"
 import { EmptyState } from "@/components/dashboard/empty-state"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -17,9 +37,18 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { PaginationNav } from "@/components/ui/pagination-nav"
 import {
   formatMembershipStatus,
+  type MemberStatus,
   titleCase,
   type PlanTier,
 } from "@/lib/dashboard"
@@ -32,6 +61,7 @@ import type {
 } from "@/lib/dashboard/member-roster"
 import { cn } from "@/lib/utils"
 import { MemberCreateForm } from "./member-create-form"
+import { logMemberCheckIn, updateMemberStatus } from "./member-actions"
 import { MemberQuickCheckInAction } from "./member-quick-checkin-action"
 import { MemberStatusAction } from "./member-status-action"
 
@@ -312,16 +342,18 @@ export function MemberRoster({
             </div>
 
             <div className="hidden overflow-hidden rounded-lg border border-border bg-card text-card-foreground xl:block">
-              <table className="w-full table-fixed text-left text-sm">
+              <table className="w-full table-fixed text-left text-xs">
                 <thead className="border-b border-border bg-muted/70 text-xs text-muted-foreground uppercase">
                   <tr>
-                    <th className="w-[25%] px-4 py-3 font-medium">Member</th>
-                    <th className="w-[15%] px-4 py-3 font-medium">Plan</th>
-                    <th className="w-[15%] px-4 py-3 font-medium">Health</th>
-                    <th className="w-[11%] px-4 py-3 font-medium">Joined</th>
-                    <th className="w-[13%] px-4 py-3 font-medium">Next bill</th>
-                    <th className="w-[7%] px-4 py-3 font-medium">Visits</th>
-                    <th className="w-[14%] px-4 py-3 font-medium">Actions</th>
+                    <th className="w-[27%] px-3 py-2 font-medium">Member</th>
+                    <th className="w-[15%] px-3 py-2 font-medium">Plan</th>
+                    <th className="w-[16%] px-3 py-2 font-medium">Health</th>
+                    <th className="w-[11%] px-3 py-2 font-medium">Joined</th>
+                    <th className="w-[13%] px-3 py-2 font-medium">Next bill</th>
+                    <th className="w-[8%] px-3 py-2 font-medium">Visits</th>
+                    <th className="w-[10%] px-3 py-2 text-right font-medium">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -480,7 +512,7 @@ function MemberTableRow({
 }) {
   return (
     <tr className="transition-colors hover:bg-muted/35">
-      <td className="px-4 py-4 align-top">
+      <td className="px-3 py-2 align-top">
         <div className="min-w-0">
           <p className="truncate font-medium">
             <Link
@@ -493,54 +525,215 @@ function MemberTableRow({
           <p className="mt-1 truncate text-xs text-muted-foreground">
             {member.email || "No email"}
           </p>
-          <p className="mt-1 truncate text-xs text-muted-foreground">
+          <p className="truncate text-xs text-muted-foreground">
             {member.phone || "No phone"}
           </p>
         </div>
       </td>
-      <td className="px-4 py-4 align-top">
+      <td className="px-3 py-2 align-top">
         <p className="font-medium">{formatPlan(member)}</p>
-        <p className="mt-1 text-xs text-muted-foreground">
+        <p className="mt-0.5 text-xs text-muted-foreground">
           {formatMembershipStatus(member.membershipStatus)}
         </p>
       </td>
-      <td className="px-4 py-4 align-top">
-        <div className="grid gap-2">
+      <td className="px-3 py-2 align-top">
+        <div className="flex flex-wrap gap-1.5">
           <StatusBadge status={member.status} />
           <RiskBadge risk={member.billingRisk} />
         </div>
       </td>
-      <td className="px-4 py-4 align-top text-muted-foreground">
+      <td className="px-3 py-2 align-top text-muted-foreground">
         {member.joinDateLabel}
       </td>
-      <td className="px-4 py-4 align-top text-muted-foreground">
+      <td className="px-3 py-2 align-top text-muted-foreground">
         {member.nextBillingDateLabel}
       </td>
-      <td className="px-4 py-4 align-top font-semibold">
+      <td className="px-3 py-2 align-top font-semibold">
         {member.sessionsAttended}
       </td>
-      <td className="px-4 py-4 align-top">
-        <QuickActions member={member} checkInDate={checkInDate} compact />
+      <td className="px-3 py-2 text-right align-top">
+        <MemberActionMenu member={member} checkInDate={checkInDate} />
       </td>
     </tr>
+  )
+}
+
+type StatusActionStatus = Extract<MemberStatus, "ACTIVE" | "SUSPENDED">
+
+function MemberActionMenu({
+  member,
+  checkInDate,
+}: {
+  member: MemberRosterRow
+  checkInDate: string
+}) {
+  const [isMenuOpen, setIsMenuOpen] = React.useState(false)
+  const [isStatusOpen, setIsStatusOpen] = React.useState(false)
+  const [statusError, setStatusError] = React.useState<string | null>(null)
+  const [isCheckInPending, startCheckInTransition] = React.useTransition()
+  const [isStatusPending, startStatusTransition] = React.useTransition()
+  const canChangeStatus = member.status !== "INACTIVE"
+  const nextStatus: StatusActionStatus =
+    member.status === "ACTIVE" ? "SUSPENDED" : "ACTIVE"
+  const statusActionLabel = member.status === "ACTIVE" ? "Suspend" : "Unsuspend"
+  const statusPendingLabel =
+    member.status === "ACTIVE" ? "Suspending..." : "Unsuspending..."
+  const statusConfirmation =
+    member.status === "ACTIVE"
+      ? `Suspend ${member.name}? Active memberships will be paused.`
+      : `Unsuspend ${member.name}? You can assign a new plan afterward.`
+
+  function handleCheckIn() {
+    startCheckInTransition(async () => {
+      const actionResult = await logMemberCheckIn({
+        memberId: member.id,
+        attendedAt: checkInDate,
+      })
+
+      if (actionResult.success) {
+        toast.success(`${member.name} checked in.`)
+        return
+      }
+
+      toast.error(actionResult.error ?? "The check-in could not be logged.")
+    })
+  }
+
+  function handleStatusConfirm() {
+    setStatusError(null)
+
+    startStatusTransition(async () => {
+      const actionResult = await updateMemberStatus({
+        memberId: member.id,
+        status: nextStatus,
+      })
+
+      if (actionResult.success) {
+        setIsStatusOpen(false)
+        toast.success(
+          nextStatus === "SUSPENDED"
+            ? `${member.name} is suspended.`
+            : `${member.name} is active. Assign a new plan when ready.`
+        )
+        return
+      }
+
+      setStatusError(
+        actionResult.error ?? "The member status could not be updated."
+      )
+    })
+  }
+
+  return (
+    <AlertDialog
+      open={isStatusOpen}
+      onOpenChange={(open) => {
+        setIsStatusOpen(open)
+        if (open) {
+          setStatusError(null)
+        }
+      }}
+    >
+      <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
+        <DropdownMenuTrigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon-sm"
+            className="ml-auto"
+            aria-label={`Open actions for ${member.name}`}
+          >
+            <MoreHorizontal />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-48">
+          <DropdownMenuLabel className="truncate">
+            {member.name}
+          </DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            disabled={isCheckInPending}
+            onSelect={() => {
+              handleCheckIn()
+            }}
+          >
+            <CheckCircle2 />
+            {isCheckInPending ? "Checking in..." : "Check in"}
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link href={`/members/${member.id}`}>
+              <UserRound />
+              View profile
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link href={`/members/${member.id}#plan-change`}>
+              <PencilLine />
+              Edit plan
+            </Link>
+          </DropdownMenuItem>
+          {canChangeStatus ? (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                variant={member.status === "ACTIVE" ? "destructive" : "default"}
+                onSelect={(event) => {
+                  event.preventDefault()
+                  setIsMenuOpen(false)
+                  setIsStatusOpen(true)
+                }}
+              >
+                <AlertCircle />
+                {statusActionLabel}
+              </DropdownMenuItem>
+            </>
+          ) : null}
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      {canChangeStatus ? (
+        <AlertDialogContent size="sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle>{statusConfirmation}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {member.status === "ACTIVE"
+                ? "This will suspend the member and mark any active memberships as past due."
+                : "This will reactivate the member so you can assign a new plan afterward."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {statusError ? (
+            <p className="text-sm leading-6 text-destructive">{statusError}</p>
+          ) : null}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isStatusPending}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              variant={member.status === "ACTIVE" ? "destructive" : "default"}
+              disabled={isStatusPending}
+              onClick={handleStatusConfirm}
+            >
+              {isStatusPending ? statusPendingLabel : statusActionLabel}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      ) : null}
+    </AlertDialog>
   )
 }
 
 function QuickActions({
   member,
   checkInDate,
-  compact = false,
 }: {
   member: MemberRosterRow
   checkInDate: string
-  compact?: boolean
 }) {
   return (
     <div
       className={cn(
         "grid grid-cols-2 gap-2 min-[420px]:grid-cols-4",
-        "[&_[data-slot=button]]:w-full",
-        compact && "grid-cols-1 min-[420px]:grid-cols-1"
+        "[&_[data-slot=button]]:w-full"
       )}
     >
       <MemberQuickCheckInAction
@@ -558,7 +751,6 @@ function QuickActions({
         memberId={member.id}
         memberName={member.name}
         status={member.status}
-        compact={compact}
       />
     </div>
   )
