@@ -100,7 +100,7 @@ No Prisma schema changes. The wizard creates:
 
 ## Related Docs
 
-- [Auth & Account Provisioning](./03-auth-assumptions.md)
-- [Local Database And Seed Data](./04-local-database-and-seed.md)
-- [Gym Settings](./19-gym-settings.md)
-- [Setup Checklist Onboarding](./23-setup-checklist-onboarding.md)
+- [Auth & Account Provisioning](../architecture/auth-and-account-provisioning.md)
+- [Local Database And Seed Data](../setup/local-database-and-seed.md)
+- [Gym Settings](./gym-settings.md)
+- [Setup Checklist Onboarding](./setup-checklist-onboarding.md)

@@ -72,10 +72,10 @@ days and interpolating the result directly.
 
 The roster query now uses two timestamps:
 
-| Timestamp        | Used for                                      |
-| ---------------- | --------------------------------------------- |
-| `paymentAsOf`    | overdue payment counts and overdue filtering  |
-| `membershipAsOf` | expired and expiring membership risk filters  |
+| Timestamp        | Used for                                     |
+| ---------------- | -------------------------------------------- |
+| `paymentAsOf`    | overdue payment counts and overdue filtering |
+| `membershipAsOf` | expired and expiring membership risk filters |
 
 `loadMemberRosterPage()` passes the exact request time into payment risk query
 paths and keeps the gym-local day boundary for membership status logic.

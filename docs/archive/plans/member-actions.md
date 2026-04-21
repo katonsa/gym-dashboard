@@ -104,12 +104,12 @@ Add a server action to toggle a member between ACTIVE and SUSPENDED, replacing t
 ### Shipped implementation note
 
 - [x] `app/(dashboard)/members/member-status-action.tsx` now uses
-  `components/ui/alert-dialog.tsx` instead of the previous inline confirmation
-  block.
+      `components/ui/alert-dialog.tsx` instead of the previous inline confirmation
+      block.
 - [x] The dialog keeps the existing pending and error states and still reports
-  messages through the surrounding `onResult` callback.
+      messages through the surrounding `onResult` callback.
 - [x] Suspend confirmation copy now explicitly warns that active memberships are
-  marked `PAST_DUE`.
+      marked `PAST_DUE`.
 
 ### Wire into member detail page
 
@@ -209,11 +209,11 @@ This is the same create-membership logic used in `createMember`, but applied to 
 ### Shipped implementation note
 
 - [x] `app/(dashboard)/members/member-plan-change-form.tsx` now validates the
-  form first, then opens `AlertDialog` before executing `changeMemberPlan`.
+      form first, then opens `AlertDialog` before executing `changeMemberPlan`.
 - [x] The confirmation copy includes the selected plan name, billing interval,
-  and formatted effective date when available.
+      and formatted effective date when available.
 - [x] Cancel only closes the dialog. Confirm runs the existing server action and
-  preserves the current success and error handling.
+      preserves the current success and error handling.
 
 ---
 

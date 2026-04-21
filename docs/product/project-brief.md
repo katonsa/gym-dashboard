@@ -3,7 +3,7 @@
 **Project Type:** Web Application  
 **Platform:** React (Web)  
 **Version:** 1.0  
-**Date:** April 2026  
+**Date:** April 2026
 
 ---
 
@@ -36,19 +36,20 @@ Small gym owners currently juggle spreadsheets, paper sign-in sheets, and discon
 
 ## 4. Target User
 
-| Attribute | Detail |
-|-----------|--------|
-| **Role** | Gym Owner / Admin |
-| **Technical level** | Low to moderate |
-| **Usage frequency** | Daily — first thing in the morning |
-| **Device** | Mobile browser (primary), Desktop (secondary) |
-| **Scale** | 1 location, fewer than 200 members |
+| Attribute           | Detail                                        |
+| ------------------- | --------------------------------------------- |
+| **Role**            | Gym Owner / Admin                             |
+| **Technical level** | Low to moderate                               |
+| **Usage frequency** | Daily — first thing in the morning            |
+| **Device**          | Mobile browser (primary), Desktop (secondary) |
+| **Scale**           | 1 location, fewer than 200 members            |
 
 ---
 
 ## 5. Core Features
 
 ### 5.1 Overview Stats Panel
+
 - Total members (active / inactive breakdown)
 - New sign-ups this month
 - Monthly Recurring Revenue (MRR) — from memberships only
@@ -57,26 +58,31 @@ Small gym owners currently juggle spreadsheets, paper sign-in sheets, and discon
 - Members with expiring subscriptions (next 7 days)
 
 ### 5.2 Member Table
+
 - Searchable and filterable list of all members
 - Columns: Name, Plan, Status, Join Date, Next Billing Date, Sessions Attended
 - Quick actions: View profile, Edit plan, Suspend account
 
 ### 5.3 Subscription Breakdown
+
 - Distribution of members across plan tiers (Basic / Pro / Elite)
 - Revenue contribution per tier
 - Visual plan comparison chart
 
 ### 5.4 Alerts Panel
+
 - Members with subscriptions expiring within 7 days
 - Members with overdue payments
 - Members inactive for 30+ days (churn risk)
 
 ### 5.5 Revenue Trend Chart
+
 - Monthly revenue chart (last 6 months)
 - Stacked or grouped view: **Membership Revenue** vs **Drop-in Revenue**
 - Highlights MoM growth or decline per stream and in total
 
 ### 5.6 Drop-in Log
+
 - Record of day pass visits (date, name optional, amount paid)
 - Daily and monthly drop-in totals
 - Flag frequent identified drop-ins (5+ visits/month) as **membership conversion opportunities**
@@ -92,11 +98,11 @@ The following features are intentionally excluded from the initial version:
 - Equipment tracking and maintenance logs
 - Class booking and attendance
 - Role-based access control (staff vs owner)
-- Native mobile app *(web app is mobile-optimized; native app is v2 consideration)*
+- Native mobile app _(web app is mobile-optimized; native app is v2 consideration)_
 - Payment processing / billing integrations
-- CSV import from external systems *(v1.5 consideration)*
-- Email notifications for expiring subscriptions *(v1.5 consideration)*
-- PWA / offline mode *(v1.5 consideration)*
+- CSV import from external systems _(v1.5 consideration)_
+- Email notifications for expiring subscriptions _(v1.5 consideration)_
+- PWA / offline mode _(v1.5 consideration)_
 
 ---
 
@@ -104,19 +110,20 @@ The following features are intentionally excluded from the initial version:
 
 The dashboard tracks two distinct revenue streams:
 
-| Type | Also Known As | Description | Billing Intervals |
-|------|--------------|-------------|-------------------|
-| **Membership** | Subscription | Recurring members on a plan tier | **Monthly** or **Annual** |
-| **Drop-in** | Day Pass / Walk-in | Non-members paying per visit | One-time, per visit |
+| Type           | Also Known As      | Description                      | Billing Intervals         |
+| -------------- | ------------------ | -------------------------------- | ------------------------- |
+| **Membership** | Subscription       | Recurring members on a plan tier | **Monthly** or **Annual** |
+| **Drop-in**    | Day Pass / Walk-in | Non-members paying per visit     | One-time, per visit       |
 
 ### Billing Intervals
 
-| Interval | Cycle | Notes |
-|----------|-------|-------|
-| **Monthly** | Every 30 days | Default interval; shown as MRR |
-| **Annual** | Every 365 days | Usually offered at a discounted rate; normalized to monthly equivalent for MRR display |
+| Interval    | Cycle          | Notes                                                                                  |
+| ----------- | -------------- | -------------------------------------------------------------------------------------- |
+| **Monthly** | Every 30 days  | Default interval; shown as MRR                                                         |
+| **Annual**  | Every 365 days | Usually offered at a discounted rate; normalized to monthly equivalent for MRR display |
 
 **Key rules:**
+
 - Members can be on either a **monthly** or **annual** billing cycle per plan tier
 - Annual plans are normalized to a **monthly equivalent** for MRR calculation (annual price ÷ 12)
 - Renewal alerts apply to both — monthly members 7 days before renewal, annual members 30 days before
@@ -131,16 +138,16 @@ The dashboard tracks two distinct revenue streams:
 
 ## 8. Technical Stack
 
-| Layer | Technology |
-|-------|------------|
-| **Frontend** | Next.js 16 (App Router, Server Components) |
-| **Styling** | Tailwind CSS 4 |
-| **Charts** | Recharts |
-| **Data** | PostgreSQL + Prisma ORM; Better Auth for authentication |
-| **State** | React Server Components (default); client components for interactive controls |
-| **Responsive** | Mobile-first; responsive breakpoints for tablet and desktop |
-| **Import** | Manual entry in v1; CSV import deferred |
-| **Notifications** | In-app alerts + Sonner toasts in v1; email notifications deferred |
+| Layer             | Technology                                                                    |
+| ----------------- | ----------------------------------------------------------------------------- |
+| **Frontend**      | Next.js 16 (App Router, Server Components)                                    |
+| **Styling**       | Tailwind CSS 4                                                                |
+| **Charts**        | Recharts                                                                      |
+| **Data**          | PostgreSQL + Prisma ORM; Better Auth for authentication                       |
+| **State**         | React Server Components (default); client components for interactive controls |
+| **Responsive**    | Mobile-first; responsive breakpoints for tablet and desktop                   |
+| **Import**        | Manual entry in v1; CSV import deferred                                       |
+| **Notifications** | In-app alerts + Sonner toasts in v1; email notifications deferred             |
 
 ---
 
@@ -157,40 +164,40 @@ The dashboard tracks two distinct revenue streams:
 
 The dashboard is designed **mobile-first** for an admin on the gym floor:
 
-| Consideration | Approach |
-|--------------|----------|
-| **Layout** | Single-column stacked cards on mobile; wider grid on desktop |
-| **Touch targets** | Minimum 44×44px for all buttons and interactive elements |
-| **Stats panel** | 2×2 card grid — large numbers, scannable at a glance |
-| **Member table** | Condensed card list on mobile (not a wide table) |
-| **Navigation** | Full-width bottom bar on mobile with icon-only inactive routes and an expanded active route label; sidebar on desktop |
-| **Alerts** | Pinned at top — always visible without scrolling |
-| **Forms & inputs** | Large input fields, native mobile keyboards where appropriate |
-| **Charts** | Simplified, touch-friendly with tap-to-reveal data points |
+| Consideration      | Approach                                                                                                              |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------- |
+| **Layout**         | Single-column stacked cards on mobile; wider grid on desktop                                                          |
+| **Touch targets**  | Minimum 44×44px for all buttons and interactive elements                                                              |
+| **Stats panel**    | 2×2 card grid — large numbers, scannable at a glance                                                                  |
+| **Member table**   | Condensed card list on mobile (not a wide table)                                                                      |
+| **Navigation**     | Full-width bottom bar on mobile with icon-only inactive routes and an expanded active route label; sidebar on desktop |
+| **Alerts**         | Pinned at top — always visible without scrolling                                                                      |
+| **Forms & inputs** | Large input fields, native mobile keyboards where appropriate                                                         |
+| **Charts**         | Simplified, touch-friendly with tap-to-reveal data points                                                             |
 
 ---
 
 ## 10. Success Metrics
 
-| Metric | Target |
-|--------|--------|
-| Time to find a member's status | < 10 seconds |
-| Alerts visibility on load | Above the fold |
-| Daily active usage | Owner opens dashboard every morning |
-| Reduction in missed renewals | 90%+ of expiring plans actioned before lapse |
+| Metric                         | Target                                       |
+| ------------------------------ | -------------------------------------------- |
+| Time to find a member's status | < 10 seconds                                 |
+| Alerts visibility on load      | Above the fold                               |
+| Daily active usage             | Owner opens dashboard every morning          |
+| Reduction in missed renewals   | 90%+ of expiring plans actioned before lapse |
 
 ---
 
 ## 11. Milestones
 
-| Phase | Deliverable | Status |
-|-------|-------------|--------|
-| Phase 1 | Project Brief | ✅ Complete |
-| Phase 2 | UI Design & Component Architecture | ✅ Complete |
+| Phase   | Deliverable                           | Status      |
+| ------- | ------------------------------------- | ----------- |
+| Phase 1 | Project Brief                         | ✅ Complete |
+| Phase 2 | UI Design & Component Architecture    | ✅ Complete |
 | Phase 3 | Core Dashboard — Stats + Member Table | ✅ Complete |
 | Phase 4 | Alerts Panel + Subscription Breakdown | ✅ Complete |
-| Phase 5 | Revenue Trend Chart + Drop-in Log | ✅ Complete |
-| Phase 6 | Polish, QA, and Handoff | ✅ Complete |
+| Phase 5 | Revenue Trend Chart + Drop-in Log     | ✅ Complete |
+| Phase 6 | Polish, QA, and Handoff               | ✅ Complete |
 
 ---
 
@@ -205,4 +212,4 @@ The dashboard is designed **mobile-first** for an admin on the gym floor:
 
 ---
 
-*Brief prepared for the Gym Owner Dashboard project. Review and confirm before development begins.*
+_Brief prepared for the Gym Owner Dashboard project. Review and confirm before development begins._

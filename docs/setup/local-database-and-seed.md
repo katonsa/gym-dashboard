@@ -1,16 +1,24 @@
 # Local Database And Seed Data
 
-Use this guide to start a local Postgres database, apply the Prisma migrations, and load the demo gym data used by the dashboard.
+Use this guide to start local Postgres, apply Prisma migrations, and load the
+demo gym data used by the dashboard.
 
 ## Prerequisites
 
 - Docker with Compose support.
 - Node dependencies installed with `npm install`.
-- A local `.env` file with:
+- A local `.env` file. Start from the checked-in template:
 
 ```bash
-DATABASE_URL="postgresql://gymdashboard:gymdashboard@localhost:5432/gymdashboard"
+cp .env.example .env
+```
+
+The required local values are:
+
+```bash
+DATABASE_URL="postgresql://gymdashboard:gymdashboard@localhost:5432/gymdashboard?schema=public"
 BETTER_AUTH_SECRET="replace-with-a-local-development-secret"
+BETTER_AUTH_URL="http://localhost:3000"
 ```
 
 The `DATABASE_URL` above matches the default values in `compose.yaml`.
@@ -46,11 +54,19 @@ npx prisma migrate dev
 
 Both commands read `DATABASE_URL` from `.env` through `prisma.config.ts`.
 
-## Seed Demo Data
+## Provision An Owner
+
+There are two supported local provisioning paths.
+
+### Seeded Demo Data
+
+For normal development with useful dashboard records, run:
 
 ```bash
 npm run db:seed
 ```
+
+Use the seeded owner credentials below to sign in.
 
 The seed command runs Prisma's configured seed entrypoint:
 
@@ -58,7 +74,18 @@ The seed command runs Prisma's configured seed entrypoint:
 npx tsx prisma/seed.ts
 ```
 
-The seed script creates the demo owner account through Better Auth's email/password API instead of inserting password records directly.
+The seed script creates the demo owner account through Better Auth's
+email/password API instead of inserting password records directly.
+
+### First-Run Setup Wizard
+
+For testing first-run provisioning, leave the database empty after migrations and
+visit `/sign-in`. When no user exists, the sign-in page renders the setup wizard
+instead of the sign-in form. The wizard creates the owner account and gym in one
+flow.
+
+If you previously seeded data and want to test this path again, reset the local
+database first.
 
 ## Run DB-Backed Integration Tests
 
@@ -70,8 +97,8 @@ npm run test:integration
 
 The integration runner loads `.env` before importing Prisma, creates isolated
 owner/gym/member/payment fixtures, and deletes those fixtures after each test.
-It currently covers payment lifecycle mutations: marking payments paid, voiding
-payments, owner-gym scoping, and `PAST_DUE` membership reactivation.
+It covers server-action behavior for payment lifecycle, renewal lifecycle,
+attendance lifecycle, member contact updates, and plan tier management.
 
 ## Demo Owner Login
 
@@ -129,7 +156,8 @@ To reset the local database, reapply migrations, and rerun the seed:
 npx prisma migrate reset
 ```
 
-This command deletes local database data for the configured `DATABASE_URL`. Confirm that `.env` points to your local Compose database before running it.
+This command deletes local database data for the configured `DATABASE_URL`.
+Confirm that `.env` points to your local Compose database before running it.
 
 If you only want to stop Postgres without deleting the volume:
 

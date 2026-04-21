@@ -53,13 +53,13 @@ unavailable, or unauthenticated. Instead:
 - Empty database tables render route-specific empty states.
 
 Use the seed data for local runtime verification. See
-`docs/04-local-database-and-seed.md` for setup and reset commands.
+`docs/setup/local-database-and-seed.md` for setup and reset commands.
 
 ## Related Handoff Docs
 
-- `docs/03-auth-assumptions.md` documents auth assumptions, owner provisioning,
+- `docs/architecture/auth-and-account-provisioning.md` documents auth assumptions, owner provisioning,
   and member account scope.
-- `docs/04-local-database-and-seed.md` documents local Postgres setup, demo
+- `docs/setup/local-database-and-seed.md` documents local Postgres setup, demo
   owner credentials, and seed coverage.
-- `docs/09-runtime-performance-cleanup.md` documents the removed legacy
+- `docs/archive/changes/runtime-performance-cleanup.md` documents the removed legacy
   full-load paths after pagination and aggregation landed.

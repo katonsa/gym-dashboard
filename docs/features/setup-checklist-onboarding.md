@@ -43,10 +43,7 @@ The active step is derived from `setupState` props in the `SetupChecklist`
 component:
 
 ```typescript
-const activeStep = !hasPlanTiers ? 1
-  : !hasMembers ? 2
-  : !hasDropIns ? 3
-  : null
+const activeStep = !hasPlanTiers ? 1 : !hasMembers ? 2 : !hasDropIns ? 3 : null
 ```
 
 No React state management is needed. When `revalidatePath("/")` triggers a
@@ -64,11 +61,11 @@ server re-render, the component receives fresh props and auto-advances.
 
 ## Step Behavior
 
-| Step state | Visual |
-| ---------- | ------ |
-| Complete | Green checkmark, muted title with strikethrough |
-| Active | Numbered badge, expanded with inline form |
-| Pending | Gray circle, muted title |
+| Step state | Visual                                          |
+| ---------- | ----------------------------------------------- |
+| Complete   | Green checkmark, muted title with strikethrough |
+| Active     | Numbered badge, expanded with inline form       |
+| Pending    | Gray circle, muted title                        |
 
 Step 2 is effectively locked when step 1 is incomplete — the `MemberCreateForm`
 already shows "Add an active plan before starting memberships" when no active
@@ -80,10 +77,10 @@ plan tiers exist.
 
 ```typescript
 {
-  hasPlanTiers: boolean   // planTier.count > 0
-  hasMembers: boolean     // member.count > 0
+  hasPlanTiers: boolean // planTier.count > 0
+  hasMembers: boolean // member.count > 0
   hasMemberships: boolean // membership.count > 0
-  hasDropIns: boolean     // dropInVisit._sum.visitCount > 0
+  hasDropIns: boolean // dropInVisit._sum.visitCount > 0
 }
 ```
 
@@ -105,14 +102,14 @@ so it adds no sequential latency.
 
 ## Files
 
-| File                                                  | Purpose                                |
-| ----------------------------------------------------- | -------------------------------------- |
-| `components/dashboard/setup-checklist.tsx`            | 3-step guided checklist client component |
-| `components/dashboard/setup-plan-tier-form.tsx`       | Simplified inline plan tier creation form |
-| `lib/dashboard/aggregate-types.ts`                    | `OverviewSetupState` with `hasPlanTiers` |
-| `lib/dashboard/aggregate-queries.ts`                  | `getOverviewSetupState()` with plan tier count |
-| `lib/dashboard/loaders.ts`                            | `loadSetupChecklistData()` loader |
-| `app/(dashboard)/page.tsx`                            | Integration point: checklist replaces setup gaps |
+| File                                            | Purpose                                          |
+| ----------------------------------------------- | ------------------------------------------------ |
+| `components/dashboard/setup-checklist.tsx`      | 3-step guided checklist client component         |
+| `components/dashboard/setup-plan-tier-form.tsx` | Simplified inline plan tier creation form        |
+| `lib/dashboard/aggregate-types.ts`              | `OverviewSetupState` with `hasPlanTiers`         |
+| `lib/dashboard/aggregate-queries.ts`            | `getOverviewSetupState()` with plan tier count   |
+| `lib/dashboard/loaders.ts`                      | `loadSetupChecklistData()` loader                |
+| `app/(dashboard)/page.tsx`                      | Integration point: checklist replaces setup gaps |
 
 ## Verification
 
@@ -132,6 +129,6 @@ testing on April 22, 2026 covered:
 
 ## Related Docs
 
-- [Owner Provisioning](./22-owner-provisioning-plan.md)
-- [Plan Tier Management](./20-plan-tier-management.md)
-- [Gym Settings](./19-gym-settings.md)
+- [Owner Provisioning](./owner-provisioning.md)
+- [Plan Tier Management](./plan-tier-management.md)
+- [Gym Settings](./gym-settings.md)

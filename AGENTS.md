@@ -52,5 +52,5 @@ changes. Call out migrations, seed changes, or required `.env` updates.
 ## Security & Configuration Tips
 
 Do not commit real secrets. Use `.env.example` as the template and keep local
-values in `.env`. Review `docs/03-auth-assumptions.md` before changing account
-provisioning or owner/member access rules.
+values in `.env`. Review `docs/architecture/auth-and-account-provisioning.md`
+before changing account provisioning or owner/member access rules.

@@ -23,7 +23,7 @@ account and gym in one flow:
 This is the primary provisioning path for new deployments. No admin intervention
 or seed script is required.
 
-See [Owner Provisioning Plan](./21-owner-provisioning-plan.md) for full details.
+See [Owner Provisioning](../features/owner-provisioning.md) for full details.
 
 ### Other Provisioning Methods
 
@@ -83,12 +83,12 @@ Members **do not** have login accounts. Member records are data managed by the a
 
 ## Related Files
 
-- [lib/auth/index.ts](../lib/auth/index.ts) — Better Auth server instance.
-- [lib/auth/client.ts](../lib/auth/client.ts) — Better Auth client for browser-side auth calls.
-- [lib/auth/page-state.tsx](../lib/auth/page-state.tsx) — Sign-in page state detection (`getAuthPageState`).
-- [lib/auth/schemas/setup-schema.ts](../lib/auth/schemas/setup-schema.ts) — Zod schema for the setup wizard.
-- [lib/auth/next-path.ts](../lib/auth/next-path.ts) — Safe `next` query param validation for post-login redirect.
-- [app/(auth)/sign-in/page.tsx](<../app/(auth)/sign-in/page.tsx>) — Sign-in page (renders wizard or sign-in form).
-- [app/(auth)/sign-in/setup-wizard.tsx](<../app/(auth)/sign-in/setup-wizard.tsx>) — First-run setup wizard component.
-- [lib/dashboard/gym-create-action.ts](../lib/dashboard/gym-create-action.ts) — Server action for gym creation.
-- [prisma/seed.ts](../prisma/seed.ts) — Seed script that creates the demo owner.
+- [lib/auth/index.ts](../../lib/auth/index.ts) — Better Auth server instance.
+- [lib/auth/client.ts](../../lib/auth/client.ts) — Better Auth client for browser-side auth calls.
+- [lib/auth/page-state.tsx](../../lib/auth/page-state.tsx) — Sign-in page state detection (`getAuthPageState`).
+- [lib/auth/schemas/setup-schema.ts](../../lib/auth/schemas/setup-schema.ts) — Zod schema for the setup wizard.
+- [lib/auth/next-path.ts](../../lib/auth/next-path.ts) — Safe `next` query param validation for post-login redirect.
+- [app/(auth)/sign-in/page.tsx](<../../app/(auth)/sign-in/page.tsx>) — Sign-in page (renders wizard or sign-in form).
+- [app/(auth)/sign-in/setup-wizard.tsx](<../../app/(auth)/sign-in/setup-wizard.tsx>) — First-run setup wizard component.
+- [lib/dashboard/gym-create-action.ts](../../lib/dashboard/gym-create-action.ts) — Server action for gym creation.
+- [prisma/seed.ts](../../prisma/seed.ts) — Seed script that creates the demo owner.
