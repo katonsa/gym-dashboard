@@ -11,9 +11,52 @@ const DEMO_OWNER_EMAIL = "owner@jkt-strength.local"
 const DEMO_OWNER_PASSWORD = "owner-password-123"
 const DEMO_OWNER_NAME = "Demo Owner"
 
+const DROP_IN_FEE_AMOUNT = 75_000
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+type BillingInterval = "MONTHLY" | "ANNUAL"
+type MemberStatus = "ACTIVE" | "INACTIVE" | "SUSPENDED"
+type MembershipStatus = "ACTIVE" | "PAST_DUE" | "CANCELED" | "EXPIRED"
+type PaymentStatus = "PENDING" | "PAID" | "OVERDUE" | "VOID"
+
+type SeedMemberKey =
+  | "ari"
+  | "sinta"
+  | "bayu"
+  | "dewi"
+  | "maya"
+  | "lina"
+  | "nadia"
+  | "raka"
+  | "edo"
+  | "made"
+  | "yusuf"
+  | "putu"
+  | "citra"
+  | "bagus"
+  | "fitri"
+  | "hana"
+  | "tono"
+
+type SeedPlan = {
+  id: string
+  monthlyPriceAmount: number
+  annualPriceAmount: number
+}
+
+type SeedMember = {
+  firstName: string
+  lastName: string
+  email?: string | null
+  phone?: string | null
+  status: MemberStatus
+  joinDate: Date
+  lastAttendedAt?: Date | null
+  notes?: string | null
+}
 
 function daysAgo(days: number): Date {
   const date = new Date()
@@ -33,6 +76,12 @@ function hoursAgo(hours: number): Date {
   return date
 }
 
+function monthsAgo(months: number): Date {
+  const date = new Date()
+  date.setMonth(date.getMonth() - months)
+  return date
+}
+
 function endOfDay(date: Date): Date {
   const d = new Date(date)
   d.setHours(23, 59, 59, 0)
@@ -45,13 +94,26 @@ function startOfDay(date: Date): Date {
   return d
 }
 
+function paymentDate(monthsBack: number): Date {
+  const date = monthsAgo(monthsBack)
+  date.setDate(5)
+  date.setHours(9, 0, 0, 0)
+  return date
+}
+
+function membershipPrice(plan: SeedPlan, interval: BillingInterval) {
+  return interval === "ANNUAL"
+    ? plan.annualPriceAmount
+    : plan.monthlyPriceAmount
+}
+
 // ---------------------------------------------------------------------------
-// Prisma client (standalone — not the Next.js singleton)
+// Prisma client (standalone, not the Next.js singleton)
 // ---------------------------------------------------------------------------
 
 const connectionString = process.env.DATABASE_URL
 if (!connectionString) {
-  console.error("❌ DATABASE_URL is not set.")
+  console.error("DATABASE_URL is not set.")
   process.exit(1)
 }
 
@@ -63,20 +125,20 @@ const db = new PrismaClient({ adapter })
 // ---------------------------------------------------------------------------
 
 async function main() {
-  console.log("🌱 Seeding database…\n")
+  console.log("Seeding database...\n")
 
   // ---- Idempotency check --------------------------------------------------
   const existingGym = await db.gym.findFirst()
   if (existingGym) {
     console.log(
-      `✅ Database already has a gym ("${existingGym.name}"). Skipping seed.\n` +
+      `Database already has a gym ("${existingGym.name}"). Skipping seed.\n` +
         "   To re-seed, run: npx prisma migrate reset"
     )
     return
   }
 
   // ---- 1. Create demo owner via Better Auth --------------------------------
-  console.log("  Creating demo owner account…")
+  console.log("  Creating demo owner account...")
 
   let userId: string
 
@@ -90,38 +152,38 @@ async function main() {
     })
 
     userId = result.user.id
-    console.log(`  ✓ Owner created: ${DEMO_OWNER_EMAIL}`)
+    console.log(`  - Owner created: ${DEMO_OWNER_EMAIL}`)
   } catch (error: unknown) {
-    // If the user already exists (e.g. from a partial previous seed), look them up.
+    // If the user already exists from a partial previous seed, look them up.
     const existing = await db.user.findUnique({
       where: { email: DEMO_OWNER_EMAIL },
     })
 
     if (existing) {
       userId = existing.id
-      console.log(`  ✓ Owner already exists: ${DEMO_OWNER_EMAIL}`)
+      console.log(`  - Owner already exists: ${DEMO_OWNER_EMAIL}`)
     } else {
       throw error
     }
   }
 
   // ---- 2. Create gym -------------------------------------------------------
-  console.log("  Creating gym…")
+  console.log("  Creating gym...")
 
   const gym = await db.gym.create({
     data: {
       name: "JKT Strength House",
       timezone: "Asia/Jakarta",
       currencyCode: "IDR",
-      defaultDropInFeeAmount: 75_000,
+      defaultDropInFeeAmount: DROP_IN_FEE_AMOUNT,
       ownerId: userId,
     },
   })
 
-  console.log(`  ✓ Gym created: ${gym.name}`)
+  console.log(`  - Gym created: ${gym.name}`)
 
   // ---- 3. Create plan tiers ------------------------------------------------
-  console.log("  Creating plan tiers…")
+  console.log("  Creating plan tiers...")
 
   const [basic, pro, elite] = await Promise.all([
     db.planTier.create({
@@ -158,16 +220,15 @@ async function main() {
       },
     }),
   ])
+  const plansByName = { Basic: basic, Pro: pro, Elite: elite }
 
-  console.log(`  ✓ Plan tiers: ${basic.name}, ${pro.name}, ${elite.name}`)
+  console.log(`  - Plan tiers: ${basic.name}, ${pro.name}, ${elite.name}`)
 
   // ---- 4. Create members ---------------------------------------------------
-  console.log("  Creating members…")
+  console.log("  Creating members...")
 
-  // ACTIVE members
-  const ari = await db.member.create({
-    data: {
-      gymId: gym.id,
+  const memberScenarios: Record<SeedMemberKey, SeedMember> = {
+    ari: {
       firstName: "Ari",
       lastName: "Pratama",
       email: "ari.pratama@example.com",
@@ -175,26 +236,19 @@ async function main() {
       status: "ACTIVE",
       joinDate: daysAgo(165),
       lastAttendedAt: hoursAgo(20),
+      notes: "Baseline active Basic monthly member.",
     },
-  })
-
-  const sinta = await db.member.create({
-    data: {
-      gymId: gym.id,
+    sinta: {
       firstName: "Sinta",
       lastName: "Mahendra",
       email: "sinta.mahendra@example.com",
       phone: "+628111110002",
       status: "ACTIVE",
-      joinDate: daysAgo(12), // New sign-up this month
+      joinDate: daysAgo(12),
       lastAttendedAt: hoursAgo(44),
       notes: "New sign-up this month.",
     },
-  })
-
-  const bayu = await db.member.create({
-    data: {
-      gymId: gym.id,
+    bayu: {
       firstName: "Bayu",
       lastName: "Santoso",
       email: "bayu.santoso@example.com",
@@ -203,11 +257,7 @@ async function main() {
       joinDate: daysAgo(270),
       lastAttendedAt: daysAgo(21),
     },
-  })
-
-  const dewi = await db.member.create({
-    data: {
-      gymId: gym.id,
+    dewi: {
       firstName: "Dewi",
       lastName: "Lestari",
       email: "dewi.lestari@example.com",
@@ -215,12 +265,9 @@ async function main() {
       status: "ACTIVE",
       joinDate: daysAgo(365),
       lastAttendedAt: daysAgo(6),
+      notes: "Annual Elite renewal due soon.",
     },
-  })
-
-  const maya = await db.member.create({
-    data: {
-      gymId: gym.id,
+    maya: {
       firstName: "Maya",
       lastName: "Putri",
       email: "maya.putri@example.com",
@@ -228,12 +275,9 @@ async function main() {
       status: "ACTIVE",
       joinDate: daysAgo(125),
       lastAttendedAt: daysAgo(8),
+      notes: "Past-due membership with overdue payment.",
     },
-  })
-
-  const lina = await db.member.create({
-    data: {
-      gymId: gym.id,
+    lina: {
       firstName: "Lina",
       lastName: "Kusuma",
       email: "lina.kusuma@example.com",
@@ -241,13 +285,9 @@ async function main() {
       status: "ACTIVE",
       joinDate: daysAgo(96),
       lastAttendedAt: hoursAgo(18),
+      notes: "Monthly membership expires this week.",
     },
-  })
-
-  // SUSPENDED member
-  const nadia = await db.member.create({
-    data: {
-      gymId: gym.id,
+    nadia: {
       firstName: "Nadia",
       lastName: "Halim",
       email: "nadia.halim@example.com",
@@ -257,12 +297,7 @@ async function main() {
       lastAttendedAt: daysAgo(47),
       notes: "Suspended pending billing review.",
     },
-  })
-
-  // INACTIVE members
-  const raka = await db.member.create({
-    data: {
-      gymId: gym.id,
+    raka: {
       firstName: "Raka",
       lastName: "Wijaya",
       email: "raka.wijaya@example.com",
@@ -270,12 +305,9 @@ async function main() {
       status: "INACTIVE",
       joinDate: daysAgo(260),
       lastAttendedAt: daysAgo(57),
+      notes: "Inactive member with expired membership.",
     },
-  })
-
-  const edo = await db.member.create({
-    data: {
-      gymId: gym.id,
+    edo: {
       firstName: "Edo",
       lastName: "Saputra",
       email: "edo.saputra@example.com",
@@ -283,142 +315,386 @@ async function main() {
       status: "INACTIVE",
       joinDate: daysAgo(555),
       lastAttendedAt: daysAgo(77),
+      notes: "Inactive member with canceled history.",
     },
+    made: {
+      firstName: "Made",
+      lastName: "Suryani",
+      email: "made.suryani@example.com",
+      phone: "+628111110010",
+      status: "ACTIVE",
+      joinDate: daysAgo(430),
+      lastAttendedAt: daysAgo(12),
+      notes: "Persisted expired membership for the Renew flow.",
+    },
+    yusuf: {
+      firstName: "Yusuf",
+      lastName: "Ramadhan",
+      email: "yusuf.ramadhan@example.com",
+      phone: "+628111110011",
+      status: "ACTIVE",
+      joinDate: daysAgo(210),
+      lastAttendedAt: daysAgo(11),
+      notes: "Active membership whose period already ended.",
+    },
+    putu: {
+      firstName: "Putu",
+      lastName: "Aditya",
+      email: "putu.aditya@example.com",
+      phone: "+628111110012",
+      status: "ACTIVE",
+      joinDate: daysAgo(3),
+      lastAttendedAt: null,
+      notes: "No plan yet; use to test plan assignment.",
+    },
+    citra: {
+      firstName: "Citra",
+      lastName: "Ningrum",
+      email: null,
+      phone: null,
+      status: "ACTIVE",
+      joinDate: daysAgo(44),
+      lastAttendedAt: daysAgo(2),
+      notes: null,
+    },
+    bagus: {
+      firstName: "Bagus",
+      lastName: "Wibowo",
+      email: "bagus.wibowo@example.com",
+      phone: "+628111110014",
+      status: "ACTIVE",
+      joinDate: daysAgo(620),
+      lastAttendedAt: daysAgo(1),
+      notes: "Multiple membership history rows for plan-change review.",
+    },
+    fitri: {
+      firstName: "Fitri",
+      lastName: "Handayani",
+      email: "fitri.handayani@example.com",
+      phone: "+628111110015",
+      status: "ACTIVE",
+      joinDate: monthsAgo(32),
+      lastAttendedAt: daysAgo(4),
+      notes: "Long payment history for pagination testing.",
+    },
+    hana: {
+      firstName: "Hana",
+      lastName: "Permata",
+      email: "hana.permata@example.com",
+      phone: "+628111110016",
+      status: "ACTIVE",
+      joinDate: daysAgo(190),
+      lastAttendedAt: hoursAgo(6),
+      notes: "Long attendance history for pagination testing.",
+    },
+    tono: {
+      firstName: "Tono",
+      lastName: "Irawan",
+      email: "tono.irawan@example.com",
+      phone: "+628111110017",
+      status: "INACTIVE",
+      joinDate: daysAgo(85),
+      lastAttendedAt: null,
+      notes: "Inactive member with no attendance recorded.",
+    },
+  }
+
+  const membersByKey = {} as Record<
+    SeedMemberKey,
+    Awaited<ReturnType<typeof db.member.create>>
+  >
+
+  for (const [key, member] of Object.entries(memberScenarios) as Array<
+    [SeedMemberKey, SeedMember]
+  >) {
+    membersByKey[key] = await db.member.create({
+      data: {
+        gymId: gym.id,
+        ...member,
+      },
+    })
+  }
+
+  const rosterMembers = await db.member.createMany({
+    data: Array.from({ length: 18 }, (_, index) => {
+      const number = index + 1
+      const isInactive = number % 9 === 0
+      const isSuspended = number % 13 === 0
+
+      return {
+        gymId: gym.id,
+        firstName: [
+          "Agus",
+          "Bima",
+          "Clara",
+          "Dimas",
+          "Eka",
+          "Farah",
+          "Gilang",
+          "Intan",
+          "Joko",
+          "Kartika",
+          "Leo",
+          "Mira",
+          "Niko",
+          "Oki",
+          "Priska",
+          "Qori",
+          "Rendi",
+          "Sarah",
+        ][index],
+        lastName: `Roster ${String(number).padStart(2, "0")}`,
+        email: `roster-${String(number).padStart(2, "0")}@example.com`,
+        phone: `+62813333${String(number).padStart(4, "0")}`,
+        status: isSuspended
+          ? ("SUSPENDED" as const)
+          : isInactive
+            ? ("INACTIVE" as const)
+            : ("ACTIVE" as const),
+        joinDate: daysAgo(30 + number * 5),
+        lastAttendedAt: isInactive
+          ? daysAgo(45 + number)
+          : daysAgo(number % 20),
+        notes: "Additional roster member for pagination and filtering.",
+      }
+    }),
   })
 
-  const members = [ari, sinta, bayu, dewi, maya, lina, nadia, raka, edo]
-  console.log(`  ✓ Members: ${members.length}`)
+  const allMembers = await db.member.findMany({
+    where: { gymId: gym.id },
+    orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
+  })
+
+  console.log(`  - Members: ${allMembers.length}`)
 
   // ---- 5. Create memberships -----------------------------------------------
-  console.log("  Creating memberships…")
+  console.log("  Creating memberships...")
 
-  // Ari — Basic, monthly, ACTIVE
-  const msAri = await db.membership.create({
-    data: {
-      memberId: ari.id,
-      planTierId: basic.id,
-      billingInterval: "MONTHLY",
-      status: "ACTIVE",
-      priceAmount: 350_000,
-      startedAt: ari.joinDate,
-      currentPeriodEndsAt: endOfDay(daysFromNow(17)),
-      nextBillingDate: startOfDay(daysFromNow(18)),
-    },
+  async function createMembership({
+    memberId,
+    plan,
+    interval,
+    status = "ACTIVE",
+    startedAt,
+    currentPeriodEndsAt,
+    nextBillingDate,
+    canceledAt,
+  }: {
+    memberId: string
+    plan: SeedPlan
+    interval: BillingInterval
+    status?: MembershipStatus
+    startedAt: Date
+    currentPeriodEndsAt: Date
+    nextBillingDate?: Date
+    canceledAt?: Date
+  }) {
+    return db.membership.create({
+      data: {
+        memberId,
+        planTierId: plan.id,
+        billingInterval: interval,
+        status,
+        priceAmount: membershipPrice(plan, interval),
+        startedAt,
+        currentPeriodEndsAt,
+        nextBillingDate: nextBillingDate ?? startOfDay(currentPeriodEndsAt),
+        canceledAt,
+      },
+    })
+  }
+
+  const msAri = await createMembership({
+    memberId: membersByKey.ari.id,
+    plan: basic,
+    interval: "MONTHLY",
+    startedAt: membersByKey.ari.joinDate,
+    currentPeriodEndsAt: endOfDay(daysFromNow(17)),
+    nextBillingDate: startOfDay(daysFromNow(18)),
+  })
+  const msSinta = await createMembership({
+    memberId: membersByKey.sinta.id,
+    plan: pro,
+    interval: "MONTHLY",
+    startedAt: membersByKey.sinta.joinDate,
+    currentPeriodEndsAt: endOfDay(daysFromNow(18)),
+    nextBillingDate: startOfDay(daysFromNow(19)),
+  })
+  const msBayu = await createMembership({
+    memberId: membersByKey.bayu.id,
+    plan: pro,
+    interval: "ANNUAL",
+    startedAt: membersByKey.bayu.joinDate,
+    currentPeriodEndsAt: endOfDay(daysFromNow(95)),
+    nextBillingDate: startOfDay(daysFromNow(96)),
+  })
+  const msDewi = await createMembership({
+    memberId: membersByKey.dewi.id,
+    plan: elite,
+    interval: "ANNUAL",
+    startedAt: membersByKey.dewi.joinDate,
+    currentPeriodEndsAt: endOfDay(daysFromNow(21)),
+    nextBillingDate: startOfDay(daysFromNow(22)),
+  })
+  const msMaya = await createMembership({
+    memberId: membersByKey.maya.id,
+    plan: elite,
+    interval: "MONTHLY",
+    status: "PAST_DUE",
+    startedAt: membersByKey.maya.joinDate,
+    currentPeriodEndsAt: endOfDay(daysAgo(4)),
+    nextBillingDate: startOfDay(daysAgo(3)),
+  })
+  const msNadia = await createMembership({
+    memberId: membersByKey.nadia.id,
+    plan: pro,
+    interval: "MONTHLY",
+    status: "PAST_DUE",
+    startedAt: membersByKey.nadia.joinDate,
+    currentPeriodEndsAt: endOfDay(daysAgo(9)),
+    nextBillingDate: startOfDay(daysAgo(8)),
+  })
+  const msRaka = await createMembership({
+    memberId: membersByKey.raka.id,
+    plan: basic,
+    interval: "MONTHLY",
+    status: "EXPIRED",
+    startedAt: membersByKey.raka.joinDate,
+    currentPeriodEndsAt: endOfDay(daysAgo(45)),
+    nextBillingDate: startOfDay(daysAgo(44)),
+    canceledAt: daysAgo(44),
+  })
+  const msEdo = await createMembership({
+    memberId: membersByKey.edo.id,
+    plan: basic,
+    interval: "MONTHLY",
+    status: "CANCELED",
+    startedAt: membersByKey.edo.joinDate,
+    currentPeriodEndsAt: endOfDay(daysAgo(66)),
+    nextBillingDate: startOfDay(daysAgo(65)),
+    canceledAt: daysAgo(65),
+  })
+  const msLina = await createMembership({
+    memberId: membersByKey.lina.id,
+    plan: basic,
+    interval: "MONTHLY",
+    startedAt: membersByKey.lina.joinDate,
+    currentPeriodEndsAt: endOfDay(daysFromNow(4)),
+    nextBillingDate: startOfDay(daysFromNow(5)),
+  })
+  const msMade = await createMembership({
+    memberId: membersByKey.made.id,
+    plan: pro,
+    interval: "MONTHLY",
+    status: "EXPIRED",
+    startedAt: membersByKey.made.joinDate,
+    currentPeriodEndsAt: endOfDay(daysAgo(17)),
+    nextBillingDate: startOfDay(daysAgo(16)),
+    canceledAt: daysAgo(16),
+  })
+  const msYusuf = await createMembership({
+    memberId: membersByKey.yusuf.id,
+    plan: elite,
+    interval: "MONTHLY",
+    startedAt: membersByKey.yusuf.joinDate,
+    currentPeriodEndsAt: endOfDay(daysAgo(5)),
+    nextBillingDate: startOfDay(daysAgo(4)),
+  })
+  const msCitra = await createMembership({
+    memberId: membersByKey.citra.id,
+    plan: basic,
+    interval: "MONTHLY",
+    startedAt: membersByKey.citra.joinDate,
+    currentPeriodEndsAt: endOfDay(daysFromNow(12)),
+    nextBillingDate: startOfDay(daysFromNow(13)),
+  })
+  const msBagusOld = await createMembership({
+    memberId: membersByKey.bagus.id,
+    plan: basic,
+    interval: "MONTHLY",
+    status: "EXPIRED",
+    startedAt: daysAgo(620),
+    currentPeriodEndsAt: endOfDay(daysAgo(400)),
+    nextBillingDate: startOfDay(daysAgo(399)),
+    canceledAt: daysAgo(399),
+  })
+  const msBagusMiddle = await createMembership({
+    memberId: membersByKey.bagus.id,
+    plan: pro,
+    interval: "MONTHLY",
+    status: "EXPIRED",
+    startedAt: daysAgo(399),
+    currentPeriodEndsAt: endOfDay(daysAgo(110)),
+    nextBillingDate: startOfDay(daysAgo(109)),
+    canceledAt: daysAgo(109),
+  })
+  const msBagusCurrent = await createMembership({
+    memberId: membersByKey.bagus.id,
+    plan: elite,
+    interval: "ANNUAL",
+    startedAt: daysAgo(109),
+    currentPeriodEndsAt: endOfDay(daysFromNow(256)),
+    nextBillingDate: startOfDay(daysFromNow(257)),
+  })
+  const msFitri = await createMembership({
+    memberId: membersByKey.fitri.id,
+    plan: pro,
+    interval: "MONTHLY",
+    startedAt: membersByKey.fitri.joinDate,
+    currentPeriodEndsAt: endOfDay(daysFromNow(24)),
+    nextBillingDate: startOfDay(daysFromNow(25)),
+  })
+  const msHana = await createMembership({
+    memberId: membersByKey.hana.id,
+    plan: basic,
+    interval: "MONTHLY",
+    startedAt: membersByKey.hana.joinDate,
+    currentPeriodEndsAt: endOfDay(daysFromNow(10)),
+    nextBillingDate: startOfDay(daysFromNow(11)),
+  })
+  const msTono = await createMembership({
+    memberId: membersByKey.tono.id,
+    plan: basic,
+    interval: "MONTHLY",
+    status: "CANCELED",
+    startedAt: membersByKey.tono.joinDate,
+    currentPeriodEndsAt: endOfDay(daysAgo(34)),
+    nextBillingDate: startOfDay(daysAgo(33)),
+    canceledAt: daysAgo(33),
   })
 
-  // Sinta — Pro, monthly, ACTIVE (new sign-up)
-  const msSinta = await db.membership.create({
-    data: {
-      memberId: sinta.id,
-      planTierId: pro.id,
-      billingInterval: "MONTHLY",
-      status: "ACTIVE",
-      priceAmount: 650_000,
-      startedAt: sinta.joinDate,
-      currentPeriodEndsAt: endOfDay(daysFromNow(18)),
-      nextBillingDate: startOfDay(daysFromNow(19)),
-    },
-  })
+  const rosterMemberRows = allMembers.filter((member) =>
+    member.lastName.startsWith("Roster")
+  )
+  const rosterMemberships = []
 
-  // Bayu — Pro, annual, ACTIVE
-  const msBayu = await db.membership.create({
-    data: {
-      memberId: bayu.id,
-      planTierId: pro.id,
-      billingInterval: "ANNUAL",
-      status: "ACTIVE",
-      priceAmount: 6_500_000,
-      startedAt: bayu.joinDate,
-      currentPeriodEndsAt: endOfDay(daysFromNow(95)),
-      nextBillingDate: startOfDay(daysFromNow(96)),
-    },
-  })
+  for (const [index, member] of rosterMemberRows.entries()) {
+    const plan =
+      index % 3 === 0 ? plansByName.Basic : index % 3 === 1 ? pro : elite
+    const interval: BillingInterval = index % 4 === 0 ? "ANNUAL" : "MONTHLY"
+    const isSuspended = member.status === "SUSPENDED"
+    const isExpired = index % 8 === 0
+    const isExpiring = index % 7 === 0
 
-  // Dewi — Elite, annual, ACTIVE (expiring soon — triggers alert)
-  const msDewi = await db.membership.create({
-    data: {
-      memberId: dewi.id,
-      planTierId: elite.id,
-      billingInterval: "ANNUAL",
-      status: "ACTIVE",
-      priceAmount: 9_500_000,
-      startedAt: dewi.joinDate,
-      currentPeriodEndsAt: endOfDay(daysFromNow(2)),
-      nextBillingDate: startOfDay(daysFromNow(3)),
-    },
-  })
-
-  // Maya — Elite, monthly, PAST_DUE (overdue — triggers alert)
-  const msMaya = await db.membership.create({
-    data: {
-      memberId: maya.id,
-      planTierId: elite.id,
-      billingInterval: "MONTHLY",
-      status: "PAST_DUE",
-      priceAmount: 950_000,
-      startedAt: maya.joinDate,
-      currentPeriodEndsAt: endOfDay(daysAgo(4)),
-      nextBillingDate: startOfDay(daysAgo(3)),
-    },
-  })
-
-  // Nadia — Pro, monthly, PAST_DUE (suspended member, overdue)
-  const msNadia = await db.membership.create({
-    data: {
-      memberId: nadia.id,
-      planTierId: pro.id,
-      billingInterval: "MONTHLY",
-      status: "PAST_DUE",
-      priceAmount: 650_000,
-      startedAt: nadia.joinDate,
-      currentPeriodEndsAt: endOfDay(daysAgo(9)),
-      nextBillingDate: startOfDay(daysAgo(8)),
-    },
-  })
-
-  // Raka — Basic, monthly, EXPIRED
-  const msRaka = await db.membership.create({
-    data: {
-      memberId: raka.id,
-      planTierId: basic.id,
-      billingInterval: "MONTHLY",
-      status: "EXPIRED",
-      priceAmount: 350_000,
-      startedAt: raka.joinDate,
-      currentPeriodEndsAt: endOfDay(daysAgo(45)),
-      nextBillingDate: startOfDay(daysAgo(44)),
-      canceledAt: daysAgo(44),
-    },
-  })
-
-  // Edo — Basic, monthly, CANCELED
-  const msEdo = await db.membership.create({
-    data: {
-      memberId: edo.id,
-      planTierId: basic.id,
-      billingInterval: "MONTHLY",
-      status: "CANCELED",
-      priceAmount: 350_000,
-      startedAt: edo.joinDate,
-      currentPeriodEndsAt: endOfDay(daysAgo(66)),
-      nextBillingDate: startOfDay(daysAgo(65)),
-      canceledAt: daysAgo(65),
-    },
-  })
-
-  // Lina — Basic, monthly, ACTIVE (period ending soon — triggers expiring alert)
-  const msLina = await db.membership.create({
-    data: {
-      memberId: lina.id,
-      planTierId: basic.id,
-      billingInterval: "MONTHLY",
-      status: "ACTIVE",
-      priceAmount: 350_000,
-      startedAt: lina.joinDate,
-      currentPeriodEndsAt: endOfDay(daysFromNow(4)),
-      nextBillingDate: startOfDay(daysFromNow(5)),
-    },
-  })
+    rosterMemberships.push(
+      await createMembership({
+        memberId: member.id,
+        plan,
+        interval,
+        status: isSuspended ? "PAST_DUE" : isExpired ? "EXPIRED" : "ACTIVE",
+        startedAt: member.joinDate,
+        currentPeriodEndsAt: isExpired
+          ? endOfDay(daysAgo(10 + index))
+          : isExpiring
+            ? endOfDay(daysFromNow(interval === "ANNUAL" ? 24 : 5))
+            : endOfDay(daysFromNow(35 + index)),
+        nextBillingDate: isExpired
+          ? startOfDay(daysAgo(9 + index))
+          : startOfDay(daysFromNow(36 + index)),
+        canceledAt: isExpired ? daysAgo(9 + index) : undefined,
+      })
+    )
+  }
 
   const memberships = [
     msAri,
@@ -430,198 +706,348 @@ async function main() {
     msRaka,
     msEdo,
     msLina,
+    msMade,
+    msYusuf,
+    msCitra,
+    msBagusOld,
+    msBagusMiddle,
+    msBagusCurrent,
+    msFitri,
+    msHana,
+    msTono,
+    ...rosterMemberships,
   ]
-  console.log(`  ✓ Memberships: ${memberships.length}`)
+
+  console.log(`  - Memberships: ${memberships.length}`)
 
   // ---- 6. Create payments --------------------------------------------------
-  console.log("  Creating payments…")
+  console.log("  Creating payments...")
+
+  const fitriPaymentHistory = Array.from({ length: 30 }, (_, index) => {
+    const dueAt = paymentDate(29 - index)
+
+    return {
+      gymId: gym.id,
+      memberId: membersByKey.fitri.id,
+      membershipId: msFitri.id,
+      amount: pro.monthlyPriceAmount,
+      status: "PAID" as PaymentStatus,
+      dueAt,
+      paidAt: dueAt,
+      notes:
+        index === 5
+          ? "Historical payment row for pagination testing."
+          : undefined,
+    }
+  })
+
+  const paymentRows = [
+    {
+      gymId: gym.id,
+      memberId: membersByKey.ari.id,
+      membershipId: msAri.id,
+      amount: basic.monthlyPriceAmount,
+      status: "PAID" as PaymentStatus,
+      dueAt: daysAgo(13),
+      paidAt: daysAgo(13),
+    },
+    {
+      gymId: gym.id,
+      memberId: membersByKey.sinta.id,
+      membershipId: msSinta.id,
+      amount: pro.monthlyPriceAmount,
+      status: "PAID" as PaymentStatus,
+      dueAt: membersByKey.sinta.joinDate,
+      paidAt: membersByKey.sinta.joinDate,
+    },
+    {
+      gymId: gym.id,
+      memberId: membersByKey.dewi.id,
+      membershipId: msDewi.id,
+      amount: elite.annualPriceAmount,
+      status: "PENDING" as PaymentStatus,
+      dueAt: daysFromNow(22),
+      notes: "Annual renewal invoice.",
+    },
+    {
+      gymId: gym.id,
+      memberId: membersByKey.lina.id,
+      membershipId: msLina.id,
+      amount: basic.monthlyPriceAmount,
+      status: "PENDING" as PaymentStatus,
+      dueAt: daysFromNow(5),
+      notes: "Monthly renewal invoice.",
+    },
+    {
+      gymId: gym.id,
+      memberId: membersByKey.maya.id,
+      membershipId: msMaya.id,
+      amount: elite.monthlyPriceAmount,
+      status: "OVERDUE" as PaymentStatus,
+      dueAt: daysAgo(3),
+      notes: "Card failed twice.",
+    },
+    {
+      gymId: gym.id,
+      memberId: membersByKey.nadia.id,
+      membershipId: msNadia.id,
+      amount: pro.monthlyPriceAmount,
+      status: "OVERDUE" as PaymentStatus,
+      dueAt: daysAgo(8),
+      notes: "Account suspended until settled.",
+    },
+    {
+      gymId: gym.id,
+      memberId: membersByKey.yusuf.id,
+      membershipId: msYusuf.id,
+      amount: elite.monthlyPriceAmount,
+      status: "PENDING" as PaymentStatus,
+      dueAt: daysAgo(4),
+      notes: "Pending payment past due by date.",
+    },
+    {
+      gymId: gym.id,
+      memberId: membersByKey.edo.id,
+      membershipId: msEdo.id,
+      amount: basic.monthlyPriceAmount,
+      status: "VOID" as PaymentStatus,
+      dueAt: daysAgo(65),
+      notes: "Voided after cancellation correction.",
+    },
+    {
+      gymId: gym.id,
+      memberId: membersByKey.made.id,
+      membershipId: msMade.id,
+      amount: pro.monthlyPriceAmount,
+      status: "PAID" as PaymentStatus,
+      dueAt: daysAgo(48),
+      paidAt: daysAgo(47),
+    },
+    {
+      gymId: gym.id,
+      memberId: membersByKey.bagus.id,
+      membershipId: msBagusCurrent.id,
+      amount: elite.annualPriceAmount,
+      status: "PAID" as PaymentStatus,
+      dueAt: msBagusCurrent.startedAt,
+      paidAt: msBagusCurrent.startedAt,
+    },
+    {
+      gymId: gym.id,
+      memberId: membersByKey.hana.id,
+      membershipId: msHana.id,
+      amount: basic.monthlyPriceAmount,
+      status: "PAID" as PaymentStatus,
+      dueAt: daysAgo(20),
+      paidAt: daysAgo(20),
+    },
+    {
+      gymId: gym.id,
+      memberId: membersByKey.tono.id,
+      membershipId: msTono.id,
+      amount: basic.monthlyPriceAmount,
+      status: "VOID" as PaymentStatus,
+      dueAt: daysAgo(33),
+      notes: "Canceled before collection.",
+    },
+    ...fitriPaymentHistory,
+    ...rosterMemberships.slice(0, 8).map((membership, index) => ({
+      gymId: gym.id,
+      memberId: membership.memberId,
+      membershipId: membership.id,
+      amount: membership.priceAmount,
+      status:
+        index % 5 === 0
+          ? ("OVERDUE" as PaymentStatus)
+          : ("PAID" as PaymentStatus),
+      dueAt: index % 5 === 0 ? daysAgo(2 + index) : daysAgo(12 + index),
+      paidAt: index % 5 === 0 ? undefined : daysAgo(11 + index),
+      notes:
+        index % 5 === 0
+          ? "Roster payment creates overdue filter coverage."
+          : undefined,
+    })),
+  ]
 
   await db.membershipPayment.createMany({
-    data: [
-      // Ari — PAID (current period)
-      {
-        gymId: gym.id,
-        memberId: ari.id,
-        membershipId: msAri.id,
-        amount: 350_000,
-        status: "PAID",
-        dueAt: daysAgo(13),
-        paidAt: daysAgo(13),
-      },
-      // Sinta — PAID (first payment)
-      {
-        gymId: gym.id,
-        memberId: sinta.id,
-        membershipId: msSinta.id,
-        amount: 650_000,
-        status: "PAID",
-        dueAt: sinta.joinDate,
-        paidAt: sinta.joinDate,
-      },
-      // Dewi — PENDING (annual renewal invoice, due soon)
-      {
-        gymId: gym.id,
-        memberId: dewi.id,
-        membershipId: msDewi.id,
-        amount: 9_500_000,
-        status: "PENDING",
-        dueAt: daysFromNow(3),
-        notes: "Annual renewal invoice.",
-      },
-      // Maya — OVERDUE (card failed)
-      {
-        gymId: gym.id,
-        memberId: maya.id,
-        membershipId: msMaya.id,
-        amount: 950_000,
-        status: "OVERDUE",
-        dueAt: daysAgo(3),
-        notes: "Card failed twice.",
-      },
-      // Nadia — OVERDUE (suspended)
-      {
-        gymId: gym.id,
-        memberId: nadia.id,
-        membershipId: msNadia.id,
-        amount: 650_000,
-        status: "OVERDUE",
-        dueAt: daysAgo(8),
-        notes: "Account suspended until settled.",
-      },
-      // Edo — VOID (canceled membership)
-      {
-        gymId: gym.id,
-        memberId: edo.id,
-        membershipId: msEdo.id,
-        amount: 350_000,
-        status: "VOID",
-        dueAt: daysAgo(65),
-      },
-    ],
+    data: paymentRows,
   })
 
-  console.log("  ✓ Payments: 6")
+  console.log(`  - Payments: ${paymentRows.length}`)
 
   // ---- 7. Create attendance records ----------------------------------------
-  console.log("  Creating attendance records…")
+  console.log("  Creating attendance records...")
+
+  const hanaAttendanceHistory = Array.from({ length: 26 }, (_, index) => ({
+    gymId: gym.id,
+    memberId: membersByKey.hana.id,
+    attendedAt: index === 0 ? hoursAgo(6) : daysAgo(index * 3),
+    source: "MANUAL" as const,
+    notes: index === 0 ? "Morning strength block." : undefined,
+  }))
+
+  const attendanceRows = [
+    {
+      gymId: gym.id,
+      memberId: membersByKey.ari.id,
+      attendedAt: daysAgo(3),
+      source: "MANUAL" as const,
+    },
+    {
+      gymId: gym.id,
+      memberId: membersByKey.ari.id,
+      attendedAt: hoursAgo(20),
+      source: "MANUAL" as const,
+    },
+    {
+      gymId: gym.id,
+      memberId: membersByKey.sinta.id,
+      attendedAt: daysAgo(9),
+      source: "MANUAL" as const,
+    },
+    {
+      gymId: gym.id,
+      memberId: membersByKey.sinta.id,
+      attendedAt: hoursAgo(44),
+      source: "MANUAL" as const,
+    },
+    {
+      gymId: gym.id,
+      memberId: membersByKey.bayu.id,
+      attendedAt: daysAgo(21),
+      source: "MANUAL" as const,
+    },
+    {
+      gymId: gym.id,
+      memberId: membersByKey.dewi.id,
+      attendedAt: daysAgo(6),
+      source: "MANUAL" as const,
+    },
+    {
+      gymId: gym.id,
+      memberId: membersByKey.maya.id,
+      attendedAt: daysAgo(8),
+      source: "MANUAL" as const,
+    },
+    {
+      gymId: gym.id,
+      memberId: membersByKey.lina.id,
+      attendedAt: hoursAgo(18),
+      source: "MANUAL" as const,
+    },
+    {
+      gymId: gym.id,
+      memberId: membersByKey.citra.id,
+      attendedAt: daysAgo(2),
+      source: "MANUAL" as const,
+      notes: "Member has no email or phone on file.",
+    },
+    ...hanaAttendanceHistory,
+    ...rosterMemberRows.slice(0, 14).map((member, index) => ({
+      gymId: gym.id,
+      memberId: member.id,
+      attendedAt: daysAgo(index + 1),
+      source: "MANUAL" as const,
+    })),
+  ]
 
   await db.attendanceRecord.createMany({
-    data: [
-      // Ari — 2 visits
-      {
-        gymId: gym.id,
-        memberId: ari.id,
-        attendedAt: daysAgo(3),
-        source: "MANUAL",
-      },
-      {
-        gymId: gym.id,
-        memberId: ari.id,
-        attendedAt: hoursAgo(20),
-        source: "MANUAL",
-      },
-      // Sinta — 2 visits
-      {
-        gymId: gym.id,
-        memberId: sinta.id,
-        attendedAt: daysAgo(9),
-        source: "MANUAL",
-      },
-      {
-        gymId: gym.id,
-        memberId: sinta.id,
-        attendedAt: hoursAgo(44),
-        source: "MANUAL",
-      },
-      // Bayu — 1 visit (older, contributes to "inactive-ish" feel)
-      {
-        gymId: gym.id,
-        memberId: bayu.id,
-        attendedAt: daysAgo(21),
-        source: "MANUAL",
-      },
-      // Dewi — 1 visit
-      {
-        gymId: gym.id,
-        memberId: dewi.id,
-        attendedAt: daysAgo(6),
-        source: "MANUAL",
-      },
-      // Maya — 1 visit
-      {
-        gymId: gym.id,
-        memberId: maya.id,
-        attendedAt: daysAgo(8),
-        source: "MANUAL",
-      },
-      // Lina — 1 visit
-      {
-        gymId: gym.id,
-        memberId: lina.id,
-        attendedAt: hoursAgo(18),
-        source: "MANUAL",
-      },
-    ],
+    data: attendanceRows,
   })
 
-  console.log("  ✓ Attendance records: 8")
+  console.log(`  - Attendance records: ${attendanceRows.length}`)
 
   // ---- 8. Create drop-in visits --------------------------------------------
-  console.log("  Creating drop-in visits…")
+  console.log("  Creating drop-in visits...")
+
+  const dropInRows = [
+    {
+      gymId: gym.id,
+      visitorName: "Fajar Nugroho",
+      visitorContact: "+628122220001",
+      visitCount: 2,
+      amount: 2 * DROP_IN_FEE_AMOUNT,
+      visitedAt: daysAgo(14),
+    },
+    {
+      gymId: gym.id,
+      visitorName: "Fajar Nugroho",
+      visitorContact: "+628122220001",
+      visitCount: 3,
+      amount: 3 * DROP_IN_FEE_AMOUNT,
+      visitedAt: daysAgo(4),
+      notes: "Asked about Pro plan.",
+    },
+    {
+      gymId: gym.id,
+      visitorName: "Rita Amanda",
+      visitorContact: "rita.amanda@example.com",
+      visitCount: 5,
+      amount: 5 * DROP_IN_FEE_AMOUNT,
+      visitedAt: hoursAgo(25),
+      notes: "Interested in morning training.",
+    },
+    {
+      gymId: gym.id,
+      visitorName: "Samuel Tan",
+      visitorContact: "samuel.tan@example.com",
+      visitCount: 4,
+      amount: 4 * DROP_IN_FEE_AMOUNT,
+      visitedAt: daysAgo(2),
+      notes: "Below conversion threshold.",
+    },
+    {
+      gymId: gym.id,
+      visitorName: "Nora Wati",
+      visitorContact: "+628122220004",
+      visitCount: 6,
+      amount: 6 * DROP_IN_FEE_AMOUNT,
+      visitedAt: hoursAgo(2),
+      notes: "Today drop-in and conversion lead.",
+    },
+    {
+      gymId: gym.id,
+      visitCount: 4,
+      amount: 4 * DROP_IN_FEE_AMOUNT,
+      visitedAt: daysAgo(5),
+      notes: "Anonymous walk-ins from local event.",
+    },
+    {
+      gymId: gym.id,
+      visitCount: 2,
+      amount: 2 * DROP_IN_FEE_AMOUNT,
+      visitedAt: daysAgo(35),
+      notes: "Prior month anonymous visits.",
+    },
+    ...Array.from({ length: 24 }, (_, index) => ({
+      gymId: gym.id,
+      visitorName:
+        index % 3 === 0
+          ? `Trial Visitor ${String(index + 1).padStart(2, "0")}`
+          : null,
+      visitorContact:
+        index % 3 === 0
+          ? `trial-${String(index + 1).padStart(2, "0")}@example.com`
+          : null,
+      visitCount: 1 + (index % 2),
+      amount: (1 + (index % 2)) * DROP_IN_FEE_AMOUNT,
+      visitedAt: daysAgo((index % 20) + 1),
+      notes:
+        index % 3 === 0
+          ? "Identified visitor below conversion threshold."
+          : "Anonymous drop-in group.",
+    })),
+  ]
 
   await db.dropInVisit.createMany({
-    data: [
-      // Fajar — identified visitor, 2 visits early in the month
-      {
-        gymId: gym.id,
-        visitorName: "Fajar Nugroho",
-        visitorContact: "+628122220001",
-        visitCount: 2,
-        amount: 150_000,
-        visitedAt: daysAgo(14),
-      },
-      // Fajar — 3 more visits mid-month (total 5 = conversion threshold)
-      {
-        gymId: gym.id,
-        visitorName: "Fajar Nugroho",
-        visitorContact: "+628122220001",
-        visitCount: 3,
-        amount: 225_000,
-        visitedAt: daysAgo(4),
-        notes: "Asked about Pro plan.",
-      },
-      // Rita — identified visitor, 5 visits (at conversion threshold)
-      {
-        gymId: gym.id,
-        visitorName: "Rita Amanda",
-        visitorContact: "rita.amanda@example.com",
-        visitCount: 5,
-        amount: 375_000,
-        visitedAt: hoursAgo(25),
-        notes: "Interested in morning training.",
-      },
-      // Anonymous walk-ins
-      {
-        gymId: gym.id,
-        visitCount: 4,
-        amount: 300_000,
-        visitedAt: daysAgo(5),
-        notes: "Anonymous walk-ins from local event.",
-      },
-      // Prior month anonymous — should not count in current month totals
-      {
-        gymId: gym.id,
-        visitCount: 2,
-        amount: 150_000,
-        visitedAt: daysAgo(35),
-      },
-    ],
+    data: dropInRows,
   })
 
-  console.log("  ✓ Drop-in visits: 5")
+  console.log(`  - Drop-in visits: ${dropInRows.length}`)
+  console.log(`  - Extra roster members inserted: ${rosterMembers.count}`)
 
   // ---- Done ----------------------------------------------------------------
-  console.log("\n✅ Seed complete.")
+  console.log("\nSeed complete.")
   console.log(`\n   Sign in with:`)
   console.log(`   Email:    ${DEMO_OWNER_EMAIL}`)
   console.log(`   Password: ${DEMO_OWNER_PASSWORD}\n`)
@@ -629,7 +1055,7 @@ async function main() {
 
 main()
   .catch((error) => {
-    console.error("❌ Seed failed:", error)
+    console.error("Seed failed:", error)
     process.exit(1)
   })
   .finally(async () => {

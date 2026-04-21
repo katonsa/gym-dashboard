@@ -88,15 +88,38 @@ The seed creates:
 
 - One owner-owned gym: `JKT Strength House`.
 - Basic, Pro, and Elite plan tiers.
+- 35 members, which is enough to exercise roster pagination.
 - Active, inactive, and suspended members.
-- Monthly and annual memberships.
-- Active, past-due, expired, and canceled membership states.
-- Paid, pending, overdue, and void payment records.
-- Recent and stale attendance records.
-- Identified and anonymous drop-in visits.
+- Monthly and annual memberships across all plans.
+- Active, past-due, persisted-expired, de facto expired, and canceled membership
+  states.
+- Paid, pending, overdue, implicit-overdue, and void payment records.
+- Recent, stale, null, and noted attendance states.
+- Identified and anonymous drop-in visits, including more than one drop-in log
+  page.
 - Drop-in conversion scenarios for repeat visitors.
 
-The data is scenario-compatible with the mock dashboard data, but names, ids, and dates do not need to match exactly.
+Useful seeded records:
+
+| Record            | Scenario                                                                 |
+| ----------------- | ------------------------------------------------------------------------ |
+| `Putu Aditya`     | Active member with no plan; use for assigning a plan from member detail. |
+| `Made Suryani`    | Persisted expired membership; use for the renewal flow.                  |
+| `Yusuf Ramadhan`  | Active membership with a past period end and pending overdue payment.    |
+| `Maya Putri`      | Past-due membership with an explicit overdue payment.                    |
+| `Dewi Lestari`    | Annual membership expiring within the renewal window.                    |
+| `Lina Kusuma`     | Monthly membership expiring within the renewal window.                   |
+| `Fitri Handayani` | More than 25 payments; use for payment history pagination.               |
+| `Hana Permata`    | More than 20 check-ins; use for attendance pagination.                   |
+| `Citra Ningrum`   | Missing email, phone, and notes; use for contact-edit display states.    |
+| `Tono Irawan`     | Inactive member with no attendance recorded.                             |
+| `Bagus Wibowo`    | Multiple membership history rows for plan-change history display.        |
+| `Nora Wati`       | Today's drop-in and a conversion lead.                                   |
+| `Fajar Nugroho`   | Repeat drop-in visitor at the conversion threshold.                      |
+| `Samuel Tan`      | Identified drop-in visitor below the conversion threshold.               |
+
+The seed uses relative dates so alerts remain useful over time. Names, ids, and
+exact dates do not need to match tests or documentation examples.
 
 ## Reset Local Data Safely
 
