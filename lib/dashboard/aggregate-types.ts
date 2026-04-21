@@ -25,6 +25,7 @@ export type DashboardDb = {
     aggregate: (args: unknown) => Promise<DropInTotalAggregateResult>
   }
   planTier: {
+    count: (args: unknown) => Promise<number>
     findMany: (args: unknown) => Promise<PlanTier[]>
   }
   $queryRaw: <T = unknown>(
@@ -123,6 +124,7 @@ export type InactiveMemberAlertRow = {
 }
 
 export type OverviewSetupState = {
+  hasPlanTiers: boolean
   hasMembers: boolean
   hasMemberships: boolean
   hasDropIns: boolean

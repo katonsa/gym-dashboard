@@ -1,20 +1,24 @@
 import { EmptyState } from "@/components/dashboard/empty-state"
+import { SetupChecklist } from "@/components/dashboard/setup-checklist"
 import {
   loadOverdueAgingSummary,
   loadOverviewAlerts,
   loadOverviewSummary,
+  loadSetupChecklistData,
 } from "@/lib/dashboard/loaders"
-import { formatDashboardDate } from "@/lib/dashboard/formatters"
+import { formatDashboardDate, formatCurrency, formatDateInput } from "@/lib/dashboard/formatters"
 import { OverviewPinnedAlerts } from "./overview-pinned-alerts"
 import { OverviewStatsSection } from "./overview-stats-section"
 
 export default async function Page() {
   const asOf = new Date()
-  const [overviewData, alerts, agingSummary] = await Promise.all([
-    loadOverviewSummary({ asOf }),
-    loadOverviewAlerts({ asOf }),
-    loadOverdueAgingSummary({ asOf }),
-  ])
+  const [overviewData, alerts, agingSummary, checklistData] =
+    await Promise.all([
+      loadOverviewSummary({ asOf }),
+      loadOverviewAlerts({ asOf }),
+      loadOverdueAgingSummary({ asOf }),
+      loadSetupChecklistData(),
+    ])
 
   if (!overviewData || !alerts) {
     return (
@@ -116,6 +120,12 @@ export default async function Page() {
     0
   )
   const setupGaps = [
+    !setupState.hasPlanTiers
+      ? {
+          title: "No plan tiers yet.",
+          detail: "Create a plan before assigning memberships.",
+        }
+      : null,
     !setupState.hasMembers
       ? {
           title: "No members yet.",
@@ -166,6 +176,22 @@ export default async function Page() {
         </div>
       </section>
 
+      {setupGaps.length > 0 && checklistData ? (
+        <SetupChecklist
+          setupState={setupState}
+          currencyCode={summary.currencyCode}
+          defaultDropInFeeAmount={overviewData.gym.defaultDropInFeeAmount}
+          formattedDefaultAmount={formatCurrency(
+            overviewData.gym.defaultDropInFeeAmount,
+            summary.currencyCode
+          )}
+          planTiers={checklistData.planTiers}
+          initialJoinDate={formatDateInput(asOf, overviewData.gym.timezone)}
+          visitorLookupOptions={checklistData.visitorLookupOptions}
+          nextSortOrder={checklistData.nextSortOrder}
+        />
+      ) : null}
+
       <OverviewPinnedAlerts
         alertSections={alertSections}
         alerts={alerts}
@@ -180,29 +206,6 @@ export default async function Page() {
           summary.totalMembers > 0 || summary.dropInRevenueThisMonthAmount > 0
         }
       />
-
-      {setupGaps.length > 0 ? (
-        <section aria-labelledby="setup-gaps" className="grid gap-3">
-          <div>
-            <h2 id="setup-gaps" className="text-base font-semibold">
-              Setup gaps
-            </h2>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Complete these records to fill the dashboard.
-            </p>
-          </div>
-          <div className="grid gap-3 md:grid-cols-3">
-            {setupGaps.map((gap) => (
-              <EmptyState
-                key={gap.title}
-                title={gap.title}
-                detail={gap.detail}
-                dashed
-              />
-            ))}
-          </div>
-        </section>
-      ) : null}
 
       <section className="grid gap-3 lg:grid-cols-[1.1fr_0.9fr]">
         <div className="rounded-lg border border-border bg-card p-4 text-card-foreground">

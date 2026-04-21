@@ -512,6 +512,53 @@ export const loadMemberAttendancePage = cache(
   }
 )
 
+export type SetupChecklistData = {
+  gym: GymProfile
+  planTiers: PlanTier[]
+  nextSortOrder: number
+  visitorLookupOptions: DropInVisitorLookupOption[]
+}
+
+export const loadSetupChecklistData = cache(
+  async (): Promise<SetupChecklistData | null> => {
+    const gym = await requireOwnerGym("/")
+
+    if (!gym) {
+      return null
+    }
+
+    const [planTiers, dropIns] = await Promise.all([
+      db.planTier.findMany(getPlanTiersQuery(gym.id)),
+      db.dropInVisit.findMany({
+        where: {
+          gymId: gym.id,
+          OR: [
+            { visitorName: { not: null } },
+            { visitorContact: { not: null } },
+          ],
+        },
+        orderBy: [{ visitedAt: "desc" }, { id: "desc" }],
+        take: 250,
+        select: {
+          visitorName: true,
+          visitorContact: true,
+          visitedAt: true,
+        },
+      }),
+    ])
+
+    return {
+      gym,
+      planTiers: planTiers.map(mapPlanTier),
+      nextSortOrder:
+        planTiers.length === 0
+          ? 1
+          : Math.max(...planTiers.map((p) => p.sortOrder)) + 1,
+      visitorLookupOptions: buildDropInVisitorLookupOptions(dropIns),
+    }
+  }
+)
+
 async function requireOwnerGym(
   nextPath: DashboardRouteHref
 ): Promise<GymProfile | null> {

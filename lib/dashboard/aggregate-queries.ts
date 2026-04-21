@@ -165,7 +165,8 @@ export async function getOverviewSetupState(
   gymId: string,
   client: DashboardDb
 ): Promise<OverviewSetupState> {
-  const [members, memberships, dropIns] = await Promise.all([
+  const [planTiers, members, memberships, dropIns] = await Promise.all([
+    client.planTier.count({ where: { gymId } }),
     client.member.count({ where: { gymId } }),
     client.membership.count({ where: { member: { gymId } } }),
     client.dropInVisit.aggregate({
@@ -175,6 +176,7 @@ export async function getOverviewSetupState(
   ])
 
   return {
+    hasPlanTiers: planTiers > 0,
     hasMembers: members > 0,
     hasMemberships: memberships > 0,
     hasDropIns: (dropIns._sum.visitCount ?? 0) > 0,
