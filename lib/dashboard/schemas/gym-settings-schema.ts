@@ -10,11 +10,15 @@ export type UpdateGymSettingsActionResult = {
   error?: string
 }
 
-const MAX_DROP_IN_AMOUNT = 10_000_000
-const supportedTimezones: ReadonlySet<string> = new Set(gymTimezoneValues)
-const supportedCurrencies: ReadonlySet<string> = new Set(gymCurrencyValues)
+export const MAX_DROP_IN_AMOUNT = 10_000_000
+export const supportedTimezones: ReadonlySet<string> = new Set(
+  gymTimezoneValues
+)
+export const supportedCurrencies: ReadonlySet<string> = new Set(
+  gymCurrencyValues
+)
 
-const wholeNumberString = z
+export const wholeNumberString = z
   .string()
   .trim()
   .min(1, "Enter a default drop-in fee.")
@@ -47,9 +51,7 @@ export const updateGymSettingsSchema = z.object({
   defaultDropInFeeAmount: wholeNumberString,
 })
 
-export type UpdateGymSettingsValues = z.input<
-  typeof updateGymSettingsSchema
->
+export type UpdateGymSettingsValues = z.input<typeof updateGymSettingsSchema>
 
 export function normalizeGymSettingsValues(
   values: z.output<typeof updateGymSettingsSchema>

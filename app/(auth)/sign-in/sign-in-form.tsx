@@ -110,7 +110,7 @@ export function SignInForm({ nextPath }: { nextPath: string }) {
                 disabled={isSubmitting}
               />
               <FieldDescription>
-                Use the owner account provisioned for this gym.
+                Enter the password for your owner account.
               </FieldDescription>
               {fieldState.invalid ? (
                 <FieldError errors={[fieldState.error]} />
