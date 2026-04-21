@@ -37,6 +37,7 @@ test("maps database gym and arbitrary plan names to dashboard types", () => {
     id: "plan-1",
     gymId: gym.id,
     name: "Founders",
+    normalizedName: "founders",
     description: null,
     monthlyPriceAmount: 10000,
     annualPriceAmount: 100000,

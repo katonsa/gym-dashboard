@@ -61,6 +61,10 @@ export type PlanBreakdownRawRow = {
   monthlyEquivalentRevenue: number | bigint
 }
 
+export type PlanUsageRawRow = {
+  planTierId: string
+}
+
 export type MembershipRevenueTrendRawRow = {
   month: Date | string
   membershipRevenue: number | bigint

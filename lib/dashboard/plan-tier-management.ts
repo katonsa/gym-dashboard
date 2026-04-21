@@ -1,4 +1,5 @@
 import type { db } from "../db.ts"
+import { Prisma } from "../generated/prisma/client.ts"
 import { mapPlanTier } from "./mappers.ts"
 import type { createPlanTierSchema } from "./schemas/plan-tier-schema.ts"
 import type { PlanTier } from "./types.ts"
@@ -101,15 +102,23 @@ export async function createPlanTierForGym({
       return { status: "duplicate-name" }
     }
 
-    const planTier = await tx.planTier.create({
-      data: {
-        gymId,
-        ...toPlanTierData(values),
-      },
-      select: { id: true },
-    })
+    try {
+      const planTier = await tx.planTier.create({
+        data: {
+          gymId,
+          ...toPlanTierData(values),
+        },
+        select: { id: true },
+      })
 
-    return { status: "created", planTierId: planTier.id }
+      return { status: "created", planTierId: planTier.id }
+    } catch (error) {
+      if (isPlanTierNameUniqueError(error)) {
+        return { status: "duplicate-name" }
+      }
+
+      throw error
+    }
   })
 }
 
@@ -155,11 +164,19 @@ export async function updatePlanTierForGym({
       return { status: "duplicate-name" }
     }
 
-    await tx.planTier.update({
-      where: { id: planTier.id },
-      data: toPlanTierData(values),
-      select: { id: true },
-    })
+    try {
+      await tx.planTier.update({
+        where: { id: planTier.id },
+        data: toPlanTierData(values),
+        select: { id: true },
+      })
+    } catch (error) {
+      if (isPlanTierNameUniqueError(error)) {
+        return { status: "duplicate-name" }
+      }
+
+      throw error
+    }
 
     return { status: "updated", planTierId: planTier.id }
   })
@@ -196,10 +213,31 @@ export async function deactivatePlanTierForGym({
 function toPlanTierData(values: PlanTierValues) {
   return {
     name: values.name,
+    normalizedName: normalizePlanTierName(values.name),
     description: values.description ?? null,
     monthlyPriceAmount: Number(values.monthlyPriceAmount),
     annualPriceAmount: Number(values.annualPriceAmount),
     sortOrder: Number(values.sortOrder),
     isActive: values.isActive,
   }
+}
+
+export function normalizePlanTierName(name: string) {
+  return name.trim().toLowerCase()
+}
+
+function isPlanTierNameUniqueError(error: unknown) {
+  const target =
+    error instanceof Prisma.PrismaClientKnownRequestError
+      ? error.meta?.target
+      : null
+
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === "P2002" &&
+    ((Array.isArray(target) &&
+      target.includes("gymId") &&
+      target.includes("normalizedName")) ||
+      target === "PlanTier_gymId_normalizedName_key")
+  )
 }

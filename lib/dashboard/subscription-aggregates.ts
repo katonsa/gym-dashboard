@@ -9,6 +9,7 @@ import type {
   DropInRevenueTrendRawRow,
   MembershipRevenueTrendRawRow,
   PlanBreakdownRawRow,
+  PlanUsageRawRow,
   PlanTier,
   SubscriptionPlanBreakdownRow,
   SubscriptionRevenueTrendRow,
@@ -154,31 +155,40 @@ export async function getPlanBreakdownAggregates(
   revenueAsOf: Date,
   client: DashboardDb
 ): Promise<SubscriptionPlanBreakdownRow[]> {
-  const rows = await client.$queryRaw<PlanBreakdownRawRow[]>`
-    SELECT
-      "planTierId" as "planTierId",
-      COUNT(*)::int as "memberCount",
-      COUNT(*) FILTER (WHERE "billingInterval" = 'MONTHLY')::int as "monthlyMemberships",
-      COUNT(*) FILTER (WHERE "billingInterval" = 'ANNUAL')::int as "annualMemberships",
-      COALESCE(SUM(
-        CASE WHEN "billingInterval" = 'ANNUAL'
-          THEN "priceAmount" / 12.0
-          ELSE "priceAmount"
-        END
-      ), 0)::float8 as "monthlyEquivalentRevenue"
-    FROM "Membership"
-    WHERE "memberId" IN (SELECT id FROM "Member" WHERE "gymId" = ${gymId})
-      AND "status" = 'ACTIVE'
-      AND "currentPeriodEndsAt" >= ${revenueAsOf}
-    GROUP BY "planTierId"
-  `
+  const [rows, planUsageRows] = await Promise.all([
+    client.$queryRaw<PlanBreakdownRawRow[]>`
+      SELECT
+        "planTierId" as "planTierId",
+        COUNT(*)::int as "memberCount",
+        COUNT(*) FILTER (WHERE "billingInterval" = 'MONTHLY')::int as "monthlyMemberships",
+        COUNT(*) FILTER (WHERE "billingInterval" = 'ANNUAL')::int as "annualMemberships",
+        COALESCE(SUM(
+          CASE WHEN "billingInterval" = 'ANNUAL'
+            THEN "priceAmount" / 12.0
+            ELSE "priceAmount"
+          END
+        ), 0)::float8 as "monthlyEquivalentRevenue"
+      FROM "Membership"
+      WHERE "memberId" IN (SELECT id FROM "Member" WHERE "gymId" = ${gymId})
+        AND "status" = 'ACTIVE'
+        AND "currentPeriodEndsAt" >= ${revenueAsOf}
+      GROUP BY "planTierId"
+    `,
+    client.$queryRaw<PlanUsageRawRow[]>`
+      SELECT DISTINCT "planTierId" as "planTierId"
+      FROM "Membership"
+      WHERE "memberId" IN (SELECT id FROM "Member" WHERE "gymId" = ${gymId})
+    `,
+  ])
   const rowByPlanId = new Map(rows.map((row) => [row.planTierId, row]))
+  const usedPlanIds = new Set(planUsageRows.map((row) => row.planTierId))
   const totalRevenueMemberships = rows.reduce(
     (total, row) => total + toNumber(row.memberCount),
     0
   )
 
   return planTiers
+    .filter((plan) => plan.isActive || usedPlanIds.has(plan.id))
     .toSorted((left, right) => left.sortOrder - right.sortOrder)
     .map((plan) => {
       const row = rowByPlanId.get(plan.id)

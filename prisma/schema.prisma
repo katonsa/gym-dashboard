@@ -135,6 +135,7 @@ model PlanTier {
   gymId              String
   gym                Gym          @relation(fields: [gymId], references: [id], onDelete: Cascade)
   name               String
+  normalizedName     String
   description        String?
   monthlyPriceAmount Int
   annualPriceAmount  Int
@@ -145,6 +146,7 @@ model PlanTier {
   updatedAt          DateTime     @updatedAt
 
   @@unique([gymId, name])
+  @@unique([gymId, normalizedName])
   @@index([gymId, isActive])
 }
 

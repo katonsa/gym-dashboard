@@ -392,10 +392,12 @@ async function createRenewalFixture(options: FixtureOptions) {
       },
       select: { id: true },
     })
+    const planName = `Renewal Plan ${suffix}`
     const plan = await tx.planTier.create({
       data: {
         gymId: gym.id,
-        name: `Renewal Plan ${suffix}`,
+        name: planName,
+        normalizedName: planName.trim().toLowerCase(),
         monthlyPriceAmount: 650000,
         annualPriceAmount: 6500000,
         sortOrder: 1,

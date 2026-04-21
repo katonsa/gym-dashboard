@@ -505,6 +505,14 @@ test("maps plan breakdown aggregate rows onto sorted plan tiers", async () => {
     $queryRaw: async (strings: TemplateStringsArray, ...values: unknown[]) => {
       rawCalls.push({ strings: Array.from(strings), values })
 
+      if (strings.join(" ").includes("SELECT DISTINCT")) {
+        return [
+          { planTierId: "plan-pro" },
+          { planTierId: "plan-inactive-current" },
+          { planTierId: "plan-legacy" },
+        ]
+      }
+
       return [
         {
           planTierId: "plan-pro",
@@ -513,12 +521,37 @@ test("maps plan breakdown aggregate rows onto sorted plan tiers", async () => {
           annualMemberships: 1,
           monthlyEquivalentRevenue: 800000,
         },
+        {
+          planTierId: "plan-inactive-current",
+          memberCount: 1,
+          monthlyMemberships: 1,
+          annualMemberships: 0,
+          monthlyEquivalentRevenue: 200000,
+        },
       ]
     },
   })
   const plans: PlanTier[] = [
     planTier({ id: "plan-pro", name: "Pro", sortOrder: 2 }),
     planTier({ id: "plan-basic", name: "Basic", sortOrder: 1 }),
+    planTier({
+      id: "plan-inactive-current",
+      name: "Inactive Current",
+      isActive: false,
+      sortOrder: 3,
+    }),
+    planTier({
+      id: "plan-legacy",
+      name: "Legacy",
+      isActive: false,
+      sortOrder: 4,
+    }),
+    planTier({
+      id: "plan-unused",
+      name: "Unused",
+      isActive: false,
+      sortOrder: 5,
+    }),
   ]
 
   assert.deepEqual(
@@ -539,10 +572,30 @@ test("maps plan breakdown aggregate rows onto sorted plan tiers", async () => {
         name: "Pro",
         description: undefined,
         memberCount: 3,
-        memberShare: 1,
+        memberShare: 0.75,
         monthlyMemberships: 2,
         annualMemberships: 1,
         monthlyEquivalentRevenue: 800000,
+      },
+      {
+        id: "plan-inactive-current",
+        name: "Inactive Current",
+        description: undefined,
+        memberCount: 1,
+        memberShare: 0.25,
+        monthlyMemberships: 1,
+        annualMemberships: 0,
+        monthlyEquivalentRevenue: 200000,
+      },
+      {
+        id: "plan-legacy",
+        name: "Legacy",
+        description: undefined,
+        memberCount: 0,
+        memberShare: 0,
+        monthlyMemberships: 0,
+        annualMemberships: 0,
+        monthlyEquivalentRevenue: 0,
       },
     ]
   )
@@ -550,6 +603,8 @@ test("maps plan breakdown aggregate rows onto sorted plan tiers", async () => {
   assert.equal(rawCalls[0]?.values[1], revenueAsOf)
   assert.match(rawCalls[0]?.strings.join(" "), /"status" = 'ACTIVE'/)
   assert.match(rawCalls[0]?.strings.join(" "), /"currentPeriodEndsAt" >=/)
+  assert.equal(rawCalls[1]?.values[0], "gym-1")
+  assert.match(rawCalls[1]?.strings.join(" "), /SELECT DISTINCT/)
 })
 
 test("loads subscription setup from current active revenue memberships only", async () => {

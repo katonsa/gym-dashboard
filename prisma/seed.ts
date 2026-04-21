@@ -13,6 +13,10 @@ const DEMO_OWNER_NAME = "Demo Owner"
 
 const DROP_IN_FEE_AMOUNT = 75_000
 
+function normalizePlanTierName(name: string) {
+  return name.trim().toLowerCase()
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -190,6 +194,7 @@ async function main() {
       data: {
         gymId: gym.id,
         name: "Basic",
+        normalizedName: normalizePlanTierName("Basic"),
         description: "Open gym access for independent training.",
         monthlyPriceAmount: 350_000,
         annualPriceAmount: 3_500_000,
@@ -201,6 +206,7 @@ async function main() {
       data: {
         gymId: gym.id,
         name: "Pro",
+        normalizedName: normalizePlanTierName("Pro"),
         description: "Open gym plus weekly group programming.",
         monthlyPriceAmount: 650_000,
         annualPriceAmount: 6_500_000,
@@ -212,6 +218,7 @@ async function main() {
       data: {
         gymId: gym.id,
         name: "Elite",
+        normalizedName: normalizePlanTierName("Elite"),
         description: "Unlimited access with monthly performance review.",
         monthlyPriceAmount: 950_000,
         annualPriceAmount: 9_500_000,

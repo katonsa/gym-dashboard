@@ -194,10 +194,12 @@ async function createPaymentLifecycleFixture(options: FixtureOptions) {
       },
       select: { id: true },
     })
+    const planName = `Lifecycle Plan ${suffix}`
     const plan = await tx.planTier.create({
       data: {
         gymId: gym.id,
-        name: `Lifecycle Plan ${suffix}`,
+        name: planName,
+        normalizedName: planName.trim().toLowerCase(),
         monthlyPriceAmount: 650000,
         annualPriceAmount: 6500000,
         sortOrder: 1,

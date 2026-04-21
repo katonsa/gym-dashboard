@@ -5,6 +5,7 @@ import {
   createPlanTierForGym,
   deactivatePlanTierForGym,
   getPlanTierManagementRows,
+  normalizePlanTierName,
   updatePlanTierForGym,
 } from "../lib/dashboard/plan-tier-management.ts"
 import { db } from "../lib/db.ts"
@@ -41,6 +42,21 @@ test("creating plan tiers is scoped and rejects duplicate names", async () => {
       }),
       { status: "duplicate-name" }
     )
+    await assert.rejects(
+      () =>
+        db.planTier.create({
+          data: {
+            gymId: fixture.gymId,
+            name: "PRO",
+            normalizedName: normalizePlanTierName("PRO"),
+            monthlyPriceAmount: 650000,
+            annualPriceAmount: 6500000,
+            sortOrder: 3,
+          },
+          select: { id: true },
+        }),
+      isUniqueConstraintError
+    )
 
     const rows = await getPlanTierManagementRows(fixture.gymId, db)
     assert.equal(rows.length, 1)
@@ -60,6 +76,7 @@ test("updating plan tiers rejects cross-gym writes and duplicates", async () => 
       data: {
         gymId: fixture.gymId,
         name: "Basic",
+        normalizedName: normalizePlanTierName("Basic"),
         monthlyPriceAmount: 350000,
         annualPriceAmount: 3500000,
         sortOrder: 1,
@@ -70,6 +87,7 @@ test("updating plan tiers rejects cross-gym writes and duplicates", async () => 
       data: {
         gymId: fixture.gymId,
         name: "Pro",
+        normalizedName: normalizePlanTierName("Pro"),
         monthlyPriceAmount: 650000,
         annualPriceAmount: 6500000,
         sortOrder: 2,
@@ -80,6 +98,7 @@ test("updating plan tiers rejects cross-gym writes and duplicates", async () => 
       data: {
         gymId: otherFixture.gymId,
         name: "Other",
+        normalizedName: normalizePlanTierName("Other"),
         monthlyPriceAmount: 100000,
         annualPriceAmount: 1000000,
         sortOrder: 1,
@@ -144,6 +163,7 @@ test("deactivating a plan hides it without changing memberships", async () => {
       data: {
         gymId: fixture.gymId,
         name: "Elite",
+        normalizedName: normalizePlanTierName("Elite"),
         monthlyPriceAmount: 950000,
         annualPriceAmount: 9500000,
         sortOrder: 3,
@@ -258,4 +278,13 @@ async function deleteFixture(userId: string) {
     db.gym.deleteMany({ where: { id: { in: gymIds } } }),
     db.user.deleteMany({ where: { id: userId } }),
   ])
+}
+
+function isUniqueConstraintError(error: unknown) {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    error.code === "P2002"
+  )
 }

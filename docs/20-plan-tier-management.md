@@ -12,8 +12,9 @@ Let a gym owner manage membership plan tiers from `/settings`:
   active state
 - deactivate plans without deleting historical data
 
-No database migration was required because `PlanTier` already had the needed
-fields in `prisma/schema.prisma`.
+The original implementation did not require a migration. The follow-up review
+fix added a `normalizedName` field and unique `(gymId, normalizedName)` index so
+case-insensitive plan-name uniqueness is enforced by the database.
 
 ## Implemented
 
@@ -29,19 +30,22 @@ fields in `prisma/schema.prisma`.
 - Added active/past-due membership counts to the settings plan list so
   deactivate confirmations can explain the impact.
 - Revalidated `/settings`, `/members`, `/members/[id]`, `/subscriptions`, and
-  `/` after plan mutations.
+  `/` after plan mutations. The member detail revalidation uses the
+  `/members/[id]` route pattern with `type: "page"`.
 
 ## Behavior Notes
 
 - Plan names are arbitrary strings. Basic, Pro, and Elite are examples, not a
   hardcoded enum.
-- Plan names must be unique per gym. Duplicate checks are case-insensitive.
+- Plan names must be unique per gym. Duplicate checks are case-insensitive and
+  backed by a normalized-name database constraint.
 - Deactivation only sets `isActive` to `false`.
 - Existing memberships stay assigned to a deactivated plan.
 - Deactivated plans are hidden from new member creation and member plan-change
   selects because those flows already filter to active plans.
 - Deactivated plans still appear in membership history and subscription
-  reporting when they have historical or current memberships.
+  reporting when they have ever had memberships. Inactive plans that were never
+  assigned are hidden from subscription reporting.
 - Editing a plan changes future assignment options and reporting labels/prices
   for the plan tier record. Existing `Membership.priceAmount` values are not
   rewritten.

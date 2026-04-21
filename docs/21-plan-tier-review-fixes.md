@@ -10,12 +10,12 @@ of the plan tier management feature.
 
 ## Changes
 
-### Bug fix: broken member detail revalidation
+### Bug fix: member detail revalidation
 
-Removed `revalidatePath("/members/[id]", "page")` from the plan tier mutation
-revalidation helper. The literal `[id]` never matched any actual route — every
-other action in the codebase uses template literals with real IDs. The
-`/members` list revalidation already covers the roster page.
+Restored `revalidatePath("/members/[id]", "page")` in the plan tier mutation
+revalidation helper. Next.js supports route patterns with dynamic segments when
+the `type` parameter is provided, and plan tier edits can affect every member
+detail page's plan labels and plan-change options.
 
 ### Dead code removal
 
