@@ -1,5 +1,4 @@
-import assert from "node:assert/strict"
-import test from "node:test"
+import { expect, test } from "vitest"
 
 import {
   buildDropInVisitorLookupOptions,
@@ -30,7 +29,7 @@ test("builds lookup options for identified drop-in visitors", () => {
     },
   ]
 
-  assert.deepEqual(buildDropInVisitorLookupOptions(rows), [
+  expect(buildDropInVisitorLookupOptions(rows)).toStrictEqual([
     {
       id: "contact:fajar@example.com",
       label: "Fajar N. (fajar@example.com)",
@@ -67,8 +66,10 @@ test("sorts visitor lookup options newest first and caps the result", () => {
     },
   ]
 
-  assert.deepEqual(
-    buildDropInVisitorLookupOptions(rows, 2).map((visitor) => visitor.label),
-    ["Newest Visitor (new@example.com)", "Middle Visitor (middle@example.com)"]
-  )
+  expect(
+    buildDropInVisitorLookupOptions(rows, 2).map((visitor) => visitor.label)
+  ).toStrictEqual([
+    "Newest Visitor (new@example.com)",
+    "Middle Visitor (middle@example.com)",
+  ])
 })

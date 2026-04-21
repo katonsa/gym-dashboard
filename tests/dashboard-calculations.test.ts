@@ -1,5 +1,4 @@
-import assert from "node:assert/strict"
-import test from "node:test"
+import { expect, test } from "vitest"
 
 import {
   getCurrentDisplayMembership,
@@ -41,10 +40,9 @@ test("detects active memberships expiring inside the relevant windows", () => {
     }),
   ]
 
-  assert.deepEqual(
-    getExpiringMemberships(memberships, { asOf }).map((item) => item.id),
-    ["monthly-inside-window", "annual-inside-window"]
-  )
+  expect(
+    getExpiringMemberships(memberships, { asOf }).map((item) => item.id)
+  ).toStrictEqual(["monthly-inside-window", "annual-inside-window"])
 })
 
 test("detects de facto expired memberships against a gym-local boundary", () => {
@@ -54,40 +52,36 @@ test("detects de facto expired memberships against a gym-local boundary", () => 
     currentPeriodEndsAt: "2026-04-19T00:00:00.000Z",
   })
 
-  assert.equal(isExpired(endingOnLocalDate, sameGymDayBoundary), false)
-  assert.equal(isExpired(endingOnLocalDate, nextGymDayBoundary), true)
+  expect(isExpired(endingOnLocalDate, sameGymDayBoundary)).toBe(false)
+  expect(isExpired(endingOnLocalDate, nextGymDayBoundary)).toBe(true)
 })
 
 test("returns display membership statuses for active, expiring, and expired rows", () => {
-  assert.equal(
+  expect(
     getMembershipDisplayStatus(
       membership({ currentPeriodEndsAt: "2026-05-20T00:00:00.000Z" }),
       asOf
-    ),
-    "active"
-  )
-  assert.equal(
+    )
+  ).toBe("active")
+  expect(
     getMembershipDisplayStatus(
       membership({ currentPeriodEndsAt: "2026-04-20T00:00:00.000Z" }),
       asOf
-    ),
-    "expiring"
-  )
-  assert.equal(
+    )
+  ).toBe("expiring")
+  expect(
     getMembershipDisplayStatus(
       membership({ currentPeriodEndsAt: "2026-04-10T00:00:00.000Z" }),
       asOf
-    ),
-    "expired"
-  )
-  assert.equal(
-    getMembershipDisplayStatus(membership({ status: "EXPIRED" }), asOf),
-    "expired"
-  )
+    )
+  ).toBe("expired")
+  expect(
+    getMembershipDisplayStatus(membership({ status: "EXPIRED" }), asOf)
+  ).toBe("expired")
 })
 
 test("builds paginated member roster rows from per-member query data", () => {
-  assert.deepEqual(
+  expect(
     buildMemberRosterPageRows(
       [
         memberRosterPageMember({
@@ -129,18 +123,17 @@ test("builds paginated member roster rows from per-member query data", () => {
         }),
       ],
       asOf
-    ).map((row) => [row.id, row.sessionsAttended, row.billingRisk]),
-    [
-      ["overdue-member", 12, "overdue"],
-      ["expiring-member", 0, "expiring"],
-      ["clear-member", 0, "clear"],
-      ["expired-member", 0, "expired"],
-    ]
-  )
+    ).map((row) => [row.id, row.sessionsAttended, row.billingRisk])
+  ).toStrictEqual([
+    ["overdue-member", 12, "overdue"],
+    ["expiring-member", 0, "expiring"],
+    ["clear-member", 0, "clear"],
+    ["expired-member", 0, "expired"],
+  ])
 })
 
 test("uses the active or expired membership for roster risk display", () => {
-  assert.deepEqual(
+  expect(
     buildMemberRosterPageRows(
       [
         memberRosterPageMember({
@@ -191,13 +184,12 @@ test("uses the active or expired membership for roster risk display", () => {
         }),
       ],
       asOf
-    ).map((row) => [row.id, row.billingRisk]),
-    [
-      ["past-due-masks-expiring-member", "expiring"],
-      ["past-due-masks-expired-member", "expired"],
-      ["overdue-payment-member", "overdue"],
-    ]
-  )
+    ).map((row) => [row.id, row.billingRisk])
+  ).toStrictEqual([
+    ["past-due-masks-expiring-member", "expiring"],
+    ["past-due-masks-expired-member", "expired"],
+    ["overdue-payment-member", "overdue"],
+  ])
 })
 
 test("selects the same current display membership for roster and profile data", () => {
@@ -213,46 +205,43 @@ test("selects the same current display membership for roster and profile data", 
     }),
   ]
 
-  assert.equal(
-    getCurrentDisplayMembership(memberships)?.id,
+  expect(getCurrentDisplayMembership(memberships)?.id).toBe(
     "older-active-membership"
   )
 })
 
 test("formats same-day expiring membership period text", () => {
-  assert.equal(getExpiringMembershipPeriodText(0), "Expires today.")
-  assert.equal(getExpiringMembershipPeriodText(1), "Expires in 1 day.")
-  assert.equal(getExpiringMembershipPeriodText(2), "Expires in 2 days.")
+  expect(getExpiringMembershipPeriodText(0)).toBe("Expires today.")
+  expect(getExpiringMembershipPeriodText(1)).toBe("Expires in 1 day.")
+  expect(getExpiringMembershipPeriodText(2)).toBe("Expires in 2 days.")
 })
 
 test("parses member roster filters from URL search params", () => {
-  assert.deepEqual(
+  expect(
     parseMemberRosterFilters({
       q: " Ari ",
       status: "ACTIVE",
       plan: "Pro",
       risk: "expired",
-    }),
-    {
-      q: "Ari",
-      status: "ACTIVE",
-      plan: "Pro",
-      risk: "expired",
-    }
-  )
+    })
+  ).toStrictEqual({
+    q: "Ari",
+    status: "ACTIVE",
+    plan: "Pro",
+    risk: "expired",
+  })
 
-  assert.deepEqual(
+  expect(
     parseMemberRosterFilters({
       status: "UNKNOWN",
       risk: "bad",
-    }),
-    {
-      q: "",
-      status: "all",
-      plan: "all",
-      risk: "all",
-    }
-  )
+    })
+  ).toStrictEqual({
+    q: "",
+    status: "all",
+    plan: "all",
+    risk: "all",
+  })
 })
 
 function membership(overrides: Partial<Membership> = {}): Membership {

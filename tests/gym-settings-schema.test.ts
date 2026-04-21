@@ -1,5 +1,4 @@
-import assert from "node:assert/strict"
-import test from "node:test"
+import { expect, test } from "vitest"
 
 import {
   normalizeGymSettingsValues,
@@ -21,22 +20,22 @@ test("trims gym settings and uppercases currency codes", () => {
     defaultDropInFeeAmount: " 150000 ",
   })
 
-  assert.equal(parsed.success, true)
+  expect(parsed.success).toBe(true)
 
   if (parsed.success) {
-    assert.equal(parsed.data.name, "Jakarta Strength Club")
-    assert.equal(parsed.data.currencyCode, "IDR")
-    assert.equal(parsed.data.defaultDropInFeeAmount, "150000")
+    expect(parsed.data.name).toBe("Jakarta Strength Club")
+    expect(parsed.data.currencyCode).toBe("IDR")
+    expect(parsed.data.defaultDropInFeeAmount).toBe("150000")
   }
 })
 
 test("normalizes valid gym settings for persistence", () => {
   const parsed = updateGymSettingsSchema.safeParse(validValues)
 
-  assert.equal(parsed.success, true)
+  expect(parsed.success).toBe(true)
 
   if (parsed.success) {
-    assert.deepEqual(normalizeGymSettingsValues(parsed.data), {
+    expect(normalizeGymSettingsValues(parsed.data)).toStrictEqual({
       name: "Jakarta Strength Club",
       timezone: "Asia/Jakarta",
       currencyCode: "IDR",
@@ -46,59 +45,52 @@ test("normalizes valid gym settings for persistence", () => {
 })
 
 test("rejects unsupported timezone and currency values", () => {
-  assert.equal(
+  expect(
     updateGymSettingsSchema.safeParse({
       ...validValues,
       timezone: "Mars/Base",
-    }).success,
-    false
-  )
-  assert.equal(
+    }).success
+  ).toBe(false)
+  expect(
     updateGymSettingsSchema.safeParse({
       ...validValues,
       currencyCode: "ABC",
-    }).success,
-    false
-  )
+    }).success
+  ).toBe(false)
 })
 
 test("rejects blank and long gym names", () => {
-  assert.equal(
+  expect(
     updateGymSettingsSchema.safeParse({
       ...validValues,
       name: " ",
-    }).success,
-    false
-  )
-  assert.equal(
+    }).success
+  ).toBe(false)
+  expect(
     updateGymSettingsSchema.safeParse({
       ...validValues,
       name: "x".repeat(101),
-    }).success,
-    false
-  )
+    }).success
+  ).toBe(false)
 })
 
 test("rejects invalid default drop-in fees", () => {
-  assert.equal(
+  expect(
     updateGymSettingsSchema.safeParse({
       ...validValues,
       defaultDropInFeeAmount: "",
-    }).success,
-    false
-  )
-  assert.equal(
+    }).success
+  ).toBe(false)
+  expect(
     updateGymSettingsSchema.safeParse({
       ...validValues,
       defaultDropInFeeAmount: "10.5",
-    }).success,
-    false
-  )
-  assert.equal(
+    }).success
+  ).toBe(false)
+  expect(
     updateGymSettingsSchema.safeParse({
       ...validValues,
       defaultDropInFeeAmount: "10000001",
-    }).success,
-    false
-  )
+    }).success
+  ).toBe(false)
 })

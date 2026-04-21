@@ -1,32 +1,29 @@
-import assert from "node:assert/strict"
-import test from "node:test"
+import { expect, test } from "vitest"
 
 import { markPaidSchema } from "../lib/dashboard/schemas/mark-paid-schema.ts"
 import { voidPaymentSchema } from "../lib/dashboard/schemas/void-payment-schema.ts"
 
 test("validates mark-paid payment ids", () => {
-  assert.deepEqual(markPaidSchema.parse({ paymentId: " payment-1 " }), {
+  expect(markPaidSchema.parse({ paymentId: " payment-1 " })).toStrictEqual({
     paymentId: "payment-1",
   })
-  assert.equal(markPaidSchema.safeParse({ paymentId: " " }).success, false)
+  expect(markPaidSchema.safeParse({ paymentId: " " }).success).toBe(false)
 })
 
 test("validates void payment ids and optional reasons", () => {
-  assert.deepEqual(
+  expect(
     voidPaymentSchema.parse({
       paymentId: " payment-1 ",
       reason: " duplicate invoice ",
-    }),
-    {
-      paymentId: "payment-1",
-      reason: "duplicate invoice",
-    }
-  )
-  assert.equal(
+    })
+  ).toStrictEqual({
+    paymentId: "payment-1",
+    reason: "duplicate invoice",
+  })
+  expect(
     voidPaymentSchema.safeParse({
       paymentId: "payment-1",
       reason: "x".repeat(501),
-    }).success,
-    false
-  )
+    }).success
+  ).toBe(false)
 })

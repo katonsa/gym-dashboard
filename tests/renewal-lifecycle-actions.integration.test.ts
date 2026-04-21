@@ -1,5 +1,4 @@
-import assert from "node:assert/strict"
-import test from "node:test"
+import { expect, test } from "vitest"
 
 import {
   getRenewalSubmissionNote,
@@ -19,7 +18,7 @@ test("renewing a current active membership advances from its period end", async 
   const submissionId = "d791294f-7c19-4d30-8ef8-8739aa9de70c"
 
   try {
-    assert.deepEqual(
+    expect(
       await renewMembershipForGym({
         client: db,
         gymId: fixture.gymId,
@@ -29,28 +28,27 @@ test("renewing a current active membership advances from its period end", async 
         expectedCurrentPeriodEndsAt: new Date("2026-04-25T00:00:00.000Z"),
         submissionId,
         now: new Date("2026-04-19T10:00:00.000Z"),
-      }),
-      { status: "renewed", memberId: fixture.memberId }
-    )
+      })
+    ).toStrictEqual({ status: "renewed", memberId: fixture.memberId })
 
     const membership = await getMembership(fixture.membershipId)
     const payments = await getRenewalPayments(fixture.membershipId)
 
-    assert.equal(membership.status, "ACTIVE")
-    assert.deepEqual(
-      membership.currentPeriodEndsAt,
+    expect(membership.status).toBe("ACTIVE")
+    expect(membership.currentPeriodEndsAt).toStrictEqual(
       new Date("2026-05-25T00:00:00.000Z")
     )
-    assert.deepEqual(
-      membership.nextBillingDate,
+    expect(membership.nextBillingDate).toStrictEqual(
       new Date("2026-05-25T00:00:00.000Z")
     )
-    assert.deepEqual(membership.startedAt, fixture.startedAt)
-    assert.equal(payments.length, 1)
-    assert.equal(payments[0]?.amount, 650000)
-    assert.equal(payments[0]?.status, "PENDING")
-    assert.deepEqual(payments[0]?.dueAt, new Date("2026-04-19T00:00:00.000Z"))
-    assert.equal(payments[0]?.notes, getRenewalSubmissionNote(submissionId))
+    expect(membership.startedAt).toStrictEqual(fixture.startedAt)
+    expect(payments.length).toBe(1)
+    expect(payments[0]?.amount).toBe(650000)
+    expect(payments[0]?.status).toBe("PENDING")
+    expect(payments[0]?.dueAt).toStrictEqual(
+      new Date("2026-04-19T00:00:00.000Z")
+    )
+    expect(payments[0]?.notes).toBe(getRenewalSubmissionNote(submissionId))
   } finally {
     await deleteFixture(fixture.userId)
   }
@@ -63,7 +61,7 @@ test("renewing an expired membership advances from gym-local today by default", 
   })
 
   try {
-    assert.deepEqual(
+    expect(
       await renewMembershipForGym({
         client: db,
         gymId: fixture.gymId,
@@ -73,19 +71,19 @@ test("renewing an expired membership advances from gym-local today by default", 
         expectedCurrentPeriodEndsAt: new Date("2026-03-01T00:00:00.000Z"),
         submissionId: "18c6202f-17d5-4da8-b463-ffeb88d0f132",
         now: new Date("2026-04-18T18:30:00.000Z"),
-      }),
-      { status: "renewed", memberId: fixture.memberId }
-    )
+      })
+    ).toStrictEqual({ status: "renewed", memberId: fixture.memberId })
 
     const membership = await getMembership(fixture.membershipId)
     const payments = await getRenewalPayments(fixture.membershipId)
 
-    assert.equal(membership.status, "ACTIVE")
-    assert.deepEqual(
-      membership.currentPeriodEndsAt,
+    expect(membership.status).toBe("ACTIVE")
+    expect(membership.currentPeriodEndsAt).toStrictEqual(
       new Date("2026-05-19T00:00:00.000Z")
     )
-    assert.deepEqual(payments[0]?.dueAt, new Date("2026-04-19T00:00:00.000Z"))
+    expect(payments[0]?.dueAt).toStrictEqual(
+      new Date("2026-04-19T00:00:00.000Z")
+    )
   } finally {
     await deleteFixture(fixture.userId)
   }
@@ -113,11 +111,12 @@ test("backdating an expired renewal changes the period basis but not due date", 
     const membership = await getMembership(fixture.membershipId)
     const payments = await getRenewalPayments(fixture.membershipId)
 
-    assert.deepEqual(
-      membership.currentPeriodEndsAt,
+    expect(membership.currentPeriodEndsAt).toStrictEqual(
       new Date("2026-05-05T00:00:00.000Z")
     )
-    assert.deepEqual(payments[0]?.dueAt, new Date("2026-04-19T00:00:00.000Z"))
+    expect(payments[0]?.dueAt).toStrictEqual(
+      new Date("2026-04-19T00:00:00.000Z")
+    )
   } finally {
     await deleteFixture(fixture.userId)
   }
@@ -141,8 +140,8 @@ test("retrying the same renewal submission is idempotent", async () => {
   }
 
   try {
-    assert.equal((await renewMembershipForGym(values)).status, "renewed")
-    assert.deepEqual(await renewMembershipForGym(values), {
+    expect((await renewMembershipForGym(values)).status).toBe("renewed")
+    expect(await renewMembershipForGym(values)).toStrictEqual({
       status: "already-renewed",
       memberId: fixture.memberId,
     })
@@ -150,11 +149,10 @@ test("retrying the same renewal submission is idempotent", async () => {
     const membership = await getMembership(fixture.membershipId)
     const payments = await getRenewalPayments(fixture.membershipId)
 
-    assert.deepEqual(
-      membership.currentPeriodEndsAt,
+    expect(membership.currentPeriodEndsAt).toStrictEqual(
       new Date("2026-05-19T00:00:00.000Z")
     )
-    assert.equal(payments.length, 1)
+    expect(payments.length).toBe(1)
   } finally {
     await deleteFixture(fixture.userId)
   }
@@ -167,7 +165,7 @@ test("stale renewal submissions return conflict", async () => {
   })
 
   try {
-    assert.deepEqual(
+    expect(
       await renewMembershipForGym({
         client: db,
         gymId: fixture.gymId,
@@ -177,9 +175,8 @@ test("stale renewal submissions return conflict", async () => {
         expectedCurrentPeriodEndsAt: new Date("2026-04-24T00:00:00.000Z"),
         submissionId: "eff02b26-23b0-4503-bf50-d71184700c0a",
         now: new Date("2026-04-19T10:00:00.000Z"),
-      }),
-      { status: "conflict" }
-    )
+      })
+    ).toStrictEqual({ status: "conflict" })
   } finally {
     await deleteFixture(fixture.userId)
   }
@@ -214,8 +211,8 @@ test("concurrent renewals produce one success and one conflict", async () => {
     const statuses = results.map((result) => result.status).sort()
     const payments = await getRenewalPayments(fixture.membershipId)
 
-    assert.deepEqual(statuses, ["conflict", "renewed"])
-    assert.equal(payments.length, 1)
+    expect(statuses).toStrictEqual(["conflict", "renewed"])
+    expect(payments.length).toBe(1)
   } finally {
     await deleteFixture(fixture.userId)
   }
@@ -229,14 +226,13 @@ test("renewing an expired membership returns it to current MRR", async () => {
   const revenueAsOf = new Date("2026-04-19T00:00:00.000Z")
 
   try {
-    assert.equal(
+    expect(
       await getMembershipMrr(
         fixture.gymId,
         revenueAsOf,
         db as unknown as DashboardDb
-      ),
-      0
-    )
+      )
+    ).toBe(0)
 
     await renewMembershipForGym({
       client: db,
@@ -249,14 +245,13 @@ test("renewing an expired membership returns it to current MRR", async () => {
       now: new Date("2026-04-19T10:00:00.000Z"),
     })
 
-    assert.equal(
+    expect(
       await getMembershipMrr(
         fixture.gymId,
         revenueAsOf,
         db as unknown as DashboardDb
-      ),
-      650000
-    )
+      )
+    ).toBe(650000)
   } finally {
     await deleteFixture(fixture.userId)
   }
@@ -278,7 +273,7 @@ test("renewal rejects non-renewable, suspended, future-date, and cross-gym reque
   })
 
   try {
-    assert.equal(
+    expect(
       (
         await renewMembershipForGym({
           client: db,
@@ -290,10 +285,9 @@ test("renewal rejects non-renewable, suspended, future-date, and cross-gym reque
           submissionId: "0a1f4445-b4ba-4438-bb38-4cde0f34b679",
           now: new Date("2026-04-19T10:00:00.000Z"),
         })
-      ).status,
-      "not-renewable"
-    )
-    assert.equal(
+      ).status
+    ).toBe("not-renewable")
+    expect(
       (
         await renewMembershipForGym({
           client: db,
@@ -305,10 +299,9 @@ test("renewal rejects non-renewable, suspended, future-date, and cross-gym reque
           submissionId: "c9d9f334-e4c2-41ac-afb3-50f11cce69a9",
           now: new Date("2026-04-19T10:00:00.000Z"),
         })
-      ).status,
-      "not-renewable"
-    )
-    assert.equal(
+      ).status
+    ).toBe("not-renewable")
+    expect(
       (
         await renewMembershipForGym({
           client: db,
@@ -320,10 +313,9 @@ test("renewal rejects non-renewable, suspended, future-date, and cross-gym reque
           submissionId: "092820af-9c08-412b-b60e-e054fb9198eb",
           now: new Date("2026-04-19T10:00:00.000Z"),
         })
-      ).status,
-      "member-suspended"
-    )
-    assert.equal(
+      ).status
+    ).toBe("member-suspended")
+    expect(
       (
         await renewMembershipForGym({
           client: db,
@@ -335,10 +327,9 @@ test("renewal rejects non-renewable, suspended, future-date, and cross-gym reque
           submissionId: "f5b8eb35-42ec-48c7-bceb-41b3888e13f4",
           now: new Date("2026-04-19T10:00:00.000Z"),
         })
-      ).status,
-      "not-found"
-    )
-    assert.equal(
+      ).status
+    ).toBe("not-found")
+    expect(
       (
         await renewMembershipForGym({
           client: db,
@@ -351,9 +342,8 @@ test("renewal rejects non-renewable, suspended, future-date, and cross-gym reque
           renewalDate: new Date("2026-04-20T00:00:00.000Z"),
           now: new Date("2026-04-19T10:00:00.000Z"),
         })
-      ).status,
-      "future-renewal-date"
-    )
+      ).status
+    ).toBe("future-renewal-date")
   } finally {
     await deleteFixture(fixture.userId)
     await deleteFixture(canceledFixture.userId)

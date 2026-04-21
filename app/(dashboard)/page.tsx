@@ -6,19 +6,24 @@ import {
   loadOverviewSummary,
   loadSetupChecklistData,
 } from "@/lib/dashboard/loaders"
-import { formatDashboardDate, formatCurrency, formatDateInput } from "@/lib/dashboard/formatters"
+import {
+  formatDashboardDate,
+  formatCurrency,
+  formatDateInput,
+} from "@/lib/dashboard/formatters"
 import { OverviewPinnedAlerts } from "./overview-pinned-alerts"
 import { OverviewStatsSection } from "./overview-stats-section"
 
 export default async function Page() {
   const asOf = new Date()
-  const [overviewData, alerts, agingSummary, checklistData] =
-    await Promise.all([
+  const [overviewData, alerts, agingSummary, checklistData] = await Promise.all(
+    [
       loadOverviewSummary({ asOf }),
       loadOverviewAlerts({ asOf }),
       loadOverdueAgingSummary({ asOf }),
       loadSetupChecklistData(),
-    ])
+    ]
+  )
 
   if (!overviewData || !alerts) {
     return (

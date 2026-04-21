@@ -1,5 +1,4 @@
-import assert from "node:assert/strict"
-import test from "node:test"
+import { expect, test } from "vitest"
 
 import {
   getConversionLeads,
@@ -37,13 +36,13 @@ test("groups member counts by status for one gym", async () => {
   })
   const calls: unknown[] = []
 
-  assert.deepEqual(await getMemberCountsByStatus("gym-1", db), {
+  expect(await getMemberCountsByStatus("gym-1", db)).toStrictEqual({
     totalMembers: 10,
     activeMembers: 8,
     inactiveMembers: 2,
     suspendedMembers: 0,
   })
-  assert.deepEqual(calls[0], {
+  expect(calls[0]).toStrictEqual({
     by: ["status"],
     where: { gymId: "gym-1" },
     _count: { _all: true },
@@ -64,11 +63,10 @@ test("counts new sign-ups in a UTC month window", async () => {
   const monthStart = new Date("2026-04-01T00:00:00.000Z")
   const nextMonthStart = new Date("2026-05-01T00:00:00.000Z")
 
-  assert.equal(
-    await getNewSignUpsThisMonth("gym-1", monthStart, nextMonthStart, db),
-    4
-  )
-  assert.deepEqual(calls[0], {
+  expect(
+    await getNewSignUpsThisMonth("gym-1", monthStart, nextMonthStart, db)
+  ).toBe(4)
+  expect(calls[0]).toStrictEqual({
     where: {
       gymId: "gym-1",
       joinDate: { gte: monthStart, lt: nextMonthStart },
@@ -116,21 +114,21 @@ test("uses a gym-local month window for overview month metrics", async () => {
   const monthStart = new Date("2026-04-30T17:00:00.000Z")
   const nextMonthStart = new Date("2026-05-31T17:00:00.000Z")
 
-  assert.deepEqual(memberCountCalls[0], {
+  expect(memberCountCalls[0]).toStrictEqual({
     where: {
       gymId: "gym-1",
       joinDate: { gte: monthStart, lt: nextMonthStart },
     },
   })
-  assert.deepEqual(dropInAggregateCalls[0], {
+  expect(dropInAggregateCalls[0]).toStrictEqual({
     where: {
       gymId: "gym-1",
       visitedAt: { gte: monthStart, lt: nextMonthStart },
     },
     _sum: { amount: true },
   })
-  assert.deepEqual(rawCalls[0]?.values[1], monthStart)
-  assert.deepEqual(rawCalls[0]?.values[2], nextMonthStart)
+  expect(rawCalls[0]?.values[1]).toStrictEqual(monthStart)
+  expect(rawCalls[0]?.values[2]).toStrictEqual(nextMonthStart)
 })
 
 test("derives overview setup state from scoped gym records", async () => {
@@ -169,18 +167,18 @@ test("derives overview setup state from scoped gym records", async () => {
     },
   })
 
-  assert.deepEqual(await getOverviewSetupState("gym-1", db), {
+  expect(await getOverviewSetupState("gym-1", db)).toStrictEqual({
     hasPlanTiers: true,
     hasMembers: true,
     hasMemberships: false,
     hasDropIns: true,
   })
-  assert.deepEqual(planTierCalls[0], { where: { gymId: "gym-1" } })
-  assert.deepEqual(memberCalls[0], { where: { gymId: "gym-1" } })
-  assert.deepEqual(membershipCalls[0], {
+  expect(planTierCalls[0]).toStrictEqual({ where: { gymId: "gym-1" } })
+  expect(memberCalls[0]).toStrictEqual({ where: { gymId: "gym-1" } })
+  expect(membershipCalls[0]).toStrictEqual({
     where: { member: { gymId: "gym-1" } },
   })
-  assert.deepEqual(dropInCalls[0], {
+  expect(dropInCalls[0]).toStrictEqual({
     where: { gymId: "gym-1" },
     _sum: { visitCount: true },
   })
@@ -201,8 +199,8 @@ test("calculates MRR with monthly and annual membership aggregate queries", asyn
     },
   })
 
-  assert.equal(await getMembershipMrr("gym-1", revenueAsOf, db), 450000)
-  assert.deepEqual(calls, [
+  expect(await getMembershipMrr("gym-1", revenueAsOf, db)).toBe(450000)
+  expect(calls).toStrictEqual([
     {
       where: {
         member: { gymId: "gym-1" },
@@ -239,17 +237,16 @@ test("counts expiring memberships with separate monthly and annual windows", asy
   const monthlyWindowEnd = new Date("2026-04-23T02:00:00.000Z")
   const annualWindowEnd = new Date("2026-05-16T02:00:00.000Z")
 
-  assert.equal(
+  expect(
     await getExpiringMembershipsCount(
       "gym-1",
       now,
       monthlyWindowEnd,
       annualWindowEnd,
       db
-    ),
-    3
-  )
-  assert.deepEqual(calls, [
+    )
+  ).toBe(3)
+  expect(calls).toStrictEqual([
     {
       where: {
         member: {
@@ -292,8 +289,8 @@ test("counts expired memberships with persisted and de facto expired rows", asyn
   })
   const asOf = new Date("2026-04-18T17:00:00.000Z")
 
-  assert.equal(await getExpiredMembershipsCount("gym-1", asOf, db), 2)
-  assert.deepEqual(calls[0], {
+  expect(await getExpiredMembershipsCount("gym-1", asOf, db)).toBe(2)
+  expect(calls[0]).toStrictEqual({
     where: {
       member: {
         gymId: "gym-1",
@@ -347,11 +344,11 @@ test("maps expired memberships into distinct overview alerts", async () => {
     db
   )
 
-  assert.equal(alerts[0]?.type, "EXPIRED_MEMBERSHIP")
-  assert.equal(alerts[0]?.severity, "critical")
-  assert.equal(alerts[0]?.membershipId, "membership-expired")
-  assert.equal(alerts[0]?.membershipStatus, "ACTIVE")
-  assert.deepEqual(membershipFindManyCalls[0], {
+  expect(alerts[0]?.type).toBe("EXPIRED_MEMBERSHIP")
+  expect(alerts[0]?.severity).toBe("critical")
+  expect(alerts[0]?.membershipId).toBe("membership-expired")
+  expect(alerts[0]?.membershipStatus).toBe("ACTIVE")
+  expect(membershipFindManyCalls[0]).toStrictEqual({
     where: {
       member: {
         gymId: "gym-1",
@@ -408,15 +405,15 @@ test("counts overdue payments and stale inactive members with scoped filters", a
   const now = new Date("2026-04-16T02:00:00.000Z")
   const inactiveCutoff = new Date("2026-03-17T02:00:00.000Z")
 
-  assert.equal(await getOverduePaymentsCount("gym-1", now, db), 2)
-  assert.equal(await getInactiveMembersCount("gym-1", inactiveCutoff, db), 3)
-  assert.deepEqual(paymentCalls[0], {
+  expect(await getOverduePaymentsCount("gym-1", now, db)).toBe(2)
+  expect(await getInactiveMembersCount("gym-1", inactiveCutoff, db)).toBe(3)
+  expect(paymentCalls[0]).toStrictEqual({
     where: {
       gymId: "gym-1",
       OR: [{ status: "OVERDUE" }, { status: "PENDING", dueAt: { lt: now } }],
     },
   })
-  assert.deepEqual(memberCalls[0], {
+  expect(memberCalls[0]).toStrictEqual({
     where: {
       gymId: "gym-1",
       status: "INACTIVE",
@@ -447,23 +444,22 @@ test("loads conversion leads with case-insensitive raw SQL parameters", async ()
   const monthStart = new Date("2026-04-01T00:00:00.000Z")
   const nextMonthStart = new Date("2026-05-01T00:00:00.000Z")
 
-  assert.deepEqual(
-    await getConversionLeads("gym-1", monthStart, nextMonthStart, 5, 50, db),
-    [
-      {
-        visitorName: "Fajar Nugroho",
-        visitorContact: "FAJAR@example.com",
-        visitCount: 5,
-        revenueAmount: 375000,
-      },
-    ]
-  )
-  assert.equal(rawCalls[0]?.values[0], "gym-1")
-  assert.equal(rawCalls[0]?.values[1], monthStart)
-  assert.equal(rawCalls[0]?.values[2], nextMonthStart)
-  assert.equal(rawCalls[0]?.values[3], 5)
-  assert.equal(rawCalls[0]?.values[4], 50)
-  assert.match(rawCalls[0]?.strings.join(" "), /GROUP BY LOWER/)
+  expect(
+    await getConversionLeads("gym-1", monthStart, nextMonthStart, 5, 50, db)
+  ).toStrictEqual([
+    {
+      visitorName: "Fajar Nugroho",
+      visitorContact: "FAJAR@example.com",
+      visitCount: 5,
+      revenueAmount: 375000,
+    },
+  ])
+  expect(rawCalls[0]?.values[0]).toBe("gym-1")
+  expect(rawCalls[0]?.values[1]).toBe(monthStart)
+  expect(rawCalls[0]?.values[2]).toBe(nextMonthStart)
+  expect(rawCalls[0]?.values[3]).toBe(5)
+  expect(rawCalls[0]?.values[4]).toBe(50)
+  expect(rawCalls[0]?.strings.join(" ")).toMatch(/GROUP BY LOWER/)
 })
 
 test("aggregates drop-in totals for a scoped date window", async () => {
@@ -480,11 +476,13 @@ test("aggregates drop-in totals for a scoped date window", async () => {
   const dayStart = new Date("2026-04-16T00:00:00.000Z")
   const nextDayStart = new Date("2026-04-17T00:00:00.000Z")
 
-  assert.deepEqual(await getDropInTotal("gym-1", dayStart, nextDayStart, db), {
+  expect(
+    await getDropInTotal("gym-1", dayStart, nextDayStart, db)
+  ).toStrictEqual({
     revenueAmount: 225000,
     visitCount: 3,
   })
-  assert.deepEqual(calls[0], {
+  expect(calls[0]).toStrictEqual({
     where: {
       gymId: "gym-1",
       visitedAt: { gte: dayStart, lt: nextDayStart },
@@ -520,7 +518,7 @@ test("uses gym-local day and month windows for drop-in summary", async () => {
     db
   )
 
-  assert.deepEqual(aggregateCalls[0], {
+  expect(aggregateCalls[0]).toStrictEqual({
     where: {
       gymId: "gym-1",
       visitedAt: {
@@ -530,7 +528,7 @@ test("uses gym-local day and month windows for drop-in summary", async () => {
     },
     _sum: { amount: true, visitCount: true },
   })
-  assert.deepEqual(aggregateCalls[1], {
+  expect(aggregateCalls[1]).toStrictEqual({
     where: {
       gymId: "gym-1",
       visitedAt: {
@@ -545,10 +543,10 @@ test("uses gym-local day and month windows for drop-in summary", async () => {
 })
 
 function assertDateIso(value: unknown, isoDate: string) {
-  assert.equal(value instanceof Date, true)
+  expect(value instanceof Date).toBe(true)
 
   if (value instanceof Date) {
-    assert.equal(value.toISOString(), isoDate)
+    expect(value.toISOString()).toBe(isoDate)
   }
 }
 
@@ -608,57 +606,56 @@ test("maps plan breakdown aggregate rows onto sorted plan tiers", async () => {
     }),
   ]
 
-  assert.deepEqual(
-    await getPlanBreakdownAggregates("gym-1", plans, revenueAsOf, db),
-    [
-      {
-        id: "plan-basic",
-        name: "Basic",
-        description: undefined,
-        memberCount: 0,
-        memberShare: 0,
-        monthlyMemberships: 0,
-        annualMemberships: 0,
-        monthlyEquivalentRevenue: 0,
-      },
-      {
-        id: "plan-pro",
-        name: "Pro",
-        description: undefined,
-        memberCount: 3,
-        memberShare: 0.75,
-        monthlyMemberships: 2,
-        annualMemberships: 1,
-        monthlyEquivalentRevenue: 800000,
-      },
-      {
-        id: "plan-inactive-current",
-        name: "Inactive Current",
-        description: undefined,
-        memberCount: 1,
-        memberShare: 0.25,
-        monthlyMemberships: 1,
-        annualMemberships: 0,
-        monthlyEquivalentRevenue: 200000,
-      },
-      {
-        id: "plan-legacy",
-        name: "Legacy",
-        description: undefined,
-        memberCount: 0,
-        memberShare: 0,
-        monthlyMemberships: 0,
-        annualMemberships: 0,
-        monthlyEquivalentRevenue: 0,
-      },
-    ]
-  )
-  assert.equal(rawCalls[0]?.values[0], "gym-1")
-  assert.equal(rawCalls[0]?.values[1], revenueAsOf)
-  assert.match(rawCalls[0]?.strings.join(" "), /"status" = 'ACTIVE'/)
-  assert.match(rawCalls[0]?.strings.join(" "), /"currentPeriodEndsAt" >=/)
-  assert.equal(rawCalls[1]?.values[0], "gym-1")
-  assert.match(rawCalls[1]?.strings.join(" "), /SELECT DISTINCT/)
+  expect(
+    await getPlanBreakdownAggregates("gym-1", plans, revenueAsOf, db)
+  ).toStrictEqual([
+    {
+      id: "plan-basic",
+      name: "Basic",
+      description: undefined,
+      memberCount: 0,
+      memberShare: 0,
+      monthlyMemberships: 0,
+      annualMemberships: 0,
+      monthlyEquivalentRevenue: 0,
+    },
+    {
+      id: "plan-pro",
+      name: "Pro",
+      description: undefined,
+      memberCount: 3,
+      memberShare: 0.75,
+      monthlyMemberships: 2,
+      annualMemberships: 1,
+      monthlyEquivalentRevenue: 800000,
+    },
+    {
+      id: "plan-inactive-current",
+      name: "Inactive Current",
+      description: undefined,
+      memberCount: 1,
+      memberShare: 0.25,
+      monthlyMemberships: 1,
+      annualMemberships: 0,
+      monthlyEquivalentRevenue: 200000,
+    },
+    {
+      id: "plan-legacy",
+      name: "Legacy",
+      description: undefined,
+      memberCount: 0,
+      memberShare: 0,
+      monthlyMemberships: 0,
+      annualMemberships: 0,
+      monthlyEquivalentRevenue: 0,
+    },
+  ])
+  expect(rawCalls[0]?.values[0]).toBe("gym-1")
+  expect(rawCalls[0]?.values[1]).toBe(revenueAsOf)
+  expect(rawCalls[0]?.strings.join(" ")).toMatch(/"status" = 'ACTIVE'/)
+  expect(rawCalls[0]?.strings.join(" ")).toMatch(/"currentPeriodEndsAt" >=/)
+  expect(rawCalls[1]?.values[0]).toBe("gym-1")
+  expect(rawCalls[1]?.strings.join(" ")).toMatch(/SELECT DISTINCT/)
 })
 
 test("loads subscription setup from current active revenue memberships only", async () => {
@@ -691,8 +688,8 @@ test("loads subscription setup from current active revenue memberships only", as
     db
   )
 
-  assert.equal(summary.setupState.hasActiveRevenueMemberships, true)
-  assert.deepEqual(membershipCountCalls[0], {
+  expect(summary.setupState.hasActiveRevenueMemberships).toBe(true)
+  expect(membershipCountCalls[0]).toStrictEqual({
     where: {
       member: { gymId: "gym-1" },
       status: "ACTIVE",
@@ -743,14 +740,14 @@ test("uses gym-local month windows for subscription revenue trend", async () => 
     "Asia/Jakarta"
   )
 
-  assert.deepEqual(summary.revenueTrend.at(-1), {
+  expect(summary.revenueTrend.at(-1)).toStrictEqual({
     month: "May",
     membership: 100000,
     dropIns: 25000,
     total: 125000,
   })
-  assert.equal(hasRawCallDate(rawCalls, "2026-04-30T17:00:00.000Z"), true)
-  assert.equal(hasRawCallDate(rawCalls, "2026-05-31T17:00:00.000Z"), true)
+  expect(hasRawCallDate(rawCalls, "2026-04-30T17:00:00.000Z")).toBe(true)
+  expect(hasRawCallDate(rawCalls, "2026-05-31T17:00:00.000Z")).toBe(true)
 })
 
 function hasRawCallDate(
@@ -795,21 +792,20 @@ test("combines membership and drop-in raw rows into revenue trend", async () => 
   const endMonth = new Date("2026-04-01T00:00:00.000Z")
   const nextMonthAfterTrend = new Date("2026-05-01T00:00:00.000Z")
 
-  assert.deepEqual(
+  expect(
     await getRevenueTrend(
       "gym-1",
       startMonth,
       endMonth,
       nextMonthAfterTrend,
       db
-    ),
-    [
-      { month: "Mar", membership: 350000, dropIns: 0, total: 350000 },
-      { month: "Apr", membership: 450000, dropIns: 225000, total: 675000 },
-    ]
-  )
-  assert.deepEqual(rawCalls[0]?.values, [startMonth, endMonth, "gym-1"])
-  assert.deepEqual(rawCalls[1]?.values, [
+    )
+  ).toStrictEqual([
+    { month: "Mar", membership: 350000, dropIns: 0, total: 350000 },
+    { month: "Apr", membership: 450000, dropIns: 225000, total: 675000 },
+  ])
+  expect(rawCalls[0]?.values).toStrictEqual([startMonth, endMonth, "gym-1"])
+  expect(rawCalls[1]?.values).toStrictEqual([
     "gym-1",
     startMonth,
     nextMonthAfterTrend,
@@ -834,13 +830,13 @@ test("maps overdue payments into aging summary buckets", async () => {
   })
   const now = new Date("2026-04-16T02:00:00.000Z")
 
-  assert.deepEqual(await getOverdueAgingSummary("gym-1", now, db), [
+  expect(await getOverdueAgingSummary("gym-1", now, db)).toStrictEqual([
     { bucket: "1-7 days", count: 1, totalAmount: 450000 },
     { bucket: "8-14 days", count: 2, totalAmount: 700000 },
   ])
-  assert.deepEqual(rawCalls[0]?.values, [now, "gym-1", now])
-  assert.match(rawCalls[0]?.strings.join(" "), /status" = 'OVERDUE'/)
-  assert.match(rawCalls[0]?.strings.join(" "), /status" = 'PENDING'/)
+  expect(rawCalls[0]?.values).toStrictEqual([now, "gym-1", now])
+  expect(rawCalls[0]?.strings.join(" ")).toMatch(/status" = 'OVERDUE'/)
+  expect(rawCalls[0]?.strings.join(" ")).toMatch(/status" = 'PENDING'/)
 })
 
 type MockDbOverrides = Partial<

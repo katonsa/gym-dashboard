@@ -1,5 +1,4 @@
-import assert from "node:assert/strict"
-import test from "node:test"
+import { expect, test } from "vitest"
 
 import { logCheckInSchema } from "../lib/dashboard/schemas/log-checkin-schema.ts"
 
@@ -10,17 +9,16 @@ const validValues = {
 }
 
 test("accepts complete member check-in values", () => {
-  assert.equal(logCheckInSchema.safeParse(validValues).success, true)
+  expect(logCheckInSchema.safeParse(validValues).success).toBe(true)
 })
 
 test("accepts check-in values without notes", () => {
-  assert.equal(
+  expect(
     logCheckInSchema.safeParse({
       memberId: "member-1",
       attendedAt: "2026-04-18",
-    }).success,
-    true
-  )
+    }).success
+  ).toBe(true)
 })
 
 test("rejects a missing member", () => {
@@ -29,7 +27,7 @@ test("rejects a missing member", () => {
     memberId: "",
   })
 
-  assert.equal(parsed.success, false)
+  expect(parsed.success).toBe(false)
 })
 
 test("rejects an invalid check-in date", () => {
@@ -38,7 +36,7 @@ test("rejects an invalid check-in date", () => {
     attendedAt: "2026-02-31",
   })
 
-  assert.equal(parsed.success, false)
+  expect(parsed.success).toBe(false)
 })
 
 test("rejects a future check-in date", () => {
@@ -47,7 +45,7 @@ test("rejects a future check-in date", () => {
     attendedAt: "2099-01-01",
   })
 
-  assert.equal(parsed.success, false)
+  expect(parsed.success).toBe(false)
 })
 
 test("rejects notes over 500 characters", () => {
@@ -56,5 +54,5 @@ test("rejects notes over 500 characters", () => {
     notes: "x".repeat(501),
   })
 
-  assert.equal(parsed.success, false)
+  expect(parsed.success).toBe(false)
 })

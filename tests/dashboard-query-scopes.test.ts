@@ -1,5 +1,4 @@
-import assert from "node:assert/strict"
-import test from "node:test"
+import { expect, test } from "vitest"
 
 import {
   getDropInVisitsPageQuery,
@@ -12,7 +11,7 @@ import {
 } from "../lib/dashboard/query-scopes.ts"
 
 test("selects the authenticated owner's first gym only", () => {
-  assert.deepEqual(getOwnerGymQuery("owner-1"), {
+  expect(getOwnerGymQuery("owner-1")).toStrictEqual({
     where: {
       ownerId: "owner-1",
     },
@@ -32,12 +31,12 @@ test("selects the authenticated owner's first gym only", () => {
 test("scopes gym-owned dashboard rows to the owner's gym id", () => {
   const gymId = "gym-1"
 
-  assert.equal(getPlanTiersQuery(gymId).where.gymId, gymId)
-  assert.equal(getDropInVisitsPageQuery(gymId, 25, 25).where.gymId, gymId)
+  expect(getPlanTiersQuery(gymId).where.gymId).toBe(gymId)
+  expect(getDropInVisitsPageQuery(gymId, 25, 25).where.gymId).toBe(gymId)
 })
 
 test("builds a stable paginated drop-in query", () => {
-  assert.deepEqual(getDropInVisitsPageQuery("gym-1", 25, 25), {
+  expect(getDropInVisitsPageQuery("gym-1", 25, 25)).toStrictEqual({
     where: { gymId: "gym-1" },
     orderBy: [{ visitedAt: "desc" }, { id: "desc" }],
     skip: 25,
@@ -56,25 +55,29 @@ test("builds a stable paginated drop-in query", () => {
 })
 
 test("builds stable paginated member detail queries", () => {
-  assert.deepEqual(getMemberPaymentsPageQuery("gym-1", "member-1", 25, 25), {
-    where: { gymId: "gym-1", memberId: "member-1" },
-    orderBy: [{ dueAt: "desc" }, { id: "desc" }],
-    skip: 25,
-    take: 25,
-    select: {
-      id: true,
-      gymId: true,
-      memberId: true,
-      membershipId: true,
-      amount: true,
-      status: true,
-      dueAt: true,
-      paidAt: true,
-      notes: true,
-    },
-  })
+  expect(getMemberPaymentsPageQuery("gym-1", "member-1", 25, 25)).toStrictEqual(
+    {
+      where: { gymId: "gym-1", memberId: "member-1" },
+      orderBy: [{ dueAt: "desc" }, { id: "desc" }],
+      skip: 25,
+      take: 25,
+      select: {
+        id: true,
+        gymId: true,
+        memberId: true,
+        membershipId: true,
+        amount: true,
+        status: true,
+        dueAt: true,
+        paidAt: true,
+        notes: true,
+      },
+    }
+  )
 
-  assert.deepEqual(getMemberAttendancePageQuery("gym-1", "member-1", 20, 20), {
+  expect(
+    getMemberAttendancePageQuery("gym-1", "member-1", 20, 20)
+  ).toStrictEqual({
     where: { gymId: "gym-1", memberId: "member-1" },
     orderBy: [{ attendedAt: "desc" }, { id: "desc" }],
     skip: 20,
@@ -103,30 +106,28 @@ test("builds member roster filters and paginated query", () => {
     asOf
   )
 
-  assert.equal(where.gymId, "gym-1")
-  assert.deepEqual(getMemberRosterPageQuery(where, 50, 25, asOf).orderBy, [
+  expect(where.gymId).toBe("gym-1")
+  expect(getMemberRosterPageQuery(where, 50, 25, asOf).orderBy).toStrictEqual([
     { lastName: "asc" },
     { firstName: "asc" },
     { id: "asc" },
   ])
-  assert.equal(getMemberRosterPageQuery(where, 50, 25, asOf).skip, 50)
-  assert.equal(getMemberRosterPageQuery(where, 50, 25, asOf).take, 25)
-  assert.deepEqual(
-    getMemberRosterPageQuery(where, 50, 25, asOf).select.memberships.where,
-    {
-      status: {
-        in: ["ACTIVE", "PAST_DUE", "EXPIRED"],
-      },
-    }
-  )
-  assert.deepEqual(
+  expect(getMemberRosterPageQuery(where, 50, 25, asOf).skip).toBe(50)
+  expect(getMemberRosterPageQuery(where, 50, 25, asOf).take).toBe(25)
+  expect(
+    getMemberRosterPageQuery(where, 50, 25, asOf).select.memberships.where
+  ).toStrictEqual({
+    status: {
+      in: ["ACTIVE", "PAST_DUE", "EXPIRED"],
+    },
+  })
+  expect(
     getMemberRosterPageQuery(where, 50, 25, asOf).select._count.select.payments
-      .where,
-    {
-      OR: [{ status: "OVERDUE" }, { status: "PENDING", dueAt: { lt: asOf } }],
-    }
-  )
-  assert.ok(where.AND)
+      .where
+  ).toStrictEqual({
+    OR: [{ status: "OVERDUE" }, { status: "PENDING", dueAt: { lt: asOf } }],
+  })
+  expect(where.AND).toBeTruthy()
 })
 
 test("builds member roster overdue risk from exact request time", () => {
@@ -144,7 +145,7 @@ test("builds member roster overdue risk from exact request time", () => {
     membershipAsOf
   )
 
-  assert.deepEqual(where, {
+  expect(where).toStrictEqual({
     gymId: "gym-1",
     AND: [
       {
@@ -174,7 +175,7 @@ test("builds an expired member roster risk filter", () => {
     asOf
   )
 
-  assert.deepEqual(where, {
+  expect(where).toStrictEqual({
     gymId: "gym-1",
     AND: [
       {
@@ -228,8 +229,8 @@ test("builds a combined member attention risk filter", () => {
     asOf
   )
 
-  assert.equal(where.gymId, "gym-1")
-  assert.deepEqual(where.AND, [
+  expect(where.gymId).toBe("gym-1")
+  expect(where.AND).toStrictEqual([
     {
       OR: [
         {

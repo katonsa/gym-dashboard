@@ -1,5 +1,4 @@
-import assert from "node:assert/strict"
-import test from "node:test"
+import { expect, test } from "vitest"
 
 import { updateMemberContactForGym } from "../lib/dashboard/member-contact-lifecycle.ts"
 import { db } from "../lib/db.ts"
@@ -8,7 +7,7 @@ test("updating member contact changes scoped member fields", async () => {
   const fixture = await createMemberContactFixture()
 
   try {
-    assert.deepEqual(
+    expect(
       await updateMemberContactForGym({
         client: db,
         gymId: fixture.gymId,
@@ -18,9 +17,8 @@ test("updating member contact changes scoped member fields", async () => {
         email: null,
         phone: null,
         notes: null,
-      }),
-      { status: "updated", memberId: fixture.memberId }
-    )
+      })
+    ).toStrictEqual({ status: "updated", memberId: fixture.memberId })
 
     const member = await db.member.findUniqueOrThrow({
       where: { id: fixture.memberId },
@@ -33,7 +31,7 @@ test("updating member contact changes scoped member fields", async () => {
       },
     })
 
-    assert.deepEqual(member, {
+    expect(member).toStrictEqual({
       firstName: "Updated",
       lastName: "Member",
       email: null,
@@ -50,7 +48,7 @@ test("updating member contact rejects members from another gym", async () => {
   const otherFixture = await createMemberContactFixture()
 
   try {
-    assert.deepEqual(
+    expect(
       await updateMemberContactForGym({
         client: db,
         gymId: fixture.gymId,
@@ -60,16 +58,15 @@ test("updating member contact rejects members from another gym", async () => {
         email: null,
         phone: null,
         notes: null,
-      }),
-      { status: "not-found" }
-    )
+      })
+    ).toStrictEqual({ status: "not-found" })
 
     const member = await db.member.findUniqueOrThrow({
       where: { id: otherFixture.memberId },
       select: { firstName: true, lastName: true },
     })
 
-    assert.deepEqual(member, {
+    expect(member).toStrictEqual({
       firstName: "Original",
       lastName: "Member",
     })

@@ -1,5 +1,4 @@
-import assert from "node:assert/strict"
-import test from "node:test"
+import { expect, test } from "vitest"
 
 import {
   getGymLocalDateInput,
@@ -9,13 +8,12 @@ import {
 } from "../lib/dashboard/date-boundaries.ts"
 
 test("normalizes an instant to the start of the gym-local day", () => {
-  assert.equal(
+  expect(
     getGymLocalDayBoundary(
       new Date("2026-04-19T09:30:00.000Z"),
       "Asia/Jakarta"
-    ).toISOString(),
-    "2026-04-18T17:00:00.000Z"
-  )
+    ).toISOString()
+  ).toBe("2026-04-18T17:00:00.000Z")
 })
 
 test("keeps a UTC-midnight membership current through its gym-local date", () => {
@@ -29,42 +27,39 @@ test("keeps a UTC-midnight membership current through its gym-local date", () =>
     "Asia/Jakarta"
   )
 
-  assert.equal(periodEnd >= sameGymDay, true)
-  assert.equal(periodEnd < nextGymDay, true)
+  expect(periodEnd >= sameGymDay).toBe(true)
+  expect(periodEnd < nextGymDay).toBe(true)
 })
 
 test("formats the gym-local date input for a non-UTC timezone", () => {
-  assert.equal(
-    getGymLocalDateInput(new Date("2026-04-18T18:30:00.000Z"), "Asia/Jakarta"),
-    "2026-04-19"
-  )
+  expect(
+    getGymLocalDateInput(new Date("2026-04-18T18:30:00.000Z"), "Asia/Jakarta")
+  ).toBe("2026-04-19")
 })
 
 test("builds a gym-local day window", () => {
-  assert.deepEqual(
+  expect(
     getIsoWindow(
       getGymLocalDayWindow(new Date("2026-04-19T09:30:00.000Z"), "Asia/Jakarta")
-    ),
-    {
-      start: "2026-04-18T17:00:00.000Z",
-      end: "2026-04-19T17:00:00.000Z",
-    }
-  )
+    )
+  ).toStrictEqual({
+    start: "2026-04-18T17:00:00.000Z",
+    end: "2026-04-19T17:00:00.000Z",
+  })
 })
 
 test("builds a gym-local month window", () => {
-  assert.deepEqual(
+  expect(
     getIsoWindow(
       getGymLocalMonthWindow(
         new Date("2026-04-30T18:30:00.000Z"),
         "Asia/Jakarta"
       )
-    ),
-    {
-      start: "2026-04-30T17:00:00.000Z",
-      end: "2026-05-31T17:00:00.000Z",
-    }
-  )
+    )
+  ).toStrictEqual({
+    start: "2026-04-30T17:00:00.000Z",
+    end: "2026-05-31T17:00:00.000Z",
+  })
 })
 
 function getIsoWindow(window: { start: Date; end: Date }) {

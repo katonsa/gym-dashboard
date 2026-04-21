@@ -1,5 +1,4 @@
-import assert from "node:assert/strict"
-import test from "node:test"
+import { expect, test } from "vitest"
 
 import type { AttendanceRecordModel } from "../lib/generated/prisma/models/AttendanceRecord.ts"
 import type { DropInVisitModel } from "../lib/generated/prisma/models/DropInVisit.ts"
@@ -47,14 +46,14 @@ test("maps database gym and arbitrary plan names to dashboard types", () => {
     updatedAt,
   } satisfies PlanTierModel
 
-  assert.deepEqual(mapGymProfile(gym), {
+  expect(mapGymProfile(gym)).toStrictEqual({
     id: "gym-1",
     name: "Foundry Gym",
     timezone: "Asia/Jakarta",
     currencyCode: "SGD",
     defaultDropInFeeAmount: 2500,
   })
-  assert.deepEqual(mapPlanTier(planTier), {
+  expect(mapPlanTier(planTier)).toStrictEqual({
     id: "plan-1",
     gymId: "gym-1",
     name: "Founders",
@@ -139,7 +138,7 @@ test("maps member, membership, payment, attendance, and drop-in rows", () => {
     updatedAt,
   } satisfies DropInVisitModel
 
-  assert.deepEqual(mapMember(member), {
+  expect(mapMember(member)).toStrictEqual({
     id: "member-1",
     gymId: "gym-1",
     firstName: "Ari",
@@ -151,7 +150,7 @@ test("maps member, membership, payment, attendance, and drop-in rows", () => {
     lastAttendedAt: undefined,
     notes: undefined,
   })
-  assert.deepEqual(mapMembership(membership), {
+  expect(mapMembership(membership)).toStrictEqual({
     id: "membership-1",
     memberId: "member-1",
     planTierId: "plan-1",
@@ -163,7 +162,7 @@ test("maps member, membership, payment, attendance, and drop-in rows", () => {
     nextBillingDate: "2026-02-03T03:04:05.000Z",
     canceledAt: undefined,
   })
-  assert.deepEqual(mapMembershipPayment(payment), {
+  expect(mapMembershipPayment(payment)).toStrictEqual({
     id: "payment-1",
     gymId: "gym-1",
     memberId: "member-1",
@@ -174,7 +173,7 @@ test("maps member, membership, payment, attendance, and drop-in rows", () => {
     paidAt: "2026-01-03T03:04:05.000Z",
     notes: undefined,
   })
-  assert.deepEqual(mapAttendanceRecord(attendanceRecord), {
+  expect(mapAttendanceRecord(attendanceRecord)).toStrictEqual({
     id: "attendance-1",
     gymId: "gym-1",
     memberId: "member-1",
@@ -182,7 +181,7 @@ test("maps member, membership, payment, attendance, and drop-in rows", () => {
     source: "MANUAL",
     notes: undefined,
   })
-  assert.deepEqual(mapDropInVisit(dropInVisit), {
+  expect(mapDropInVisit(dropInVisit)).toStrictEqual({
     id: "drop-in-1",
     gymId: "gym-1",
     visitorName: undefined,

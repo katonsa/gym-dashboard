@@ -1,5 +1,4 @@
-import assert from "node:assert/strict"
-import test from "node:test"
+import { expect, test } from "vitest"
 
 import { createMemberSchema } from "../lib/dashboard/schemas/member-create-schema.ts"
 
@@ -25,43 +24,38 @@ test("member creation accepts shared contact values at edit limits", () => {
     notes: "x".repeat(1000),
   })
 
-  assert.equal(parsed.success, true)
+  expect(parsed.success).toBe(true)
 })
 
 test("member creation rejects shared contact values over edit limits", () => {
-  assert.equal(
+  expect(
     createMemberSchema.safeParse({
       ...validValues,
       firstName: "x".repeat(101),
-    }).success,
-    false
-  )
-  assert.equal(
+    }).success
+  ).toBe(false)
+  expect(
     createMemberSchema.safeParse({
       ...validValues,
       lastName: "x".repeat(101),
-    }).success,
-    false
-  )
-  assert.equal(
+    }).success
+  ).toBe(false)
+  expect(
     createMemberSchema.safeParse({
       ...validValues,
       email: `${"x".repeat(244)}@example.test`,
-    }).success,
-    false
-  )
-  assert.equal(
+    }).success
+  ).toBe(false)
+  expect(
     createMemberSchema.safeParse({
       ...validValues,
       phone: "x".repeat(51),
-    }).success,
-    false
-  )
-  assert.equal(
+    }).success
+  ).toBe(false)
+  expect(
     createMemberSchema.safeParse({
       ...validValues,
       notes: "x".repeat(1001),
-    }).success,
-    false
-  )
+    }).success
+  ).toBe(false)
 })

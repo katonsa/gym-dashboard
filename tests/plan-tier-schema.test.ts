@@ -1,5 +1,4 @@
-import assert from "node:assert/strict"
-import test from "node:test"
+import { expect, test } from "vitest"
 
 import {
   createPlanTierSchema,
@@ -16,59 +15,52 @@ const validValues = {
 }
 
 test("requires plan names and bounded whole-number prices", () => {
-  assert.equal(
+  expect(
     createPlanTierSchema.safeParse({
       ...validValues,
       name: "",
-    }).success,
-    false
-  )
-  assert.equal(
+    }).success
+  ).toBe(false)
+  expect(
     createPlanTierSchema.safeParse({
       ...validValues,
       monthlyPriceAmount: "10.5",
-    }).success,
-    false
-  )
-  assert.equal(
+    }).success
+  ).toBe(false)
+  expect(
     createPlanTierSchema.safeParse({
       ...validValues,
       annualPriceAmount: "10000001",
-    }).success,
-    false
-  )
+    }).success
+  ).toBe(false)
 })
 
 test("requires bounded whole-number sort order", () => {
-  assert.equal(
+  expect(
     createPlanTierSchema.safeParse({
       ...validValues,
       sortOrder: "-1",
-    }).success,
-    false
-  )
-  assert.equal(
+    }).success
+  ).toBe(false)
+  expect(
     createPlanTierSchema.safeParse({
       ...validValues,
       sortOrder: "10001",
-    }).success,
-    false
-  )
+    }).success
+  ).toBe(false)
 })
 
 test("requires a plan id for updates", () => {
-  assert.equal(
+  expect(
     updatePlanTierSchema.safeParse({
       ...validValues,
       planTierId: "",
-    }).success,
-    false
-  )
-  assert.equal(
+    }).success
+  ).toBe(false)
+  expect(
     updatePlanTierSchema.safeParse({
       ...validValues,
       planTierId: "plan-1",
-    }).success,
-    true
-  )
+    }).success
+  ).toBe(true)
 })

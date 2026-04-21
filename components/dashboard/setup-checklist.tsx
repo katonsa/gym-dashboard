@@ -38,8 +38,7 @@ function getSteps(setupState: OverviewSetupState): SetupChecklistStep[] {
     {
       stepNumber: 2,
       title: "Add your first member",
-      description:
-        "Record a member to start tracking attendance and billing.",
+      description: "Record a member to start tracking attendance and billing.",
       isComplete: setupState.hasMembers,
       isActive: activeStep === 2,
     },
@@ -176,9 +175,7 @@ function SetupStep({
         </div>
       </div>
       {isActive && children ? (
-        <div className="border-t border-border px-4 pb-4 pt-4">
-          {children}
-        </div>
+        <div className="border-t border-border px-4 pt-4 pb-4">{children}</div>
       ) : null}
     </div>
   )

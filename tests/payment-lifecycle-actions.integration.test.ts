@@ -1,5 +1,4 @@
-import assert from "node:assert/strict"
-import test from "node:test"
+import { expect, test } from "vitest"
 
 import {
   markPaymentPaidForGym,
@@ -15,15 +14,14 @@ test("marking the last unpaid payment paid reactivates the membership", async ()
   const paidAt = new Date("2026-04-19T10:30:00.000Z")
 
   try {
-    assert.deepEqual(
+    expect(
       await markPaymentPaidForGym({
         client: db,
         gymId: fixture.gymId,
         paymentId: fixture.paymentId,
         now: paidAt,
-      }),
-      { status: "paid", memberId: fixture.memberId }
-    )
+      })
+    ).toStrictEqual({ status: "paid", memberId: fixture.memberId })
 
     const payment = await db.membershipPayment.findUniqueOrThrow({
       where: { id: fixture.paymentId },
@@ -38,15 +36,13 @@ test("marking the last unpaid payment paid reactivates the membership", async ()
       },
     })
 
-    assert.equal(payment.status, "PAID")
-    assert.deepEqual(payment.paidAt, paidAt)
-    assert.equal(membership.status, "ACTIVE")
-    assert.deepEqual(
-      membership.currentPeriodEndsAt,
+    expect(payment.status).toBe("PAID")
+    expect(payment.paidAt).toStrictEqual(paidAt)
+    expect(membership.status).toBe("ACTIVE")
+    expect(membership.currentPeriodEndsAt).toStrictEqual(
       new Date("2026-05-01T00:00:00.000Z")
     )
-    assert.deepEqual(
-      membership.nextBillingDate,
+    expect(membership.nextBillingDate).toStrictEqual(
       new Date("2026-05-01T00:00:00.000Z")
     )
   } finally {
@@ -62,24 +58,22 @@ test("marking paid keeps a membership past due while another unpaid payment rema
   })
 
   try {
-    assert.deepEqual(
+    expect(
       await markPaymentPaidForGym({
         client: db,
         gymId: fixture.gymId,
         paymentId: fixture.paymentId,
         now: new Date("2026-04-19T10:30:00.000Z"),
-      }),
-      { status: "paid", memberId: fixture.memberId }
-    )
+      })
+    ).toStrictEqual({ status: "paid", memberId: fixture.memberId })
 
     const membership = await db.membership.findUniqueOrThrow({
       where: { id: fixture.membershipId },
       select: { status: true, currentPeriodEndsAt: true },
     })
 
-    assert.equal(membership.status, "PAST_DUE")
-    assert.deepEqual(
-      membership.currentPeriodEndsAt,
+    expect(membership.status).toBe("PAST_DUE")
+    expect(membership.currentPeriodEndsAt).toStrictEqual(
       new Date("2026-04-01T00:00:00.000Z")
     )
   } finally {
@@ -95,15 +89,14 @@ test("voiding an overdue payment appends the reason without reactivating members
   })
 
   try {
-    assert.deepEqual(
+    expect(
       await voidPaymentForGym({
         client: db,
         gymId: fixture.gymId,
         paymentId: fixture.paymentId,
         reason: "Duplicate invoice",
-      }),
-      { status: "voided", memberId: fixture.memberId }
-    )
+      })
+    ).toStrictEqual({ status: "voided", memberId: fixture.memberId })
 
     const payment = await db.membershipPayment.findUniqueOrThrow({
       where: { id: fixture.paymentId },
@@ -114,9 +107,9 @@ test("voiding an overdue payment appends the reason without reactivating members
       select: { status: true },
     })
 
-    assert.equal(payment.status, "VOID")
-    assert.equal(payment.notes, "Created in error.\nVoided: Duplicate invoice")
-    assert.equal(membership.status, "PAST_DUE")
+    expect(payment.status).toBe("VOID")
+    expect(payment.notes).toBe("Created in error.\nVoided: Duplicate invoice")
+    expect(membership.status).toBe("PAST_DUE")
   } finally {
     await deleteFixture(fixture.userId)
   }
@@ -132,30 +125,27 @@ test("payment lifecycle actions reject resolved or cross-gym payments", async ()
   })
 
   try {
-    assert.deepEqual(
+    expect(
       await markPaymentPaidForGym({
         client: db,
         gymId: fixture.gymId,
         paymentId: fixture.paymentId,
-      }),
-      { status: "already-resolved" }
-    )
-    assert.deepEqual(
+      })
+    ).toStrictEqual({ status: "already-resolved" })
+    expect(
       await voidPaymentForGym({
         client: db,
         gymId: fixture.gymId,
         paymentId: fixture.paymentId,
-      }),
-      { status: "already-paid" }
-    )
-    assert.deepEqual(
+      })
+    ).toStrictEqual({ status: "already-paid" })
+    expect(
       await markPaymentPaidForGym({
         client: db,
         gymId: fixture.gymId,
         paymentId: otherFixture.paymentId,
-      }),
-      { status: "not-found" }
-    )
+      })
+    ).toStrictEqual({ status: "not-found" })
   } finally {
     await deleteFixture(fixture.userId)
     await deleteFixture(otherFixture.userId)

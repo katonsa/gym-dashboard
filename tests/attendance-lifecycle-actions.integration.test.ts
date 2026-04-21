@@ -1,5 +1,4 @@
-import assert from "node:assert/strict"
-import test from "node:test"
+import { expect, test } from "vitest"
 
 import { logMemberCheckInForGym } from "../lib/dashboard/attendance-lifecycle.ts"
 import { db } from "../lib/db.ts"
@@ -11,16 +10,15 @@ test("manual check-in creates attendance and updates newer last attendance", asy
   const attendedAt = new Date("2026-04-18T00:00:00.000Z")
 
   try {
-    assert.deepEqual(
+    expect(
       await logMemberCheckInForGym({
         client: db,
         gymId: fixture.gymId,
         memberId: fixture.memberId,
         attendedAt,
         notes: "Manual desk check-in.",
-      }),
-      { status: "logged", memberId: fixture.memberId }
-    )
+      })
+    ).toStrictEqual({ status: "logged", memberId: fixture.memberId })
 
     const attendance = await db.attendanceRecord.findFirstOrThrow({
       where: { memberId: fixture.memberId },
@@ -31,10 +29,10 @@ test("manual check-in creates attendance and updates newer last attendance", asy
       select: { lastAttendedAt: true },
     })
 
-    assert.deepEqual(attendance.attendedAt, attendedAt)
-    assert.equal(attendance.source, "MANUAL")
-    assert.equal(attendance.notes, "Manual desk check-in.")
-    assert.deepEqual(member.lastAttendedAt, attendedAt)
+    expect(attendance.attendedAt).toStrictEqual(attendedAt)
+    expect(attendance.source).toBe("MANUAL")
+    expect(attendance.notes).toBe("Manual desk check-in.")
+    expect(member.lastAttendedAt).toStrictEqual(attendedAt)
   } finally {
     await deleteFixture(fixture.userId)
   }
@@ -47,22 +45,21 @@ test("manual check-in keeps last attendance when the date is older", async () =>
   })
 
   try {
-    assert.deepEqual(
+    expect(
       await logMemberCheckInForGym({
         client: db,
         gymId: fixture.gymId,
         memberId: fixture.memberId,
         attendedAt: new Date("2026-04-10T00:00:00.000Z"),
-      }),
-      { status: "logged", memberId: fixture.memberId }
-    )
+      })
+    ).toStrictEqual({ status: "logged", memberId: fixture.memberId })
 
     const member = await db.member.findUniqueOrThrow({
       where: { id: fixture.memberId },
       select: { lastAttendedAt: true },
     })
 
-    assert.deepEqual(member.lastAttendedAt, existingLastAttendedAt)
+    expect(member.lastAttendedAt).toStrictEqual(existingLastAttendedAt)
   } finally {
     await deleteFixture(fixture.userId)
   }
@@ -73,22 +70,20 @@ test("manual check-in rejects members from another gym", async () => {
   const otherFixture = await createAttendanceFixture({})
 
   try {
-    assert.deepEqual(
+    expect(
       await logMemberCheckInForGym({
         client: db,
         gymId: fixture.gymId,
         memberId: otherFixture.memberId,
         attendedAt: new Date("2026-04-18T00:00:00.000Z"),
-      }),
-      { status: "not-found" }
-    )
+      })
+    ).toStrictEqual({ status: "not-found" })
 
-    assert.equal(
+    expect(
       await db.attendanceRecord.count({
         where: { memberId: otherFixture.memberId },
-      }),
-      0
-    )
+      })
+    ).toBe(0)
   } finally {
     await deleteFixture(fixture.userId)
     await deleteFixture(otherFixture.userId)

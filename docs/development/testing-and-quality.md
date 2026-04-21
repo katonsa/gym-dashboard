@@ -7,7 +7,8 @@ UI flows that depend on authenticated owner data.
 
 | Command                    | What it checks                                          | Requirements                                                               |
 | -------------------------- | ------------------------------------------------------- | -------------------------------------------------------------------------- |
-| `npm test`                 | Fast TypeScript tests imported by `tests/run-tests.ts`. | Node dependencies installed.                                               |
+| `npm test`                 | Unit tests via Vitest (single run).                     | Node dependencies installed.                                               |
+| `npm run test:watch`       | Unit tests in watch mode — reruns on file changes.      | Node dependencies installed.                                               |
 | `npm run test:integration` | Database-backed server action and lifecycle tests.      | Local Postgres running, migrations applied.                                |
 | `npm run typecheck`        | TypeScript project correctness with `--noEmit`.         | Node dependencies installed.                                               |
 | `npm run lint`             | ESLint rules, including Next.js checks.                 | Node dependencies installed.                                               |
@@ -42,8 +43,9 @@ npm run build
 
 ## Unit-Style Tests
 
-Fast tests live in `tests/*.test.ts` and are imported from
-`tests/run-tests.ts`. They are best for pure logic and stable contracts:
+Fast tests live in `tests/*.test.ts` and are auto-discovered by Vitest via the
+`include` glob in `vitest.config.ts`. They are best for pure logic and stable
+contracts:
 
 - Billing and renewal calculations.
 - Dashboard mappers and formatters.
@@ -52,14 +54,14 @@ Fast tests live in `tests/*.test.ts` and are imported from
 - Owner scoping query shapes.
 - Safe redirect and auth path helpers.
 
-When adding a new fast test file, import it from `tests/run-tests.ts`; otherwise
-`npm test` will not execute it.
+New test files matching `tests/*.test.ts` are picked up automatically by
+`npm test` and `npm run test:watch`. No manual registration needed.
 
 ## Integration Tests
 
-Integration tests live in `tests/*.integration.test.ts` and are imported from
-`tests/run-integration-tests.ts`. They should be used for behavior that needs a
-real database:
+Integration tests live in `tests/*.integration.test.ts` and run via a separate
+Vitest config (`vitest.config.integration.ts`). They should be used for behavior
+that needs a real database:
 
 - Server actions that create or update records.
 - Payment lifecycle changes.
@@ -67,10 +69,11 @@ real database:
 - Attendance and check-in lifecycle behavior.
 - Owner-gym scoping for writes.
 
-The integration runner loads `.env` before importing Prisma, creates isolated
-fixtures, and deletes those fixtures after each test. Keep tests deterministic
-and avoid depending on seeded demo records unless the test is explicitly about
-seed coverage.
+The integration config loads `.env` variables via Vite's `loadEnv` before Prisma
+initializes, runs test files sequentially to avoid fixture collisions, and each
+test creates isolated fixtures and deletes them after completion. Keep tests
+deterministic and avoid depending on seeded demo records unless the test is
+explicitly about seed coverage.
 
 ## Adding Coverage
 

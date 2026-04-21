@@ -1,5 +1,4 @@
-import assert from "node:assert/strict"
-import test from "node:test"
+import { expect, test } from "vitest"
 
 import { updateMemberContactSchema } from "../lib/dashboard/schemas/update-member-contact-schema.ts"
 
@@ -21,13 +20,13 @@ test("trims editable contact values", () => {
     notes: "  Prefers WhatsApp.  ",
   })
 
-  assert.equal(parsed.success, true)
+  expect(parsed.success).toBe(true)
 
   if (parsed.success) {
-    assert.equal(parsed.data.firstName, "Ari")
-    assert.equal(parsed.data.lastName, "Santoso")
-    assert.equal(parsed.data.phone, "+62 812 5555")
-    assert.equal(parsed.data.notes, "Prefers WhatsApp.")
+    expect(parsed.data.firstName).toBe("Ari")
+    expect(parsed.data.lastName).toBe("Santoso")
+    expect(parsed.data.phone).toBe("+62 812 5555")
+    expect(parsed.data.notes).toBe("Prefers WhatsApp.")
   }
 })
 
@@ -39,12 +38,12 @@ test("coerces cleared optional contact values to null", () => {
     notes: "",
   })
 
-  assert.equal(parsed.success, true)
+  expect(parsed.success).toBe(true)
 
   if (parsed.success) {
-    assert.equal(parsed.data.email, null)
-    assert.equal(parsed.data.phone, null)
-    assert.equal(parsed.data.notes, null)
+    expect(parsed.data.email).toBe(null)
+    expect(parsed.data.phone).toBe(null)
+    expect(parsed.data.notes).toBe(null)
   }
 })
 
@@ -54,60 +53,53 @@ test("rejects invalid email", () => {
     email: "not-an-email",
   })
 
-  assert.equal(parsed.success, false)
+  expect(parsed.success).toBe(false)
 })
 
 test("rejects blank required names", () => {
-  assert.equal(
+  expect(
     updateMemberContactSchema.safeParse({
       ...validValues,
       firstName: " ",
-    }).success,
-    false
-  )
-  assert.equal(
+    }).success
+  ).toBe(false)
+  expect(
     updateMemberContactSchema.safeParse({
       ...validValues,
       lastName: " ",
-    }).success,
-    false
-  )
+    }).success
+  ).toBe(false)
 })
 
 test("rejects contact values over length limits", () => {
-  assert.equal(
+  expect(
     updateMemberContactSchema.safeParse({
       ...validValues,
       firstName: "x".repeat(101),
-    }).success,
-    false
-  )
-  assert.equal(
+    }).success
+  ).toBe(false)
+  expect(
     updateMemberContactSchema.safeParse({
       ...validValues,
       lastName: "x".repeat(101),
-    }).success,
-    false
-  )
-  assert.equal(
+    }).success
+  ).toBe(false)
+  expect(
     updateMemberContactSchema.safeParse({
       ...validValues,
       email: `${"x".repeat(244)}@example.test`,
-    }).success,
-    false
-  )
-  assert.equal(
+    }).success
+  ).toBe(false)
+  expect(
     updateMemberContactSchema.safeParse({
       ...validValues,
       phone: "x".repeat(51),
-    }).success,
-    false
-  )
-  assert.equal(
+    }).success
+  ).toBe(false)
+  expect(
     updateMemberContactSchema.safeParse({
       ...validValues,
       notes: "x".repeat(1001),
-    }).success,
-    false
-  )
+    }).success
+  ).toBe(false)
 })

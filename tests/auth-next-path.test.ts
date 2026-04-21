@@ -1,5 +1,4 @@
-import assert from "node:assert/strict"
-import test from "node:test"
+import { expect, test } from "vitest"
 
 import {
   getDashboardSignInPath,
@@ -7,29 +6,26 @@ import {
 } from "../lib/auth/next-path.ts"
 
 test("allows known dashboard routes as safe return paths", () => {
-  assert.equal(getSafeDashboardNextPath("/"), "/")
-  assert.equal(getSafeDashboardNextPath("/members"), "/members")
-  assert.equal(
-    getSafeDashboardNextPath("/drop-ins?source=nav#entry"),
+  expect(getSafeDashboardNextPath("/")).toBe("/")
+  expect(getSafeDashboardNextPath("/members")).toBe("/members")
+  expect(getSafeDashboardNextPath("/drop-ins?source=nav#entry")).toBe(
     "/drop-ins?source=nav#entry"
   )
-  assert.equal(getSafeDashboardNextPath("/settings"), "/settings")
+  expect(getSafeDashboardNextPath("/settings")).toBe("/settings")
 })
 
 test("falls back for external, protocol-relative, and unknown return paths", () => {
-  assert.equal(getSafeDashboardNextPath("https://example.com"), "/")
-  assert.equal(getSafeDashboardNextPath("//example.com"), "/")
-  assert.equal(getSafeDashboardNextPath("/unknown"), "/")
-  assert.equal(getSafeDashboardNextPath(undefined), "/")
+  expect(getSafeDashboardNextPath("https://example.com")).toBe("/")
+  expect(getSafeDashboardNextPath("//example.com")).toBe("/")
+  expect(getSafeDashboardNextPath("/unknown")).toBe("/")
+  expect(getSafeDashboardNextPath(undefined)).toBe("/")
 })
 
 test("builds sign-in paths with encoded safe dashboard next params", () => {
-  assert.equal(
-    getDashboardSignInPath("/members?status=ACTIVE"),
+  expect(getDashboardSignInPath("/members?status=ACTIVE")).toBe(
     "/sign-in?next=%2Fmembers%3Fstatus%3DACTIVE"
   )
-  assert.equal(
-    getDashboardSignInPath("https://example.com"),
+  expect(getDashboardSignInPath("https://example.com")).toBe(
     "/sign-in?next=%2F"
   )
 })

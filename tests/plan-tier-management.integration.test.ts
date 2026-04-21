@@ -1,5 +1,4 @@
-import assert from "node:assert/strict"
-import test from "node:test"
+import { expect, test } from "vitest"
 
 import {
   createPlanTierForGym,
@@ -29,8 +28,8 @@ test("creating plan tiers is scoped and rejects duplicate names", async () => {
       values: planValues,
     })
 
-    assert.equal(created.status, "created")
-    assert.deepEqual(
+    expect(created.status).toBe("created")
+    expect(
       await createPlanTierForGym({
         client: db,
         gymId: fixture.gymId,
@@ -39,29 +38,26 @@ test("creating plan tiers is scoped and rejects duplicate names", async () => {
           name: "pro",
           sortOrder: "3",
         },
-      }),
-      { status: "duplicate-name" }
-    )
-    await assert.rejects(
-      () =>
-        db.planTier.create({
-          data: {
-            gymId: fixture.gymId,
-            name: "PRO",
-            normalizedName: normalizePlanTierName("PRO"),
-            monthlyPriceAmount: 650000,
-            annualPriceAmount: 6500000,
-            sortOrder: 3,
-          },
-          select: { id: true },
-        }),
-      isUniqueConstraintError
-    )
+      })
+    ).toStrictEqual({ status: "duplicate-name" })
+    await expect(
+      db.planTier.create({
+        data: {
+          gymId: fixture.gymId,
+          name: "PRO",
+          normalizedName: normalizePlanTierName("PRO"),
+          monthlyPriceAmount: 650000,
+          annualPriceAmount: 6500000,
+          sortOrder: 3,
+        },
+        select: { id: true },
+      })
+    ).rejects.toSatisfy(isUniqueConstraintError)
 
     const rows = await getPlanTierManagementRows(fixture.gymId, db)
-    assert.equal(rows.length, 1)
-    assert.equal(rows[0]?.name, "Pro")
-    assert.equal(rows[0]?.isActive, true)
+    expect(rows.length).toBe(1)
+    expect(rows[0]?.name).toBe("Pro")
+    expect(rows[0]?.isActive).toBe(true)
   } finally {
     await deleteFixture(fixture.userId)
   }
@@ -106,7 +102,7 @@ test("updating plan tiers rejects cross-gym writes and duplicates", async () => 
       select: { id: true },
     })
 
-    assert.deepEqual(
+    expect(
       await updatePlanTierForGym({
         client: db,
         gymId: fixture.gymId,
@@ -115,10 +111,9 @@ test("updating plan tiers rejects cross-gym writes and duplicates", async () => 
           ...planValues,
           name: "Wrong Gym",
         },
-      }),
-      { status: "not-found" }
-    )
-    assert.deepEqual(
+      })
+    ).toStrictEqual({ status: "not-found" })
+    expect(
       await updatePlanTierForGym({
         client: db,
         gymId: fixture.gymId,
@@ -127,9 +122,8 @@ test("updating plan tiers rejects cross-gym writes and duplicates", async () => 
           ...planValues,
           name: "basic",
         },
-      }),
-      { status: "duplicate-name" }
-    )
+      })
+    ).toStrictEqual({ status: "duplicate-name" })
 
     const updated = await updatePlanTierForGym({
       client: db,
@@ -142,13 +136,13 @@ test("updating plan tiers rejects cross-gym writes and duplicates", async () => 
       },
     })
 
-    assert.equal(updated.status, "updated")
+    expect(updated.status).toBe("updated")
     const afterUpdate = await db.planTier.findUniqueOrThrow({
       where: { id: basic.id },
       select: { name: true, monthlyPriceAmount: true },
     })
-    assert.equal(afterUpdate.name, "Starter")
-    assert.equal(afterUpdate.monthlyPriceAmount, 400000)
+    expect(afterUpdate.name).toBe("Starter")
+    expect(afterUpdate.monthlyPriceAmount).toBe(400000)
   } finally {
     await deleteFixture(fixture.userId)
     await deleteFixture(otherFixture.userId)
@@ -195,16 +189,15 @@ test("deactivating a plan hides it without changing memberships", async () => {
     })
 
     const rowsBefore = await getPlanTierManagementRows(fixture.gymId, db)
-    assert.equal(rowsBefore[0]?.activeMembershipsCount, 1)
+    expect(rowsBefore[0]?.activeMembershipsCount).toBe(1)
 
-    assert.deepEqual(
+    expect(
       await deactivatePlanTierForGym({
         client: db,
         gymId: fixture.gymId,
         planTierId: plan.id,
-      }),
-      { status: "deactivated", planTierId: plan.id }
-    )
+      })
+    ).toStrictEqual({ status: "deactivated", planTierId: plan.id })
 
     const [planAfter, membershipAfter] = await Promise.all([
       db.planTier.findUniqueOrThrow({
@@ -217,8 +210,8 @@ test("deactivating a plan hides it without changing memberships", async () => {
       }),
     ])
 
-    assert.equal(planAfter.isActive, false)
-    assert.deepEqual(membershipAfter, {
+    expect(planAfter.isActive).toBe(false)
+    expect(membershipAfter).toStrictEqual({
       status: "ACTIVE",
       planTierId: plan.id,
     })

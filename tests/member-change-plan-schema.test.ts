@@ -1,5 +1,4 @@
-import assert from "node:assert/strict"
-import test from "node:test"
+import { expect, test } from "vitest"
 
 import { changePlanSchema } from "../lib/dashboard/schemas/change-plan-schema.ts"
 
@@ -11,7 +10,7 @@ const validValues = {
 }
 
 test("accepts complete member plan change values", () => {
-  assert.equal(changePlanSchema.safeParse(validValues).success, true)
+  expect(changePlanSchema.safeParse(validValues).success).toBe(true)
 })
 
 test("rejects a missing plan tier", () => {
@@ -20,7 +19,7 @@ test("rejects a missing plan tier", () => {
     planTierId: "",
   })
 
-  assert.equal(parsed.success, false)
+  expect(parsed.success).toBe(false)
 })
 
 test("rejects an invalid billing interval", () => {
@@ -29,7 +28,7 @@ test("rejects an invalid billing interval", () => {
     billingInterval: "WEEKLY",
   })
 
-  assert.equal(parsed.success, false)
+  expect(parsed.success).toBe(false)
 })
 
 test("rejects an invalid effective date", () => {
@@ -38,5 +37,5 @@ test("rejects an invalid effective date", () => {
     effectiveDate: "2026-02-31",
   })
 
-  assert.equal(parsed.success, false)
+  expect(parsed.success).toBe(false)
 })
