@@ -120,7 +120,7 @@ export function AppShell({
         aria-label="Primary"
         className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 px-2 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur lg:hidden"
       >
-        <div className="grid grid-cols-5 gap-1">
+        <div className="flex items-center gap-1">
           {dashboardRoutes.map((route) => (
             <NavItem
               key={route.href}
@@ -156,6 +156,8 @@ function NavItem({
         "group flex min-h-14 items-center justify-center rounded-lg border border-transparent px-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
         active &&
           "border-primary/30 bg-primary/12 text-foreground shadow-[inset_0_1px_0_var(--color-shell-highlight)]",
+        !desktop && "min-h-12 flex-1 basis-0 flex-col gap-1 rounded-md px-1.5",
+        !desktop && active && "flex-[1.8] flex-row gap-2 px-3 text-foreground",
         desktop &&
           "min-h-11 justify-start gap-3 px-3 text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
         desktop &&
@@ -166,12 +168,22 @@ function NavItem({
       <Icon
         className={cn(
           "size-4 shrink-0",
-          !desktop && "mb-1 block size-5",
+          !desktop && "size-5",
           active && "text-primary",
+          !desktop && active && "text-primary",
           desktop && active && "text-sidebar-primary-foreground"
         )}
       />
-      <span className={cn(!desktop && "block leading-tight")}>{label}</span>
+      <span
+        className={cn(
+          desktop && "truncate",
+          !desktop &&
+            "h-0 max-w-0 overflow-hidden leading-none whitespace-nowrap opacity-0 transition-[max-width,opacity] duration-200",
+          !desktop && active && "h-auto max-w-24 opacity-100"
+        )}
+      >
+        {label}
+      </span>
     </Link>
   )
 }

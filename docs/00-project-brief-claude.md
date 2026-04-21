@@ -163,7 +163,7 @@ The dashboard is designed **mobile-first** for an admin on the gym floor:
 | **Touch targets** | Minimum 44×44px for all buttons and interactive elements |
 | **Stats panel** | 2×2 card grid — large numbers, scannable at a glance |
 | **Member table** | Condensed card list on mobile (not a wide table) |
-| **Navigation** | Bottom tab bar on mobile; sidebar on desktop |
+| **Navigation** | Full-width bottom bar on mobile with icon-only inactive routes and an expanded active route label; sidebar on desktop |
 | **Alerts** | Pinned at top — always visible without scrolling |
 | **Forms & inputs** | Large input fields, native mobile keyboards where appropriate |
 | **Charts** | Simplified, touch-friendly with tap-to-reveal data points |

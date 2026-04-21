@@ -37,6 +37,8 @@ This backlog turned the project brief into small, verifiable tasks. All listed i
   - Add mobile-first app layout.
   - Add desktop sidebar.
   - Add mobile bottom tab bar.
+  - Keep the mobile bottom bar full-width and anchored to the viewport edge.
+    Inactive routes are icon-only; the active route expands to show its label.
   - Keep content dense and scannable.
 
 - [x] Implement persistent light/dark theme toggle

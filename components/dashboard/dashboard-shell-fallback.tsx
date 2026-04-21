@@ -109,14 +109,16 @@ export function DashboardShellFallback() {
       </div>
 
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 px-2 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur lg:hidden">
-        <div className="grid grid-cols-4 gap-1">
-          {Array.from({ length: 4 }).map((_, index) => (
+        <div className="flex items-center gap-1">
+          {Array.from({ length: 5 }).map((_, index) => (
             <div
               key={index}
-              className="flex min-h-14 flex-col items-center justify-center gap-2 rounded-lg px-2"
+              className={`flex min-h-12 basis-0 items-center justify-center rounded-md px-1.5 ${
+                index === 0 ? "flex-[1.8] gap-2 px-3" : "flex-1"
+              }`}
             >
               <LoadingBlock className="size-5 rounded-md" />
-              <LoadingBlock className="h-3 w-10" />
+              {index === 0 ? <LoadingBlock className="h-3 w-16" /> : null}
             </div>
           ))}
         </div>
