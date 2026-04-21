@@ -13,12 +13,13 @@ test("allows known dashboard routes as safe return paths", () => {
     getSafeDashboardNextPath("/drop-ins?source=nav#entry"),
     "/drop-ins?source=nav#entry"
   )
+  assert.equal(getSafeDashboardNextPath("/settings"), "/settings")
 })
 
 test("falls back for external, protocol-relative, and unknown return paths", () => {
   assert.equal(getSafeDashboardNextPath("https://example.com"), "/")
   assert.equal(getSafeDashboardNextPath("//example.com"), "/")
-  assert.equal(getSafeDashboardNextPath("/settings"), "/")
+  assert.equal(getSafeDashboardNextPath("/unknown"), "/")
   assert.equal(getSafeDashboardNextPath(undefined), "/")
 })
 

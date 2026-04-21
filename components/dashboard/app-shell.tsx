@@ -7,6 +7,7 @@ import {
   BadgeDollarSign,
   CircleDollarSign,
   Dumbbell,
+  Settings,
   Users,
 } from "lucide-react"
 
@@ -23,6 +24,7 @@ const routeIcons: Record<
   "/members": Users,
   "/subscriptions": CircleDollarSign,
   "/drop-ins": BadgeDollarSign,
+  "/settings": Settings,
 }
 
 export function AppShell({
@@ -118,7 +120,7 @@ export function AppShell({
         aria-label="Primary"
         className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 px-2 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur lg:hidden"
       >
-        <div className="grid grid-cols-4 gap-1">
+        <div className="grid grid-cols-5 gap-1">
           {dashboardRoutes.map((route) => (
             <NavItem
               key={route.href}

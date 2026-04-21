@@ -19,6 +19,11 @@ export const dashboardRoutes = [
     label: "Drop-ins",
     description: "Day-pass log, monthly totals, and conversion leads.",
   },
+  {
+    href: "/settings",
+    label: "Settings",
+    description: "Gym profile, operating defaults, and day-pass pricing.",
+  },
 ] as const
 
 export type DashboardRoute = (typeof dashboardRoutes)[number]
