@@ -4,6 +4,8 @@ import test from "node:test"
 import {
   getGymLocalDateInput,
   getGymLocalDayBoundary,
+  getGymLocalDayWindow,
+  getGymLocalMonthWindow,
 } from "../lib/dashboard/date-boundaries.ts"
 
 test("normalizes an instant to the start of the gym-local day", () => {
@@ -37,3 +39,37 @@ test("formats the gym-local date input for a non-UTC timezone", () => {
     "2026-04-19"
   )
 })
+
+test("builds a gym-local day window", () => {
+  assert.deepEqual(
+    getIsoWindow(
+      getGymLocalDayWindow(new Date("2026-04-19T09:30:00.000Z"), "Asia/Jakarta")
+    ),
+    {
+      start: "2026-04-18T17:00:00.000Z",
+      end: "2026-04-19T17:00:00.000Z",
+    }
+  )
+})
+
+test("builds a gym-local month window", () => {
+  assert.deepEqual(
+    getIsoWindow(
+      getGymLocalMonthWindow(
+        new Date("2026-04-30T18:30:00.000Z"),
+        "Asia/Jakarta"
+      )
+    ),
+    {
+      start: "2026-04-30T17:00:00.000Z",
+      end: "2026-05-31T17:00:00.000Z",
+    }
+  )
+})
+
+function getIsoWindow(window: { start: Date; end: Date }) {
+  return {
+    start: window.start.toISOString(),
+    end: window.end.toISOString(),
+  }
+}

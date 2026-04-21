@@ -114,7 +114,7 @@ export const loadOverviewSummary = cache(
     const result = await getOverviewSummary(
       gym.id,
       gym.currencyCode,
-      { ...options, asOf, membershipAsOf },
+      { ...options, asOf, membershipAsOf, timeZone: gym.timezone },
       aggregateDb
     )
 
@@ -141,7 +141,7 @@ export const loadOverviewAlerts = cache(
     return getOverviewAlerts(
       gym.id,
       gym.currencyCode,
-      { ...options, asOf, membershipAsOf },
+      { ...options, asOf, membershipAsOf, timeZone: gym.timezone },
       aggregateDb
     )
   }
@@ -245,7 +245,8 @@ export const loadSubscriptionSummary = cache(async (asOf = new Date()) => {
       mappedPlanTiers,
       asOf,
       revenueAsOf,
-      aggregateDb
+      aggregateDb,
+      gym.timezone
     ),
   } satisfies SubscriptionsSummaryDashboardData
 })
@@ -262,7 +263,11 @@ export const loadDropInSummary = cache(
 
     return {
       gym,
-      dropInSummary: await getDropInSummary(gym.id, options, aggregateDb),
+      dropInSummary: await getDropInSummary(
+        gym.id,
+        { ...options, timeZone: gym.timezone },
+        aggregateDb
+      ),
     }
   }
 )

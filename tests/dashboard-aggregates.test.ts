@@ -3,6 +3,7 @@ import test from "node:test"
 
 import {
   getConversionLeads,
+  getDropInSummary,
   getDropInTotal,
   getExpiredMembershipsCount,
   getExpiringMembershipsCount,
@@ -13,6 +14,7 @@ import {
   getOverdueAgingSummary,
   getOverduePaymentsCount,
   getOverviewAlerts,
+  getOverviewSummary,
   getPlanBreakdownAggregates,
   getRevenueTrend,
   getSubscriptionSummary,
@@ -71,6 +73,63 @@ test("counts new sign-ups in a UTC month window", async () => {
       joinDate: { gte: monthStart, lt: nextMonthStart },
     },
   })
+})
+
+test("uses a gym-local month window for overview month metrics", async () => {
+  const memberCountCalls: unknown[] = []
+  const dropInAggregateCalls: unknown[] = []
+  const rawCalls: { strings: readonly string[]; values: unknown[] }[] = []
+  const db = mockDb({
+    member: {
+      groupBy: async () => [],
+      count: async (args: unknown) => {
+        memberCountCalls.push(args)
+
+        return 0
+      },
+    },
+    dropInVisit: {
+      aggregate: async (args: unknown) => {
+        dropInAggregateCalls.push(args)
+
+        return { _sum: { amount: 0, visitCount: 0 } }
+      },
+    },
+    $queryRaw: async (strings: TemplateStringsArray, ...values: unknown[]) => {
+      rawCalls.push({ strings: Array.from(strings), values })
+
+      return [{ count: 0 }]
+    },
+  })
+
+  await getOverviewSummary(
+    "gym-1",
+    "IDR",
+    {
+      asOf: new Date("2026-04-30T18:30:00.000Z"),
+      timeZone: "Asia/Jakarta",
+    },
+    db
+  )
+
+  const monthStart = new Date("2026-04-30T17:00:00.000Z")
+  const nextMonthStart = new Date("2026-05-31T17:00:00.000Z")
+
+  assert.deepEqual(memberCountCalls[0], {
+    where: {
+      gymId: "gym-1",
+      joinDate: { gte: monthStart, lt: nextMonthStart },
+    },
+  })
+  assert.deepEqual(dropInAggregateCalls[0], {
+    where: {
+      gymId: "gym-1",
+      visitedAt: { gte: monthStart, lt: nextMonthStart },
+    },
+    _sum: { amount: true },
+  })
+  assert.deepEqual(rawCalls[0]?.values[1], monthStart)
+  assert.deepEqual(rawCalls[0]?.values[2], nextMonthStart)
 })
 
 test("calculates MRR with monthly and annual membership aggregate queries", async () => {
@@ -380,6 +439,65 @@ test("aggregates drop-in totals for a scoped date window", async () => {
   })
 })
 
+test("uses gym-local day and month windows for drop-in summary", async () => {
+  const aggregateCalls: unknown[] = []
+  const rawCalls: { strings: readonly string[]; values: unknown[] }[] = []
+  const db = mockDb({
+    dropInVisit: {
+      aggregate: async (args: unknown) => {
+        aggregateCalls.push(args)
+
+        return { _sum: { amount: 0, visitCount: 0 } }
+      },
+    },
+    $queryRaw: async (strings: TemplateStringsArray, ...values: unknown[]) => {
+      rawCalls.push({ strings: Array.from(strings), values })
+
+      return []
+    },
+  })
+
+  await getDropInSummary(
+    "gym-1",
+    {
+      asOf: new Date("2026-04-30T18:30:00.000Z"),
+      timeZone: "Asia/Jakarta",
+    },
+    db
+  )
+
+  assert.deepEqual(aggregateCalls[0], {
+    where: {
+      gymId: "gym-1",
+      visitedAt: {
+        gte: new Date("2026-04-30T17:00:00.000Z"),
+        lt: new Date("2026-05-01T17:00:00.000Z"),
+      },
+    },
+    _sum: { amount: true, visitCount: true },
+  })
+  assert.deepEqual(aggregateCalls[1], {
+    where: {
+      gymId: "gym-1",
+      visitedAt: {
+        gte: new Date("2026-04-30T17:00:00.000Z"),
+        lt: new Date("2026-05-31T17:00:00.000Z"),
+      },
+    },
+    _sum: { amount: true, visitCount: true },
+  })
+  assertDateIso(rawCalls[0]?.values[1], "2026-04-30T17:00:00.000Z")
+  assertDateIso(rawCalls[0]?.values[2], "2026-05-31T17:00:00.000Z")
+})
+
+function assertDateIso(value: unknown, isoDate: string) {
+  assert.equal(value instanceof Date, true)
+
+  if (value instanceof Date) {
+    assert.equal(value.toISOString(), isoDate)
+  }
+}
+
 test("maps plan breakdown aggregate rows onto sorted plan tiers", async () => {
   const rawCalls: { strings: readonly string[]; values: unknown[] }[] = []
   const revenueAsOf = new Date("2026-04-18T17:00:00.000Z")
@@ -473,6 +591,69 @@ test("loads subscription setup from current active revenue memberships only", as
     },
   })
 })
+
+test("uses gym-local month windows for subscription revenue trend", async () => {
+  const rawCalls: { strings: readonly string[]; values: unknown[] }[] = []
+  const revenueAsOf = new Date("2026-04-30T17:00:00.000Z")
+  const db = mockDb({
+    membership: {
+      count: async () => 1,
+    },
+    membershipPayment: {
+      count: async () => 0,
+    },
+    dropInVisit: {
+      aggregate: async () => ({ _sum: { visitCount: 1 } }),
+    },
+    $queryRaw: async (strings: TemplateStringsArray, ...values: unknown[]) => {
+      rawCalls.push({ strings: Array.from(strings), values })
+
+      const sql = strings.join(" ")
+
+      if (sql.includes('"planTierId"')) {
+        return []
+      }
+
+      if (sql.includes('"membershipRevenue"')) {
+        return [{ membershipRevenue: 100000 }]
+      }
+
+      return [{ dropInRevenue: 25000 }]
+    },
+  })
+  const plans: PlanTier[] = [
+    planTier({ id: "plan-basic", name: "Basic", sortOrder: 1 }),
+  ]
+
+  const summary = await getSubscriptionSummary(
+    "gym-1",
+    plans,
+    new Date("2026-04-30T18:30:00.000Z"),
+    revenueAsOf,
+    db,
+    "Asia/Jakarta"
+  )
+
+  assert.deepEqual(summary.revenueTrend.at(-1), {
+    month: "May",
+    membership: 100000,
+    dropIns: 25000,
+    total: 125000,
+  })
+  assert.equal(hasRawCallDate(rawCalls, "2026-04-30T17:00:00.000Z"), true)
+  assert.equal(hasRawCallDate(rawCalls, "2026-05-31T17:00:00.000Z"), true)
+})
+
+function hasRawCallDate(
+  rawCalls: { strings: readonly string[]; values: unknown[] }[],
+  isoDate: string
+) {
+  return rawCalls.some((call) =>
+    call.values.some(
+      (value) => value instanceof Date && value.toISOString() === isoDate
+    )
+  )
+}
 
 test("combines membership and drop-in raw rows into revenue trend", async () => {
   const rawCalls: { strings: readonly string[]; values: unknown[] }[] = []

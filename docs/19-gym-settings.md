@@ -61,6 +61,26 @@ Supported timezone and currency options are shared by the schema and form from
   actions: authenticate first, select the owner's gym, then update by that gym
   id.
 
+## Timezone Boundary Follow-up
+
+The first implementation saved the timezone and refreshed the affected pages,
+but a review found some dashboard calculations still used UTC day/month windows.
+That meant totals could be incorrect around local midnight or local month
+boundaries for non-UTC gyms.
+
+The follow-up was implemented with a TDD pass:
+
+- Added gym-local day and month window helpers in
+  `lib/dashboard/date-boundaries.ts`.
+- Threaded `gym.timezone` through the overview, drop-in, and subscription
+  loaders.
+- Updated overview monthly metrics so new sign-ups, drop-in revenue, and
+  conversion leads use gym-local month windows.
+- Updated drop-in daily/monthly summaries so visits are grouped by the gym-local
+  operating day and month.
+- Updated subscription revenue trends to use explicit gym-local month windows
+  instead of relying on database/session UTC `date_trunc` grouping.
+
 ## Regression Coverage
 
 Added `tests/gym-settings-schema.test.ts` for:
@@ -75,6 +95,16 @@ Added `tests/gym-settings-schema.test.ts` for:
 Updated `tests/auth-next-path.test.ts` so `/settings` is accepted as a safe
 dashboard route.
 
+Added timezone boundary regression coverage in
+`tests/dashboard-date-boundaries.test.ts` and `tests/dashboard-aggregates.test.ts`
+for:
+
+- gym-local day windows
+- gym-local month windows
+- overview month metrics using the gym timezone
+- drop-in daily and monthly summaries using the gym timezone
+- subscription revenue trends using gym-local month windows
+
 ## Verification
 
 Commands run:
@@ -82,6 +112,12 @@ Commands run:
 - `npm test`
 - `npm run typecheck`
 - `npm run lint`
+
+Latest TDD follow-up verification:
+
+- `npm test`: 79 passing tests
+- `npm run typecheck`: passed
+- `npm run lint`: passed
 
 Runtime checks:
 

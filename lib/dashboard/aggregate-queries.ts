@@ -7,6 +7,7 @@ import type {
   OverviewDateRanges,
   OverviewSetupState,
 } from "./aggregate-types.ts"
+import { getGymLocalMonthWindow } from "./date-boundaries.ts"
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000
 export const OVERVIEW_ALERT_LIMIT = 50
@@ -234,7 +235,9 @@ export function getOverviewDateRanges(
   const monthlyWindowDays = options.expiringMonthlyWindowDays ?? 7
   const annualWindowDays = options.expiringAnnualWindowDays ?? 30
   const inactiveWindowDays = options.inactiveWindowDays ?? 30
-  const { monthStart, nextMonthStart } = getUtcMonthWindow(asOf)
+  const { monthStart, nextMonthStart } = options.timeZone
+    ? toMonthWindow(getGymLocalMonthWindow(asOf, options.timeZone))
+    : getUtcMonthWindow(asOf)
 
   return {
     asOf,
@@ -260,6 +263,13 @@ export function getUtcDayWindow(date: Date): DayWindow {
   )
 
   return { dayStart, nextDayStart }
+}
+
+function toMonthWindow(window: { start: Date; end: Date }): MonthWindow {
+  return {
+    monthStart: window.start,
+    nextMonthStart: window.end,
+  }
 }
 
 export function getUtcMonthWindow(date: Date): MonthWindow {

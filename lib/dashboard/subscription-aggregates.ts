@@ -3,6 +3,7 @@ import {
   getUtcMonthWindow,
   toNumber,
 } from "./aggregate-queries.ts"
+import { getGymLocalMonthWindow } from "./date-boundaries.ts"
 import type {
   DashboardDb,
   DropInRevenueTrendRawRow,
@@ -19,7 +20,8 @@ export async function getSubscriptionSummary(
   planTiers: PlanTier[],
   currentMonth: Date,
   revenueAsOf: Date,
-  client: DashboardDb
+  client: DashboardDb,
+  timeZone?: string
 ): Promise<SubscriptionSummary> {
   const { monthStart } = getUtcMonthWindow(currentMonth)
   const startMonth = new Date(
@@ -37,7 +39,15 @@ export async function getSubscriptionSummary(
     allDropInTotal,
   ] = await Promise.all([
     getPlanBreakdownAggregates(gymId, planTiers, revenueAsOf, client),
-    getRevenueTrend(gymId, startMonth, monthStart, nextMonthAfterTrend, client),
+    timeZone
+      ? getRevenueTrendForTimeZone(gymId, currentMonth, timeZone, client)
+      : getRevenueTrend(
+          gymId,
+          startMonth,
+          monthStart,
+          nextMonthAfterTrend,
+          client
+        ),
     client.membership.count({
       where: {
         member: { gymId },
@@ -66,6 +76,76 @@ export async function getSubscriptionSummary(
         (allDropInTotal._sum.visitCount ?? 0) > 0,
     },
   }
+}
+
+type RevenueTrendWindow = {
+  label: string
+  start: Date
+  end: Date
+}
+
+type MembershipRevenueTotalRawRow = {
+  membershipRevenue: number | bigint
+}
+
+type DropInRevenueTotalRawRow = {
+  dropInRevenue: number | bigint
+}
+
+async function getRevenueTrendForTimeZone(
+  gymId: string,
+  currentMonth: Date,
+  timeZone: string,
+  client: DashboardDb
+): Promise<SubscriptionRevenueTrendRow[]> {
+  const windows = Array.from({ length: 6 }, (_, index) => {
+    const window = getGymLocalMonthWindow(currentMonth, timeZone, index - 5)
+
+    return {
+      label: new Intl.DateTimeFormat("en", {
+        month: "short",
+        timeZone,
+      }).format(window.start),
+      start: window.start,
+      end: window.end,
+    } satisfies RevenueTrendWindow
+  })
+
+  return Promise.all(
+    windows.map(async (window) => {
+      const [membershipRows, dropInRows] = await Promise.all([
+        client.$queryRaw<MembershipRevenueTotalRawRow[]>`
+          SELECT
+            COALESCE(SUM(
+              CASE WHEN m."billingInterval" = 'ANNUAL'
+                THEN m."priceAmount" / 12.0
+                ELSE m."priceAmount"
+              END
+            ), 0)::float8 as "membershipRevenue"
+          FROM "Membership" m
+          WHERE m."memberId" IN (SELECT id FROM "Member" WHERE "gymId" = ${gymId})
+            AND m."startedAt" < ${window.end}
+            AND COALESCE(m."canceledAt", m."currentPeriodEndsAt") >= ${window.start}
+        `,
+        client.$queryRaw<DropInRevenueTotalRawRow[]>`
+          SELECT COALESCE(SUM("amount"), 0)::int as "dropInRevenue"
+          FROM "DropInVisit"
+          WHERE "gymId" = ${gymId}
+            AND "visitedAt" >= ${window.start}
+            AND "visitedAt" < ${window.end}
+        `,
+      ])
+      const membership = toNumber(membershipRows[0]?.membershipRevenue)
+      const dropIns = toNumber(dropInRows[0]?.dropInRevenue)
+
+      return {
+        month: window.label,
+        membership,
+        dropIns,
+        total: membership + dropIns,
+      }
+    })
+  )
 }
 
 export async function getPlanBreakdownAggregates(

@@ -14,6 +14,66 @@ export function getGymLocalDayBoundary(date: Date, timeZone: string) {
   )
 }
 
+export function getGymLocalDayWindow(date: Date, timeZone: string) {
+  const parts = getZonedDateParts(date, timeZone)
+  const start = getZonedDateTimeInstant(
+    {
+      year: parts.year,
+      month: parts.month,
+      day: parts.day,
+      hour: 0,
+      minute: 0,
+      second: 0,
+    },
+    timeZone
+  )
+  const end = getZonedDateTimeInstant(
+    {
+      year: parts.year,
+      month: parts.month,
+      day: parts.day + 1,
+      hour: 0,
+      minute: 0,
+      second: 0,
+    },
+    timeZone
+  )
+
+  return { start, end }
+}
+
+export function getGymLocalMonthWindow(
+  date: Date,
+  timeZone: string,
+  monthOffset = 0
+) {
+  const parts = getZonedDateParts(date, timeZone)
+  const start = getZonedDateTimeInstant(
+    {
+      year: parts.year,
+      month: parts.month + monthOffset,
+      day: 1,
+      hour: 0,
+      minute: 0,
+      second: 0,
+    },
+    timeZone
+  )
+  const end = getZonedDateTimeInstant(
+    {
+      year: parts.year,
+      month: parts.month + monthOffset + 1,
+      day: 1,
+      hour: 0,
+      minute: 0,
+      second: 0,
+    },
+    timeZone
+  )
+
+  return { start, end }
+}
+
 export function getGymLocalDateInput(date: Date, timeZone: string) {
   const parts = getZonedDateParts(date, timeZone)
   const month = String(parts.month).padStart(2, "0")

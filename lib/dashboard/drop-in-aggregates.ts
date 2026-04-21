@@ -4,6 +4,10 @@ import {
   OVERVIEW_ALERT_LIMIT,
   toNumber,
 } from "./aggregate-queries.ts"
+import {
+  getGymLocalDayWindow,
+  getGymLocalMonthWindow,
+} from "./date-boundaries.ts"
 import type {
   ConversionLeadRawRow,
   CountRawRow,
@@ -114,8 +118,11 @@ export async function getDropInSummary(
   client: DashboardDb
 ): Promise<DropInSummary> {
   const asOf = options.asOf ?? new Date()
-  const { dayStart, nextDayStart } = getUtcDayWindow(asOf)
-  const { monthStart, nextMonthStart } = getUtcMonthWindow(asOf)
+  const { dayStart, nextDayStart } = getDropInDayWindow(asOf, options.timeZone)
+  const { monthStart, nextMonthStart } = getDropInMonthWindow(
+    asOf,
+    options.timeZone
+  )
   const threshold = options.conversionVisitThreshold ?? 5
   const [dailyTotal, monthlyTotal, conversionLeads, allDropInTotal] =
     await Promise.all([
@@ -140,6 +147,32 @@ export async function getDropInSummary(
     monthlyTotal,
     conversionLeads,
     hasDropIns: (allDropInTotal._sum.visitCount ?? 0) > 0,
+  }
+}
+
+function getDropInDayWindow(date: Date, timeZone: string | undefined) {
+  if (!timeZone) {
+    return getUtcDayWindow(date)
+  }
+
+  const window = getGymLocalDayWindow(date, timeZone)
+
+  return {
+    dayStart: window.start,
+    nextDayStart: window.end,
+  }
+}
+
+function getDropInMonthWindow(date: Date, timeZone: string | undefined) {
+  if (!timeZone) {
+    return getUtcMonthWindow(date)
+  }
+
+  const window = getGymLocalMonthWindow(date, timeZone)
+
+  return {
+    monthStart: window.start,
+    nextMonthStart: window.end,
   }
 }
 

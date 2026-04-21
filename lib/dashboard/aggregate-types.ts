@@ -189,6 +189,7 @@ export type OverdueAgingSummary = OverdueAgingBucket[]
 
 export type OverviewAggregateOptions = {
   asOf?: Date
+  timeZone?: string
   membershipAsOf?: Date
   expiringMonthlyWindowDays?: number
   expiringAnnualWindowDays?: number
