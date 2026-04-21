@@ -59,16 +59,3 @@ export const deactivatePlanTierSchema = z.object({
 export type CreatePlanTierValues = z.input<typeof createPlanTierSchema>
 export type UpdatePlanTierValues = z.input<typeof updatePlanTierSchema>
 export type DeactivatePlanTierValues = z.input<typeof deactivatePlanTierSchema>
-
-export function normalizePlanTierValues(
-  values: z.output<typeof createPlanTierSchema>
-) {
-  return {
-    name: values.name,
-    description: values.description ?? null,
-    monthlyPriceAmount: Number(values.monthlyPriceAmount),
-    annualPriceAmount: Number(values.annualPriceAmount),
-    sortOrder: Number(values.sortOrder),
-    isActive: values.isActive,
-  }
-}

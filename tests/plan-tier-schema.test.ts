@@ -3,7 +3,6 @@ import test from "node:test"
 
 import {
   createPlanTierSchema,
-  normalizePlanTierValues,
   updatePlanTierSchema,
 } from "../lib/dashboard/schemas/plan-tier-schema.ts"
 
@@ -15,43 +14,6 @@ const validValues = {
   sortOrder: "2",
   isActive: true,
 }
-
-test("normalizes valid plan tier values for persistence", () => {
-  const parsed = createPlanTierSchema.safeParse({
-    ...validValues,
-    name: "  Pro  ",
-    description: "  Open gym  ",
-    monthlyPriceAmount: " 650000 ",
-    annualPriceAmount: " 6500000 ",
-    sortOrder: " 2 ",
-  })
-
-  assert.equal(parsed.success, true)
-
-  if (parsed.success) {
-    assert.deepEqual(normalizePlanTierValues(parsed.data), {
-      name: "Pro",
-      description: "Open gym",
-      monthlyPriceAmount: 650000,
-      annualPriceAmount: 6500000,
-      sortOrder: 2,
-      isActive: true,
-    })
-  }
-})
-
-test("converts blank plan descriptions to null", () => {
-  const parsed = createPlanTierSchema.safeParse({
-    ...validValues,
-    description: " ",
-  })
-
-  assert.equal(parsed.success, true)
-
-  if (parsed.success) {
-    assert.equal(normalizePlanTierValues(parsed.data).description, null)
-  }
-})
 
 test("requires plan names and bounded whole-number prices", () => {
   assert.equal(

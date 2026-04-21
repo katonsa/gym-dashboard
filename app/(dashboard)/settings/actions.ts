@@ -161,7 +161,6 @@ export async function deactivatePlanTier(
 function revalidatePlanTierPaths() {
   revalidatePath("/settings")
   revalidatePath("/members")
-  revalidatePath("/members/[id]", "page")
   revalidatePath("/subscriptions")
   revalidatePath("/")
 }

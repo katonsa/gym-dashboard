@@ -223,7 +223,7 @@ function PlanTierForm({
     ),
     defaultValues,
   })
-  const isSubmitting = form.formState.isSubmitting || isPending
+  const isSubmitting = isPending
 
   function onSubmit(values: PlanTierFormValues) {
     form.clearErrors("root")

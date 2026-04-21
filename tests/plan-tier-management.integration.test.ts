@@ -124,15 +124,12 @@ test("updating plan tiers rejects cross-gym writes and duplicates", async () => 
     })
 
     assert.equal(updated.status, "updated")
-    assert.equal(
-      (
-        await db.planTier.findUniqueOrThrow({
-          where: { id: basic.id },
-          select: { name: true, monthlyPriceAmount: true },
-        })
-      ).name,
-      "Starter"
-    )
+    const afterUpdate = await db.planTier.findUniqueOrThrow({
+      where: { id: basic.id },
+      select: { name: true, monthlyPriceAmount: true },
+    })
+    assert.equal(afterUpdate.name, "Starter")
+    assert.equal(afterUpdate.monthlyPriceAmount, 400000)
   } finally {
     await deleteFixture(fixture.userId)
     await deleteFixture(otherFixture.userId)

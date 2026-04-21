@@ -10,7 +10,7 @@ type PlanTierManagementClient = Pick<
 
 type PlanTierValues = ReturnType<typeof createPlanTierSchema.parse>
 
-export type PlanTierManagementRow = PlanTier & {
+export type PlanTierManagementRow = Omit<PlanTier, "gymId"> & {
   activeMembershipsCount: number
 }
 
@@ -61,10 +61,19 @@ export async function getPlanTierManagementRows(
     membershipCounts.map((row) => [row.planTierId, row._count._all])
   )
 
-  return planTiers.map((planTier) => ({
-    ...mapPlanTier(planTier),
-    activeMembershipsCount: membershipCountByPlanId.get(planTier.id) ?? 0,
-  }))
+  return planTiers.map((planTier) => {
+    const mapped = mapPlanTier(planTier)
+    return {
+      id: mapped.id,
+      name: mapped.name,
+      description: mapped.description,
+      monthlyPriceAmount: mapped.monthlyPriceAmount,
+      annualPriceAmount: mapped.annualPriceAmount,
+      isActive: mapped.isActive,
+      sortOrder: mapped.sortOrder,
+      activeMembershipsCount: membershipCountByPlanId.get(planTier.id) ?? 0,
+    }
+  })
 }
 
 export async function createPlanTierForGym({
@@ -165,21 +174,23 @@ export async function deactivatePlanTierForGym({
   gymId: string
   planTierId: string
 }): Promise<PlanTierMutationResult> {
-  const result = await client.planTier.updateMany({
-    where: {
-      id: planTierId,
-      gymId,
-    },
-    data: {
-      isActive: false,
-    },
+  return client.$transaction(async (tx) => {
+    const result = await tx.planTier.updateMany({
+      where: {
+        id: planTierId,
+        gymId,
+      },
+      data: {
+        isActive: false,
+      },
+    })
+
+    if (result.count === 0) {
+      return { status: "not-found" }
+    }
+
+    return { status: "deactivated", planTierId }
   })
-
-  if (result.count === 0) {
-    return { status: "not-found" }
-  }
-
-  return { status: "deactivated", planTierId }
 }
 
 function toPlanTierData(values: PlanTierValues) {
