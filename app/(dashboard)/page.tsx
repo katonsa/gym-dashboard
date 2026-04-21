@@ -133,12 +133,6 @@ export default async function Page() {
             "Add member records to start tracking attendance and billing.",
         }
       : null,
-    !setupState.hasMemberships
-      ? {
-          title: "No memberships yet.",
-          detail: "Create memberships to populate MRR and renewal alerts.",
-        }
-      : null,
     !setupState.hasDropIns
       ? {
           title: "No drop-ins yet.",

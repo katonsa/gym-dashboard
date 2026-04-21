@@ -44,6 +44,7 @@ export async function createDropInVisit(
       })
 
       revalidatePath("/drop-ins")
+      revalidatePath("/")
 
       return { success: true }
     },

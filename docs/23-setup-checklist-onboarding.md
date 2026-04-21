@@ -5,9 +5,9 @@ Status: Active.
 ## Problem
 
 After the first-run wizard creates the owner account and gym, the dashboard
-shows passive "Setup gaps" cards describing what's missing (no members, no
-memberships, no drop-ins) but offers no way to fix them. The owner must
-navigate to separate pages to create plans, add members, and log drop-ins.
+used to show passive "Setup gaps" cards describing what's missing, but offered
+no way to fix them. The owner had to navigate to separate pages to create
+plans, add members, and log drop-ins.
 
 ## Solution
 
@@ -58,8 +58,9 @@ server re-render, the component receives fresh props and auto-advances.
   (omits sort order and active toggle, hard-codes sensible defaults).
 - `MemberCreateForm` — used directly as-is.
 - `DropInEntryForm` — used directly as-is.
-- All server actions (`createPlanTier`, `createMember`, `createDropInVisit`)
-  are reused without changes.
+- Existing server actions are reused. `createPlanTier`, `createMember`, and
+  `createDropInVisit` all revalidate `/` so the overview receives fresh setup
+  state while the owner remains on the dashboard.
 
 ## Step Behavior
 
@@ -86,9 +87,10 @@ plan tiers exist.
 }
 ```
 
-The checklist only checks `hasPlanTiers`, `hasMembers`, and `hasDropIns`.
-`hasMemberships` is not a separate step because memberships are created
-implicitly when a member is assigned a plan.
+The checklist and its overview visibility gate only check `hasPlanTiers`,
+`hasMembers`, and `hasDropIns`. `hasMemberships` is still returned for overview
+copy and future reporting needs, but it is not an onboarding step. This avoids
+showing a completed checklist when a member exists without an assigned plan.
 
 ## Data Loading
 
@@ -111,6 +113,22 @@ so it adds no sequential latency.
 | `lib/dashboard/aggregate-queries.ts`                  | `getOverviewSetupState()` with plan tier count |
 | `lib/dashboard/loaders.ts`                            | `loadSetupChecklistData()` loader |
 | `app/(dashboard)/page.tsx`                            | Integration point: checklist replaces setup gaps |
+
+## Verification
+
+After resetting the database with `npx prisma migrate reset -f`, browser smoke
+testing on April 22, 2026 covered:
+
+- `/sign-in` with no users renders the first-run setup wizard.
+- Creating a smoke owner and gym redirects to `/`.
+- Creating the first plan advances the checklist to member creation.
+- Creating the first member with the new plan advances the checklist to drop-in
+  entry.
+- Creating the first drop-in removes the checklist.
+- `/`, `/members`, `/subscriptions`, `/drop-ins`, and `/settings` render without
+  application error copy.
+- Next.js runtime diagnostics reported no config or session errors, and the
+  browser console reported zero errors and zero warnings.
 
 ## Related Docs
 

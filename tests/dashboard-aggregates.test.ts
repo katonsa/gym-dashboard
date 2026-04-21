@@ -14,6 +14,7 @@ import {
   getOverdueAgingSummary,
   getOverduePaymentsCount,
   getOverviewAlerts,
+  getOverviewSetupState,
   getOverviewSummary,
   getPlanBreakdownAggregates,
   getRevenueTrend,
@@ -130,6 +131,59 @@ test("uses a gym-local month window for overview month metrics", async () => {
   })
   assert.deepEqual(rawCalls[0]?.values[1], monthStart)
   assert.deepEqual(rawCalls[0]?.values[2], nextMonthStart)
+})
+
+test("derives overview setup state from scoped gym records", async () => {
+  const planTierCalls: unknown[] = []
+  const memberCalls: unknown[] = []
+  const membershipCalls: unknown[] = []
+  const dropInCalls: unknown[] = []
+  const db = mockDb({
+    planTier: {
+      count: async (args: unknown) => {
+        planTierCalls.push(args)
+
+        return 1
+      },
+    },
+    member: {
+      count: async (args: unknown) => {
+        memberCalls.push(args)
+
+        return 2
+      },
+    },
+    membership: {
+      count: async (args: unknown) => {
+        membershipCalls.push(args)
+
+        return 0
+      },
+    },
+    dropInVisit: {
+      aggregate: async (args: unknown) => {
+        dropInCalls.push(args)
+
+        return { _sum: { amount: null, visitCount: 3 } }
+      },
+    },
+  })
+
+  assert.deepEqual(await getOverviewSetupState("gym-1", db), {
+    hasPlanTiers: true,
+    hasMembers: true,
+    hasMemberships: false,
+    hasDropIns: true,
+  })
+  assert.deepEqual(planTierCalls[0], { where: { gymId: "gym-1" } })
+  assert.deepEqual(memberCalls[0], { where: { gymId: "gym-1" } })
+  assert.deepEqual(membershipCalls[0], {
+    where: { member: { gymId: "gym-1" } },
+  })
+  assert.deepEqual(dropInCalls[0], {
+    where: { gymId: "gym-1" },
+    _sum: { visitCount: true },
+  })
 })
 
 test("calculates MRR with monthly and annual membership aggregate queries", async () => {
@@ -822,6 +876,7 @@ function mockDb(overrides: MockDbOverrides) {
       ...overrides.dropInVisit,
     },
     planTier: {
+      count: async () => 0,
       findMany: async () => [],
       ...overrides.planTier,
     },

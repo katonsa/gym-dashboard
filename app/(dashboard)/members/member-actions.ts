@@ -138,6 +138,7 @@ export async function createMember(
       })
 
       revalidatePath("/members")
+      revalidatePath("/")
 
       return { success: true }
     },

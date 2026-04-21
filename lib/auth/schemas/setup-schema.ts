@@ -1,7 +1,6 @@
 import * as z from "zod"
 
 import {
-  MAX_DROP_IN_AMOUNT,
   wholeNumberString,
   supportedCurrencies,
   supportedTimezones,
