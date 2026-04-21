@@ -1,6 +1,9 @@
 import { EmptyState } from "@/components/dashboard/empty-state"
 import { requireDashboardSession } from "@/lib/auth/server"
+import { db } from "@/lib/db"
 import { getOwnerGym } from "@/lib/dashboard/owner-gym"
+import { getPlanTierManagementRows } from "@/lib/dashboard/plan-tier-management"
+import { PlanTierManager } from "./plan-tier-manager"
 import { SettingsForm } from "./settings-form"
 
 export default async function SettingsPage() {
@@ -21,6 +24,11 @@ export default async function SettingsPage() {
     currency: gym.currencyCode,
     maximumFractionDigits: 0,
   })
+  const planTiers = await getPlanTierManagementRows(gym.id, db)
+  const nextSortOrder =
+    planTiers.length === 0
+      ? 1
+      : Math.max(...planTiers.map((planTier) => planTier.sortOrder)) + 1
 
   return (
     <div className="grid gap-5 lg:gap-6">
@@ -51,6 +59,11 @@ export default async function SettingsPage() {
       </section>
 
       <SettingsForm gym={gym} />
+      <PlanTierManager
+        currencyCode={gym.currencyCode}
+        nextSortOrder={nextSortOrder}
+        planTiers={planTiers}
+      />
     </div>
   )
 }

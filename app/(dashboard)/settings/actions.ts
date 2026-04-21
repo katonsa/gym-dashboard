@@ -11,6 +11,20 @@ import {
   updateGymSettingsSchema,
   type UpdateGymSettingsValues,
 } from "@/lib/dashboard/schemas/gym-settings-schema"
+import {
+  createPlanTierSchema,
+  deactivatePlanTierSchema,
+  updatePlanTierSchema,
+  type CreatePlanTierValues,
+  type DeactivatePlanTierValues,
+  type PlanTierActionResult,
+  type UpdatePlanTierValues,
+} from "@/lib/dashboard/schemas/plan-tier-schema"
+import {
+  createPlanTierForGym,
+  deactivatePlanTierForGym,
+  updatePlanTierForGym,
+} from "@/lib/dashboard/plan-tier-management"
 import { db } from "@/lib/db"
 
 export async function updateGymSettings(
@@ -39,4 +53,115 @@ export async function updateGymSettings(
       return { success: true }
     },
   })
+}
+
+export async function createPlanTier(
+  values: CreatePlanTierValues
+): Promise<PlanTierActionResult> {
+  return withGymAction({
+    schema: createPlanTierSchema,
+    values,
+    redirectPath: "/settings",
+    validationError: "Check the plan details and try again.",
+    missingGymError: "Connect a gym to this owner account before adding plans.",
+    failureError: "The plan could not be saved. Try again.",
+    handler: async ({ parsed, gymId }) => {
+      const result = await createPlanTierForGym({
+        client: db,
+        gymId,
+        values: parsed,
+      })
+
+      if (result.status === "duplicate-name") {
+        return {
+          success: false,
+          error: "A plan with this name already exists.",
+        }
+      }
+
+      revalidatePlanTierPaths()
+
+      return { success: true }
+    },
+  })
+}
+
+export async function updatePlanTier(
+  values: UpdatePlanTierValues
+): Promise<PlanTierActionResult> {
+  return withGymAction({
+    schema: updatePlanTierSchema,
+    values,
+    redirectPath: "/settings",
+    validationError: "Check the plan details and try again.",
+    missingGymError:
+      "Connect a gym to this owner account before changing plans.",
+    failureError: "The plan could not be saved. Try again.",
+    handler: async ({ parsed, gymId }) => {
+      const result = await updatePlanTierForGym({
+        client: db,
+        gymId,
+        planTierId: parsed.planTierId,
+        values: parsed,
+      })
+
+      if (result.status === "not-found") {
+        return {
+          success: false,
+          error: "This plan does not exist or belongs to a different gym.",
+        }
+      }
+
+      if (result.status === "duplicate-name") {
+        return {
+          success: false,
+          error: "A plan with this name already exists.",
+        }
+      }
+
+      revalidatePlanTierPaths()
+
+      return { success: true }
+    },
+  })
+}
+
+export async function deactivatePlanTier(
+  values: DeactivatePlanTierValues
+): Promise<PlanTierActionResult> {
+  return withGymAction({
+    schema: deactivatePlanTierSchema,
+    values,
+    redirectPath: "/settings",
+    validationError: "Choose a plan to deactivate.",
+    missingGymError:
+      "Connect a gym to this owner account before changing plans.",
+    failureError: "The plan could not be deactivated. Try again.",
+    handler: async ({ parsed, gymId }) => {
+      const result = await deactivatePlanTierForGym({
+        client: db,
+        gymId,
+        planTierId: parsed.planTierId,
+      })
+
+      if (result.status === "not-found") {
+        return {
+          success: false,
+          error: "This plan does not exist or belongs to a different gym.",
+        }
+      }
+
+      revalidatePlanTierPaths()
+
+      return { success: true }
+    },
+  })
+}
+
+function revalidatePlanTierPaths() {
+  revalidatePath("/settings")
+  revalidatePath("/members")
+  revalidatePath("/members/[id]", "page")
+  revalidatePath("/subscriptions")
+  revalidatePath("/")
 }

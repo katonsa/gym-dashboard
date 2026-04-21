@@ -5,6 +5,7 @@ loadDotenv()
 await import("./attendance-lifecycle-actions.integration.test.ts")
 await import("./member-contact-lifecycle-actions.integration.test.ts")
 await import("./payment-lifecycle-actions.integration.test.ts")
+await import("./plan-tier-management.integration.test.ts")
 await import("./renewal-lifecycle-actions.integration.test.ts")
 
 function loadDotenv() {
