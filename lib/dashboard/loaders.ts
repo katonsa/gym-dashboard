@@ -4,6 +4,10 @@ import { requireDashboardSession } from "@/lib/auth/server"
 import { getCachedDashboardData } from "@/lib/cache/redis"
 import { db } from "@/lib/db"
 import {
+  getAggregateCacheParams,
+  getDashboardTimeCacheParam,
+} from "@/lib/dashboard/cache-params"
+import {
   getDropInSummary,
   getOverdueAgingSummary,
   getOverviewAlerts,
@@ -176,7 +180,7 @@ export const loadOverdueAgingSummary = cache(
     return getCachedDashboardData({
       gymId: gym.id,
       segment: "overdue-aging-summary",
-      params: { asOf: options.asOf ? asOf.toISOString() : "current" },
+      params: { asOf: getDashboardTimeCacheParam(options.asOf) },
       load: () => getOverdueAgingSummary(gym.id, asOf, aggregateDb),
     })
   }
@@ -258,7 +262,7 @@ export const loadSubscriptionSummary = cache(async (asOf?: Date) => {
   return getCachedDashboardData({
     gymId: gym.id,
     segment: "subscription-summary",
-    params: { asOf: asOf ? effectiveAsOf.toISOString() : "current" },
+    params: { asOf: getDashboardTimeCacheParam(asOf) },
     load: async () => {
       const planTiers = await db.planTier.findMany(getPlanTiersQuery(gym.id))
       const mappedPlanTiers = planTiers.map(mapPlanTier)
@@ -606,18 +610,6 @@ export const loadSetupChecklistData = cache(
     })
   }
 )
-
-function getAggregateCacheParams(options: OverviewAggregateOptions) {
-  return {
-    asOf: options.asOf?.toISOString() ?? "current",
-    membershipAsOf: options.membershipAsOf?.toISOString() ?? null,
-    expiringMonthlyWindowDays: options.expiringMonthlyWindowDays ?? null,
-    expiringAnnualWindowDays: options.expiringAnnualWindowDays ?? null,
-    inactiveWindowDays: options.inactiveWindowDays ?? null,
-    conversionVisitThreshold: options.conversionVisitThreshold ?? null,
-    alertLimit: options.alertLimit ?? null,
-  }
-}
 
 async function requireOwnerGym(
   nextPath: DashboardRouteHref

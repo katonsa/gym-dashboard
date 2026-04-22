@@ -58,6 +58,7 @@ export async function markPaymentPaid(
       await invalidateDashboardCache(gymId)
       revalidatePath("/members")
       revalidatePath(`/members/${result.memberId}`)
+      revalidatePath("/subscriptions")
       revalidatePath("/")
 
       return { success: true }
@@ -117,6 +118,7 @@ export async function voidPayment(
       await invalidateDashboardCache(gymId)
       revalidatePath("/members")
       revalidatePath(`/members/${result.memberId}`)
+      revalidatePath("/subscriptions")
       revalidatePath("/")
 
       return { success: true }

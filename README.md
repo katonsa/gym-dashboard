@@ -92,8 +92,9 @@ Integration tests require Postgres to be running and migrated.
 Set `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` in `.env` to enable
 the shared dashboard cache. When those variables are absent, reads go directly
 to Postgres. The cache stores owner-scoped dashboard summaries and lookup data
-with a short TTL, and server actions invalidate the gym's cache version after
-mutations.
+with a short TTL, normalizes live dashboard reads to a stable `"current"` cache
+key, and invalidates the gym's cache version after mutations. Paginated member
+and drop-in lists stay on direct Postgres reads.
 
 ## Project Layout
 

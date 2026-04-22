@@ -18,7 +18,7 @@ type CacheOptions<T> = {
   load: () => Promise<T>
 }
 
-const DEFAULT_TTL_SECONDS = 60
+export const DASHBOARD_CACHE_TTL_SECONDS = 60
 const KEY_PREFIX = process.env.CACHE_KEY_PREFIX ?? "gym-dashboard"
 
 let redisClient: Redis | null | undefined
@@ -27,7 +27,7 @@ export async function getCachedDashboardData<T>({
   gymId,
   segment,
   params = null,
-  ttlSeconds = DEFAULT_TTL_SECONDS,
+  ttlSeconds = DASHBOARD_CACHE_TTL_SECONDS,
   load,
 }: CacheOptions<T>): Promise<T> {
   const redis = getRedis()

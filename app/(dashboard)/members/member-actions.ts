@@ -159,6 +159,7 @@ export async function createMember(
 
       await invalidateDashboardCache(gymId)
       revalidatePath("/members")
+      revalidatePath("/subscriptions")
       revalidatePath("/")
 
       return { success: true }
@@ -220,6 +221,7 @@ export async function updateMemberStatus(
       await invalidateDashboardCache(gymId)
       revalidatePath("/members")
       revalidatePath(`/members/${parsed.memberId}`)
+      revalidatePath("/subscriptions")
       revalidatePath("/")
 
       return { success: true }

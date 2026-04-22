@@ -55,6 +55,15 @@ The cache is used for high-value dashboard summary and lookup data in
 Paginated pages and member detail history remain direct database reads so
 search, pagination, and detail views stay simple and fresh.
 
+This intentionally excludes:
+
+- Member roster pages with search, filter, and pagination state.
+- Drop-in log pages with pagination state.
+- Member detail, payment history, and attendance history.
+
+Those views have high key cardinality and stricter freshness expectations, so
+the shared cache stays focused on bounded summary and lookup models.
+
 ## Key Shape
 
 Cache keys include:
@@ -69,6 +78,12 @@ Cache keys include:
 Including the gym id keeps owner data isolated. Including the gym cache version
 lets mutations invalidate all existing cache entries for that gym without
 scanning Redis keys.
+
+For the normal live dashboard path, near-now timestamps are normalized to a
+stable `"current"` param instead of using the exact request timestamp. This
+keeps summary cache keys reusable across requests within the cache TTL. Explicit
+historical reads still use exact ISO timestamps so point-in-time queries remain
+isolated from the live dashboard cache.
 
 ## TTL And Invalidation
 
@@ -88,6 +103,20 @@ Current invalidation points include:
   actions.
 - Payment mark-paid and void actions.
 - Drop-in creation.
+
+Current route revalidation coverage includes:
+
+- `/` for overview metrics, alerts, setup status, and overdue aging.
+- `/settings` for gym profile and plan tier changes.
+- `/members` and `/members/[id]` for roster, profile, attendance, payment, and
+  membership detail changes.
+- `/drop-ins` for drop-in summary, log, and visitor lookup changes.
+- `/subscriptions` for plan mix, revenue, payment presence, and drop-in revenue
+  changes.
+
+The `/subscriptions` page is revalidated after mutations that change
+memberships, payment resolution state, or drop-in totals, even when the write
+originated outside the subscriptions page itself.
 
 ## Local Development
 

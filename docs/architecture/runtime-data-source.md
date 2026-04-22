@@ -27,7 +27,8 @@ so future changes keep owner scoping intact.
 
 Some summary and lookup loaders can use the optional Upstash Redis cache before
 falling back to Postgres. See `docs/architecture/redis-dashboard-cache.md` for
-the cache key shape, TTL, and invalidation rules.
+the cache key shape, stable `"current"` key behavior, TTL, and invalidation
+rules.
 
 ## Runtime Writes
 
@@ -44,6 +45,11 @@ Both server actions require the authenticated owner gym before writing records,
 return structured action results, invalidate the gym-scoped Redis cache when it
 is configured, and use `revalidatePath()` so the affected dashboard route reloads
 fresh server data after mutation.
+
+Route revalidation is based on downstream data dependencies, not only on the
+page where the mutation starts. For example, member creation, payment
+resolution, and drop-in creation also revalidate `/subscriptions` because the
+subscription summary reads membership, payment, and drop-in revenue state.
 
 Manual member entry also performs duplicate detection before writing. If a
 possible duplicate exists in the same gym, the action returns duplicate matches
@@ -74,7 +80,7 @@ Use the seed data for local runtime verification. See
 - `docs/architecture/auth-and-account-provisioning.md` documents auth assumptions, owner provisioning,
   and member account scope.
 - `docs/architecture/redis-dashboard-cache.md` documents optional Upstash Redis
-  caching and invalidation behavior.
+  caching, stable current-key behavior, and invalidation behavior.
 - `docs/setup/local-database-and-seed.md` documents local Postgres setup, demo
   owner credentials, and seed coverage.
 - `docs/archive/changes/runtime-performance-cleanup.md` documents the removed legacy

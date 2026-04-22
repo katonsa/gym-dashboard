@@ -46,6 +46,7 @@ export async function createDropInVisit(
 
       await invalidateDashboardCache(gymId)
       revalidatePath("/drop-ins")
+      revalidatePath("/subscriptions")
       revalidatePath("/")
 
       return { success: true }
