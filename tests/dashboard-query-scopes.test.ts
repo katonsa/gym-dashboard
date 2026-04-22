@@ -130,6 +130,52 @@ test("builds member roster filters and paginated query", () => {
   expect(where.AND).toBeTruthy()
 })
 
+test("leaves the unfiltered member roster scoped only to the gym", () => {
+  const asOf = new Date("2026-04-16T00:00:00.000Z")
+  const where = getMemberRosterPageWhere(
+    "gym-1",
+    {
+      q: "",
+      status: "all",
+      plan: "all",
+      risk: "all",
+    },
+    asOf
+  )
+
+  expect(where).toStrictEqual({
+    gymId: "gym-1",
+  })
+})
+
+test("preserves substring search semantics across roster fields", () => {
+  const asOf = new Date("2026-04-16T00:00:00.000Z")
+  const where = getMemberRosterPageWhere(
+    "gym-1",
+    {
+      q: "555",
+      status: "all",
+      plan: "all",
+      risk: "all",
+    },
+    asOf
+  )
+
+  expect(where).toStrictEqual({
+    gymId: "gym-1",
+    AND: [
+      {
+        OR: [
+          { firstName: { contains: "555", mode: "insensitive" } },
+          { lastName: { contains: "555", mode: "insensitive" } },
+          { email: { contains: "555", mode: "insensitive" } },
+          { phone: { contains: "555", mode: "insensitive" } },
+        ],
+      },
+    ],
+  })
+})
+
 test("builds member roster overdue risk from exact request time", () => {
   const paymentAsOf = new Date("2026-04-20T09:30:00.000Z")
   const membershipAsOf = new Date("2026-04-19T17:00:00.000Z")
@@ -311,6 +357,71 @@ test("builds a combined member attention risk filter", () => {
       ],
     },
   ])
+})
+
+test("builds a clear member risk filter by excluding overdue and renewal risk", () => {
+  const asOf = new Date("2026-04-16T00:00:00.000Z")
+  const where = getMemberRosterPageWhere(
+    "gym-1",
+    {
+      q: "",
+      status: "all",
+      plan: "all",
+      risk: "clear",
+    },
+    asOf
+  )
+
+  expect(where).toStrictEqual({
+    gymId: "gym-1",
+    AND: [
+      {
+        NOT: [
+          {
+            payments: {
+              some: {
+                OR: [
+                  { status: "OVERDUE" },
+                  { status: "PENDING", dueAt: { lt: asOf } },
+                ],
+              },
+            },
+          },
+          {
+            memberships: {
+              some: {
+                OR: [
+                  { status: "EXPIRED" },
+                  {
+                    status: "ACTIVE",
+                    currentPeriodEndsAt: { lt: asOf },
+                  },
+                ],
+              },
+            },
+          },
+          {
+            memberships: {
+              some: {
+                status: "ACTIVE",
+                currentPeriodEndsAt: { gte: asOf },
+                OR: [
+                  {
+                    billingInterval: "MONTHLY",
+                    currentPeriodEndsAt: { lte: addDays(asOf, 7) },
+                  },
+                  {
+                    billingInterval: "ANNUAL",
+                    currentPeriodEndsAt: { lte: addDays(asOf, 30) },
+                  },
+                ],
+              },
+            },
+          },
+        ],
+      },
+    ],
+  })
 })
 
 function addDays(date: Date, days: number) {

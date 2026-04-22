@@ -169,6 +169,10 @@ model Member {
   updatedAt         DateTime            @updatedAt
 
   @@index([gymId, status])
+  @@index([firstName(ops: raw("gin_trgm_ops"))], type: Gin)
+  @@index([lastName(ops: raw("gin_trgm_ops"))], type: Gin)
+  @@index([email(ops: raw("gin_trgm_ops"))], type: Gin)
+  @@index([phone(ops: raw("gin_trgm_ops"))], type: Gin)
   @@index([gymId, lastName, firstName])
   @@index([gymId, joinDate])
   @@index([gymId, lastAttendedAt])
@@ -192,6 +196,9 @@ model Membership {
   updatedAt           DateTime            @updatedAt
 
   @@index([memberId, status])
+  @@index([memberId, startedAt])
+  @@index([memberId, currentPeriodEndsAt])
+  @@index([memberId, status, currentPeriodEndsAt])
   @@index([planTierId, status])
   @@index([status, nextBillingDate])
   @@index([status, currentPeriodEndsAt])
@@ -216,6 +223,7 @@ model MembershipPayment {
   @@index([gymId, status, dueAt])
   @@index([membershipId, dueAt])
   @@index([memberId, dueAt])
+  @@index([memberId, status, dueAt])
   @@index([paidAt])
 }
 
@@ -235,19 +243,21 @@ model AttendanceRecord {
 }
 
 model DropInVisit {
-  id             String   @id @default(cuid())
-  gymId          String
-  gym            Gym      @relation(fields: [gymId], references: [id], onDelete: Cascade)
-  visitorName    String?
-  visitorContact String?
-  visitCount     Int      @default(1)
-  amount         Int
-  visitedAt      DateTime @default(now())
-  notes          String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id                       String   @id @default(cuid())
+  gymId                    String
+  gym                      Gym      @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  visitorName              String?
+  visitorContact           String?
+  normalizedVisitorContact String?
+  visitCount               Int      @default(1)
+  amount                   Int
+  visitedAt                DateTime @default(now())
+  notes                    String?
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
 
   @@index([gymId, visitedAt])
   @@index([gymId, visitorName, visitedAt])
   @@index([gymId, visitorContact, visitedAt])
+  @@index([gymId, normalizedVisitorContact, visitedAt])
 }

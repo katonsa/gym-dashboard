@@ -86,6 +86,11 @@ const rosterMembershipStatuses: MembershipStatus[] = [
   "PAST_DUE",
   "EXPIRED",
 ]
+const memberRosterOrderBy: Prisma.MemberOrderByWithRelationInput[] = [
+  { lastName: ascending },
+  { firstName: ascending },
+  { id: ascending },
+]
 
 export function getOwnerGymQuery(ownerId: string) {
   return {
@@ -117,14 +122,7 @@ export function getMemberRosterPageWhere(
   const and: Prisma.MemberWhereInput[] = []
 
   if (filters.q.length > 0) {
-    and.push({
-      OR: [
-        { firstName: { contains: filters.q, mode: "insensitive" } },
-        { lastName: { contains: filters.q, mode: "insensitive" } },
-        { email: { contains: filters.q, mode: "insensitive" } },
-        { phone: { contains: filters.q, mode: "insensitive" } },
-      ],
-    })
+    and.push(getMemberRosterSearchWhere(filters.q))
   }
 
   if (filters.status !== "all") {
@@ -158,11 +156,7 @@ export function getMemberRosterPageQuery(
 ) {
   return {
     where,
-    orderBy: [
-      { lastName: ascending },
-      { firstName: ascending },
-      { id: ascending },
-    ],
+    orderBy: memberRosterOrderBy,
     skip,
     take,
     select: {
@@ -190,6 +184,17 @@ export function getMemberRosterPageQuery(
         },
       },
     },
+  }
+}
+
+function getMemberRosterSearchWhere(query: string): Prisma.MemberWhereInput {
+  return {
+    OR: [
+      { firstName: { contains: query, mode: "insensitive" } },
+      { lastName: { contains: query, mode: "insensitive" } },
+      { email: { contains: query, mode: "insensitive" } },
+      { phone: { contains: query, mode: "insensitive" } },
+    ],
   }
 }
 

@@ -48,11 +48,22 @@ For normal local setup:
 npx prisma migrate deploy
 ```
 
+Use `migrate deploy` when you want to apply the checked-in migration history
+exactly as it exists in the repo. This is the safer default for local app runs,
+integration tests, and any situation where you are validating the current
+project state instead of changing the schema.
+
 For local schema development where you want Prisma to create or update development migrations:
 
 ```bash
 npx prisma migrate dev
 ```
+
+Use `migrate dev` only when you are actively changing `prisma/schema.prisma` and
+intend to review the generated migration files before keeping them. If Prisma
+generates a follow-up migration that only compensates for local drift or index
+representation issues, clean that history before committing instead of treating
+it as a product change.
 
 Both commands read `DATABASE_URL` from `.env` through `prisma.config.ts`.
 
@@ -160,6 +171,13 @@ npx prisma migrate reset
 
 This command deletes local database data for the configured `DATABASE_URL`.
 Confirm that `.env` points to your local Compose database before running it.
+
+Do not treat `migrate reset` as a normal cleanup step after routine development.
+Use it when you explicitly want one of these outcomes:
+
+- throw away local data and reseed from scratch
+- validate that the checked-in migration history can rebuild a fresh database
+- return to the first-run setup path with an empty database
 
 If you only want to stop Postgres without deleting the volume:
 

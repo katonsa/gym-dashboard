@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 
 import { invalidateDashboardCache } from "@/lib/cache/redis"
 import { withGymAction } from "@/lib/dashboard/action-helpers"
+import { normalizeDropInVisitorContact } from "@/lib/dashboard/drop-in-aggregates"
 import { db } from "@/lib/db"
 import {
   createDropInSchema,
@@ -28,6 +29,9 @@ export async function createDropInVisit(
     handler: async ({ parsed, gym, gymId }) => {
       const dropInValues = normalizeCreateDropInValues(parsed)
       const defaultAmount = gym.defaultDropInFeeAmount
+      const normalizedVisitorContact = normalizeDropInVisitorContact(
+        dropInValues.visitorContact
+      )
 
       if (defaultAmount === undefined) {
         throw new Error("Default drop-in amount was not selected.")
@@ -38,6 +42,7 @@ export async function createDropInVisit(
           gymId,
           visitorName: dropInValues.visitorName,
           visitorContact: dropInValues.visitorContact,
+          normalizedVisitorContact,
           visitCount: dropInValues.visitCount,
           amount: dropInValues.amount ?? defaultAmount,
           notes: dropInValues.notes,

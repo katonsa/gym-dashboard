@@ -25,10 +25,27 @@ have a direct `gymId` field.
 The shared query shapes live in `lib/dashboard/query-scopes.ts`. They are tested
 so future changes keep owner scoping intact.
 
+Several read paths now rely on performance-sensitive SQL and index choices:
+
+- `/subscriptions` uses a set-based gym-local revenue trend query in
+  `lib/dashboard/subscription-aggregates.ts` instead of a per-month loop.
+- `/members` keeps the same substring search semantics while relying on
+  Postgres trigram indexes plus supporting membership/payment indexes for the
+  heavier roster filters.
+- `/drop-ins` conversion-lead grouping uses a stored normalized visitor contact
+  key instead of grouping by runtime `LOWER(visitorContact)`.
+
 Some summary and lookup loaders can use the optional Upstash Redis cache before
 falling back to Postgres. See `docs/architecture/redis-dashboard-cache.md` for
 the cache key shape, stable `"current"` key behavior, TTL, and invalidation
 rules.
+
+Owner-scoped export routes also read runtime data directly from Postgres. The
+monthly report export in `lib/dashboard/export-csv.ts` reuses the shared
+subscription revenue-trend helper so exports and the `/subscriptions` page stay
+aligned on gym-local month boundaries and overlap-based membership revenue.
+This shared path also avoids reintroducing a second copy of the expensive
+membership-overlap SQL logic.
 
 ## Runtime Writes
 
@@ -45,6 +62,10 @@ Both server actions require the authenticated owner gym before writing records,
 return structured action results, invalidate the gym-scoped Redis cache when it
 is configured, and use `revalidatePath()` so the affected dashboard route reloads
 fresh server data after mutation.
+
+Drop-in writes also persist a conservative normalized contact key
+(`trim().toLowerCase()`) so grouped conversion-lead queries can use indexed
+stored values instead of runtime `LOWER(...)` grouping.
 
 Route revalidation is based on downstream data dependencies, not only on the
 page where the mutation starts. For example, member creation, payment

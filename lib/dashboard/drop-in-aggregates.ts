@@ -47,14 +47,14 @@ export async function getConversionLeadsCount(
 ) {
   const rows = await client.$queryRaw<CountRawRow[]>`
     SELECT COUNT(*)::int as "count" FROM (
-      SELECT LOWER("visitorContact")
+      SELECT "normalizedVisitorContact"
       FROM "DropInVisit"
       WHERE "gymId" = ${gymId}
         AND "visitedAt" >= ${monthStart}
         AND "visitedAt" < ${nextMonthStart}
         AND "visitorName" IS NOT NULL
-        AND "visitorContact" IS NOT NULL
-      GROUP BY LOWER("visitorContact")
+        AND "normalizedVisitorContact" IS NOT NULL
+      GROUP BY "normalizedVisitorContact"
       HAVING SUM("visitCount") >= ${threshold}
     ) as leads
   `
@@ -82,8 +82,8 @@ export async function getConversionLeads(
         AND "visitedAt" >= ${monthStart}
         AND "visitedAt" < ${nextMonthStart}
         AND "visitorName" IS NOT NULL
-        AND "visitorContact" IS NOT NULL
-      GROUP BY LOWER("visitorContact")
+        AND "normalizedVisitorContact" IS NOT NULL
+      GROUP BY "normalizedVisitorContact"
       HAVING SUM("visitCount") >= ${threshold}
       ORDER BY "visitCount" DESC
     `
@@ -102,8 +102,8 @@ export async function getConversionLeads(
       AND "visitedAt" >= ${monthStart}
       AND "visitedAt" < ${nextMonthStart}
       AND "visitorName" IS NOT NULL
-      AND "visitorContact" IS NOT NULL
-    GROUP BY LOWER("visitorContact")
+      AND "normalizedVisitorContact" IS NOT NULL
+    GROUP BY "normalizedVisitorContact"
     HAVING SUM("visitCount") >= ${threshold}
     ORDER BY "visitCount" DESC
     LIMIT ${limit}
@@ -185,4 +185,14 @@ function mapConversionLeads(
     visitCount: toNumber(row.visitCount),
     revenueAmount: toNumber(row.revenueAmount),
   }))
+}
+
+export function normalizeDropInVisitorContact(
+  visitorContact: string | null | undefined
+) {
+  if (visitorContact === null || visitorContact === undefined) {
+    return null
+  }
+
+  return visitorContact.trim().toLowerCase()
 }

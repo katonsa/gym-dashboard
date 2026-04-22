@@ -40,6 +40,8 @@ requirements.
 
 ## Features
 
+- [CSV Import And Export](./features/csv-import-export.md) - member import,
+  export routes, monthly report behavior, and verification notes.
 - [Gym Settings](./features/gym-settings.md) - editable gym profile,
   localization, default drop-in fees, and settings actions.
 - [Member Management](./features/member-management.md) - roster actions,

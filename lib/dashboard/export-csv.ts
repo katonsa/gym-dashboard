@@ -1,6 +1,7 @@
 import { getGymLocalMonthWindow } from "./date-boundaries.ts"
 import { toNumber } from "./aggregate-queries.ts"
 import { toCsv, toDateOnly } from "./csv.ts"
+import { getRevenueTrendForTimeZone } from "./subscription-aggregates.ts"
 import type { PrismaClient } from "../generated/prisma/client.ts"
 import type { BillingInterval } from "./types.ts"
 
@@ -15,7 +16,12 @@ type PaymentExportDb = Pick<PrismaClient, "membershipPayment">
 type DropInExportDb = Pick<PrismaClient, "dropInVisit">
 type MonthlyReportDb = Pick<
   PrismaClient,
-  "$queryRaw" | "dropInVisit" | "member" | "membershipPayment"
+  | "$queryRaw"
+  | "dropInVisit"
+  | "member"
+  | "membership"
+  | "membershipPayment"
+  | "planTier"
 >
 
 export async function getMembersCsv(gym: ExportGym, client: MemberExportDb) {
@@ -180,21 +186,11 @@ export async function getMonthlyReportCsv({
   client: MonthlyReportDb
 }) {
   const monthDate = parseReportMonth(month)
-  const { start, end } = getGymLocalMonthWindow(monthDate, gym.timezone)
-  const membershipRevenue = await getMonthlyEquivalentMembershipRevenue(
-    gym.id,
-    start,
-    end,
-    client
-  )
-  const dropInRevenue = await getMonthlyDropInRevenue(
-    gym.id,
-    start,
-    end,
-    client
-  )
-  const [newSignUps, overduePayments, renewals, activeMemberCount] =
+  const monthAnchor = getReportMonthAnchor(monthDate)
+  const { start, end } = getGymLocalMonthWindow(monthAnchor, gym.timezone)
+  const [revenueTrend, newSignUps, overduePayments, renewals, activeMemberCount] =
     await Promise.all([
+      getRevenueTrendForTimeZone(gym.id, monthAnchor, gym.timezone, client),
       client.member.count({
         where: {
           gymId: gym.id,
@@ -218,6 +214,9 @@ export async function getMonthlyReportCsv({
         },
       }),
     ])
+  const reportMonthRevenue = revenueTrend.at(-1)
+  const membershipRevenue = reportMonthRevenue?.membership ?? 0
+  const dropInRevenue = reportMonthRevenue?.dropIns ?? 0
 
   return toCsv(
     [
@@ -265,46 +264,10 @@ export function parseReportMonth(month: string) {
   return date
 }
 
-async function getMonthlyEquivalentMembershipRevenue(
-  gymId: string,
-  start: Date,
-  end: Date,
-  client: MonthlyReportDb
-) {
-  const rows = await client.$queryRaw<
-    Array<{ membershipRevenue: number | bigint }>
-  >`
-    SELECT
-      COALESCE(SUM(
-        CASE WHEN m."billingInterval" = 'ANNUAL'
-          THEN m."priceAmount" / 12.0
-          ELSE m."priceAmount"
-        END
-      ), 0)::float8 as "membershipRevenue"
-    FROM "Membership" m
-    WHERE m."memberId" IN (SELECT id FROM "Member" WHERE "gymId" = ${gymId})
-      AND m."startedAt" < ${end}
-      AND COALESCE(m."canceledAt", m."currentPeriodEndsAt") >= ${start}
-  `
-
-  return toNumber(rows[0]?.membershipRevenue)
-}
-
-async function getMonthlyDropInRevenue(
-  gymId: string,
-  start: Date,
-  end: Date,
-  client: MonthlyReportDb
-) {
-  const result = await client.dropInVisit.aggregate({
-    where: {
-      gymId,
-      visitedAt: { gte: start, lt: end },
-    },
-    _sum: { amount: true },
-  })
-
-  return result._sum.amount ?? 0
+function getReportMonthAnchor(monthDate: Date) {
+  return new Date(
+    Date.UTC(monthDate.getUTCFullYear(), monthDate.getUTCMonth(), 15)
+  )
 }
 
 async function getRenewalsDueCount(

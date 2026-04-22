@@ -16,6 +16,13 @@ import type {
   SubscriptionSummary,
 } from "./aggregate-types.ts"
 
+type RevenueTrendDb = {
+  $queryRaw: <T = unknown>(
+    strings: TemplateStringsArray,
+    ...values: unknown[]
+  ) => Promise<T>
+}
+
 export async function getSubscriptionSummary(
   gymId: string,
   planTiers: PlanTier[],
@@ -80,29 +87,30 @@ export async function getSubscriptionSummary(
 }
 
 type RevenueTrendWindow = {
+  sortOrder: number
   label: string
   start: Date
   end: Date
 }
 
-type MembershipRevenueTotalRawRow = {
+type SubscriptionRevenueTrendRawRow = {
+  month: string
   membershipRevenue: number | bigint
-}
-
-type DropInRevenueTotalRawRow = {
   dropInRevenue: number | bigint
 }
 
-async function getRevenueTrendForTimeZone(
+export async function getRevenueTrendForTimeZone(
   gymId: string,
   currentMonth: Date,
   timeZone: string,
-  client: DashboardDb
+  client: RevenueTrendDb
 ): Promise<SubscriptionRevenueTrendRow[]> {
   const windows = Array.from({ length: 6 }, (_, index) => {
+    const sortOrder = index
     const window = getGymLocalMonthWindow(currentMonth, timeZone, index - 5)
 
     return {
+      sortOrder,
       label: new Intl.DateTimeFormat("en", {
         month: "short",
         timeZone,
@@ -112,41 +120,117 @@ async function getRevenueTrendForTimeZone(
     } satisfies RevenueTrendWindow
   })
 
-  return Promise.all(
-    windows.map(async (window) => {
-      const [membershipRows, dropInRows] = await Promise.all([
-        client.$queryRaw<MembershipRevenueTotalRawRow[]>`
-          SELECT
-            COALESCE(SUM(
-              CASE WHEN m."billingInterval" = 'ANNUAL'
-                THEN m."priceAmount" / 12.0
-                ELSE m."priceAmount"
-              END
-            ), 0)::float8 as "membershipRevenue"
-          FROM "Membership" m
-          WHERE m."memberId" IN (SELECT id FROM "Member" WHERE "gymId" = ${gymId})
-            AND m."startedAt" < ${window.end}
-            AND COALESCE(m."canceledAt", m."currentPeriodEndsAt") >= ${window.start}
-        `,
-        client.$queryRaw<DropInRevenueTotalRawRow[]>`
-          SELECT COALESCE(SUM("amount"), 0)::int as "dropInRevenue"
-          FROM "DropInVisit"
-          WHERE "gymId" = ${gymId}
-            AND "visitedAt" >= ${window.start}
-            AND "visitedAt" < ${window.end}
-        `,
-      ])
-      const membership = toNumber(membershipRows[0]?.membershipRevenue)
-      const dropIns = toNumber(dropInRows[0]?.dropInRevenue)
+  const [
+    window0,
+    window1,
+    window2,
+    window3,
+    window4,
+    window5,
+  ] = windows
+  const rows = await client.$queryRaw<SubscriptionRevenueTrendRawRow[]>`
+    WITH month_windows AS (
+      SELECT
+        ${window0.sortOrder}::int as "sortOrder",
+        ${window0.label}::text as "month",
+        ${window0.start}::timestamptz as "startAt",
+        ${window0.end}::timestamptz as "endAt"
+      UNION ALL
+      SELECT
+        ${window1.sortOrder}::int,
+        ${window1.label}::text,
+        ${window1.start}::timestamptz,
+        ${window1.end}::timestamptz
+      UNION ALL
+      SELECT
+        ${window2.sortOrder}::int,
+        ${window2.label}::text,
+        ${window2.start}::timestamptz,
+        ${window2.end}::timestamptz
+      UNION ALL
+      SELECT
+        ${window3.sortOrder}::int,
+        ${window3.label}::text,
+        ${window3.start}::timestamptz,
+        ${window3.end}::timestamptz
+      UNION ALL
+      SELECT
+        ${window4.sortOrder}::int,
+        ${window4.label}::text,
+        ${window4.start}::timestamptz,
+        ${window4.end}::timestamptz
+      UNION ALL
+      SELECT
+        ${window5.sortOrder}::int,
+        ${window5.label}::text,
+        ${window5.start}::timestamptz,
+        ${window5.end}::timestamptz
+    ),
+    gym_memberships AS (
+      SELECT
+        membership."startedAt",
+        membership."canceledAt",
+        membership."currentPeriodEndsAt",
+        membership."billingInterval",
+        membership."priceAmount"
+      FROM "Membership" membership
+      INNER JOIN "Member" member
+        ON member.id = membership."memberId"
+      WHERE member."gymId" = ${gymId}
+    ),
+    membership_totals AS (
+      SELECT
+        windows."sortOrder" as "sortOrder",
+        COALESCE(SUM(
+          CASE WHEN membership."billingInterval" = 'ANNUAL'
+            THEN membership."priceAmount" / 12.0
+            ELSE membership."priceAmount"
+          END
+        ), 0)::float8 as "membershipRevenue"
+      FROM month_windows windows
+      LEFT JOIN gym_memberships membership
+        ON membership."startedAt" < windows."endAt"
+        AND COALESCE(
+          membership."canceledAt",
+          membership."currentPeriodEndsAt"
+        ) >= windows."startAt"
+      GROUP BY windows."sortOrder"
+    ),
+    drop_in_totals AS (
+      SELECT
+        windows."sortOrder" as "sortOrder",
+        COALESCE(SUM(drop_in."amount"), 0)::int as "dropInRevenue"
+      FROM month_windows windows
+      LEFT JOIN "DropInVisit" drop_in
+        ON drop_in."gymId" = ${gymId}
+        AND drop_in."visitedAt" >= windows."startAt"
+        AND drop_in."visitedAt" < windows."endAt"
+      GROUP BY windows."sortOrder"
+    )
+    SELECT
+      windows."month" as "month",
+      COALESCE(membership_totals."membershipRevenue", 0)::float8
+        as "membershipRevenue",
+      COALESCE(drop_in_totals."dropInRevenue", 0)::int as "dropInRevenue"
+    FROM month_windows windows
+    LEFT JOIN membership_totals
+      ON membership_totals."sortOrder" = windows."sortOrder"
+    LEFT JOIN drop_in_totals
+      ON drop_in_totals."sortOrder" = windows."sortOrder"
+    ORDER BY windows."sortOrder"
+  `
 
-      return {
-        month: window.label,
-        membership,
-        dropIns,
-        total: membership + dropIns,
-      }
-    })
-  )
+  return rows.map((row) => {
+    const membership = toNumber(row.membershipRevenue)
+    const dropIns = toNumber(row.dropInRevenue)
+
+    return {
+      month: row.month,
+      membership,
+      dropIns,
+      total: membership + dropIns,
+    }
+  })
 }
 
 export async function getPlanBreakdownAggregates(
@@ -158,26 +242,34 @@ export async function getPlanBreakdownAggregates(
   const [rows, planUsageRows] = await Promise.all([
     client.$queryRaw<PlanBreakdownRawRow[]>`
       SELECT
-        "planTierId" as "planTierId",
+        membership."planTierId" as "planTierId",
         COUNT(*)::int as "memberCount",
-        COUNT(*) FILTER (WHERE "billingInterval" = 'MONTHLY')::int as "monthlyMemberships",
-        COUNT(*) FILTER (WHERE "billingInterval" = 'ANNUAL')::int as "annualMemberships",
+        COUNT(*) FILTER (
+          WHERE membership."billingInterval" = 'MONTHLY'
+        )::int as "monthlyMemberships",
+        COUNT(*) FILTER (
+          WHERE membership."billingInterval" = 'ANNUAL'
+        )::int as "annualMemberships",
         COALESCE(SUM(
-          CASE WHEN "billingInterval" = 'ANNUAL'
-            THEN "priceAmount" / 12.0
-            ELSE "priceAmount"
+          CASE WHEN membership."billingInterval" = 'ANNUAL'
+            THEN membership."priceAmount" / 12.0
+            ELSE membership."priceAmount"
           END
         ), 0)::float8 as "monthlyEquivalentRevenue"
-      FROM "Membership"
-      WHERE "memberId" IN (SELECT id FROM "Member" WHERE "gymId" = ${gymId})
-        AND "status" = 'ACTIVE'
-        AND "currentPeriodEndsAt" >= ${revenueAsOf}
-      GROUP BY "planTierId"
+      FROM "Membership" membership
+      INNER JOIN "Member" member
+        ON member.id = membership."memberId"
+      WHERE member."gymId" = ${gymId}
+        AND membership."status" = 'ACTIVE'
+        AND membership."currentPeriodEndsAt" >= ${revenueAsOf}
+      GROUP BY membership."planTierId"
     `,
     client.$queryRaw<PlanUsageRawRow[]>`
-      SELECT DISTINCT "planTierId" as "planTierId"
-      FROM "Membership"
-      WHERE "memberId" IN (SELECT id FROM "Member" WHERE "gymId" = ${gymId})
+      SELECT DISTINCT membership."planTierId" as "planTierId"
+      FROM "Membership" membership
+      INNER JOIN "Member" member
+        ON member.id = membership."memberId"
+      WHERE member."gymId" = ${gymId}
     `,
   ])
   const rowByPlanId = new Map(rows.map((row) => [row.planTierId, row]))

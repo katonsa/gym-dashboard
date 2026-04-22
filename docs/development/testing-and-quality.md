@@ -35,6 +35,14 @@ npm run typecheck
 npm run lint
 ```
 
+For query-shape or index changes on hot dashboard paths, also capture focused
+verification notes:
+
+- `EXPLAIN (ANALYZE, BUFFERS)` for the changed SQL where a live Postgres
+  database is available.
+- Before/after timing notes for the affected route or export path.
+- Any query-count change that materially alters request cost.
+
 For larger UI or routing changes, also run:
 
 ```bash
@@ -68,6 +76,8 @@ that needs a real database:
 - Membership renewals and plan changes.
 - Attendance and check-in lifecycle behavior.
 - Owner-gym scoping for writes.
+- Schema-backed write details such as persisted normalized fields when the
+  correctness matters outside a pure mapper or helper test.
 
 The integration config loads `.env` variables via Vite's `loadEnv` before Prisma
 initializes, runs test files sequentially to avoid fixture collisions, and each
@@ -84,6 +94,8 @@ Prefer the smallest test surface that proves the behavior:
   scoping contract.
 - Use integration tests when the behavior depends on database constraints,
   transactions, or server action side effects.
+- Prefer unit tests for read-path query helpers, aggregate math, and export
+  assembly unless you specifically need planner-visible or DB-backed behavior.
 - Test edge states that the UI depends on, such as empty results, expired
   memberships, overdue payments, and anonymous drop-ins.
 
@@ -99,3 +111,5 @@ After UI changes, run the app with seeded data and check these routes:
 - `/settings` for gym settings and plan tier management.
 - `/sign-in` with an empty database when changing first-run setup or auth page
   state.
+- `/api/exports/monthly-report?month=YYYY-MM` when changing export aggregation
+  or gym-local month-window behavior.

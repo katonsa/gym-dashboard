@@ -18,6 +18,7 @@ import {
   getPlanBreakdownAggregates,
   getRevenueTrend,
   getSubscriptionSummary,
+  normalizeDropInVisitorContact,
 } from "../lib/dashboard/aggregates.ts"
 import type { PlanTier } from "../lib/dashboard/types.ts"
 
@@ -459,7 +460,10 @@ test("loads conversion leads with case-insensitive raw SQL parameters", async ()
   expect(rawCalls[0]?.values[2]).toBe(nextMonthStart)
   expect(rawCalls[0]?.values[3]).toBe(5)
   expect(rawCalls[0]?.values[4]).toBe(50)
-  expect(rawCalls[0]?.strings.join(" ")).toMatch(/GROUP BY LOWER/)
+  expect(rawCalls[0]?.strings.join(" ")).toMatch(
+    /GROUP BY "normalizedVisitorContact"/
+  )
+  expect(rawCalls[0]?.strings.join(" ")).not.toMatch(/LOWER\("visitorContact"\)/)
 })
 
 test("aggregates drop-in totals for a scoped date window", async () => {
@@ -540,6 +544,19 @@ test("uses gym-local day and month windows for drop-in summary", async () => {
   })
   assertDateIso(rawCalls[0]?.values[1], "2026-04-30T17:00:00.000Z")
   assertDateIso(rawCalls[0]?.values[2], "2026-05-31T17:00:00.000Z")
+  expect(rawCalls[0]?.strings.join(" ")).toContain(
+    '"normalizedVisitorContact" IS NOT NULL'
+  )
+})
+
+test("normalizes drop-in visitor contacts conservatively", () => {
+  expect(normalizeDropInVisitorContact(" FAJAR@example.com ")).toBe(
+    "fajar@example.com"
+  )
+  expect(normalizeDropInVisitorContact(" +62 812 ")).toBe("+62 812")
+  expect(normalizeDropInVisitorContact(undefined)).toBeNull()
+  expect(normalizeDropInVisitorContact(null)).toBeNull()
+  expect(normalizeDropInVisitorContact("   ")).toBe("")
 })
 
 function assertDateIso(value: unknown, isoDate: string) {
@@ -652,10 +669,13 @@ test("maps plan breakdown aggregate rows onto sorted plan tiers", async () => {
   ])
   expect(rawCalls[0]?.values[0]).toBe("gym-1")
   expect(rawCalls[0]?.values[1]).toBe(revenueAsOf)
+  expect(rawCalls[0]?.strings.join(" ")).toMatch(/INNER JOIN "Member" member/)
   expect(rawCalls[0]?.strings.join(" ")).toMatch(/"status" = 'ACTIVE'/)
   expect(rawCalls[0]?.strings.join(" ")).toMatch(/"currentPeriodEndsAt" >=/)
+  expect(rawCalls[0]?.strings.join(" ")).not.toMatch(/IN \(SELECT id FROM "Member"/)
   expect(rawCalls[1]?.values[0]).toBe("gym-1")
   expect(rawCalls[1]?.strings.join(" ")).toMatch(/SELECT DISTINCT/)
+  expect(rawCalls[1]?.strings.join(" ")).toMatch(/INNER JOIN "Member" member/)
 })
 
 test("loads subscription setup from current active revenue memberships only", async () => {
@@ -720,11 +740,14 @@ test("uses gym-local month windows for subscription revenue trend", async () => 
         return []
       }
 
-      if (sql.includes('"membershipRevenue"')) {
-        return [{ membershipRevenue: 100000 }]
-      }
-
-      return [{ dropInRevenue: 25000 }]
+      return [
+        { month: "Dec", membershipRevenue: 0, dropInRevenue: 0 },
+        { month: "Jan", membershipRevenue: 0, dropInRevenue: 0 },
+        { month: "Feb", membershipRevenue: 0, dropInRevenue: 0 },
+        { month: "Mar", membershipRevenue: 0, dropInRevenue: 0 },
+        { month: "Apr", membershipRevenue: 0, dropInRevenue: 0 },
+        { month: "May", membershipRevenue: 100000, dropInRevenue: 25000 },
+      ]
     },
   })
   const plans: PlanTier[] = [
@@ -746,6 +769,11 @@ test("uses gym-local month windows for subscription revenue trend", async () => 
     dropIns: 25000,
     total: 125000,
   })
+  const revenueTrendSql = rawCalls[2]?.strings.join(" ")
+
+  expect(revenueTrendSql).toMatch(/WITH month_windows AS/)
+  expect(revenueTrendSql).toMatch(/INNER JOIN "Member" member/)
+  expect(revenueTrendSql).not.toMatch(/IN \(SELECT id FROM "Member"/)
   expect(hasRawCallDate(rawCalls, "2026-04-30T17:00:00.000Z")).toBe(true)
   expect(hasRawCallDate(rawCalls, "2026-05-31T17:00:00.000Z")).toBe(true)
 })

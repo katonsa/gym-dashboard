@@ -237,6 +237,14 @@ current dashboard/subscription calculations:
 The report month uses the gym timezone. Active member count uses the current
 member status model already present in the app.
 
+Implementation note:
+
+- the export reuses the shared subscription revenue-trend helper instead of
+  maintaining a separate overlap query
+- this keeps gym-local month boundaries aligned with `/subscriptions`
+- changes to revenue-trend math should be verified against both the export route
+  and the subscriptions page
+
 The monthly report intentionally does not mean cash received. Membership payment
 cash reconciliation is available through the membership payments export.
 

@@ -211,16 +211,33 @@ export const loadMemberRosterPage = cache(
       asOf,
       membershipAsOf
     )
+    const isUnfilteredRoster =
+      filters.q.length === 0 &&
+      filters.status === "all" &&
+      filters.plan === "all" &&
+      filters.risk === "all"
+    const isAttentionOnlyRoster =
+      filters.q.length === 0 &&
+      filters.status === "all" &&
+      filters.plan === "all" &&
+      filters.risk === "attention"
+    const totalMembersPromise = db.member.count({
+      where: {
+        gymId: gym.id,
+      },
+    })
+    const attentionMembersPromise = db.member.count({ where: attentionWhere })
+    const totalPromise = isUnfilteredRoster
+      ? totalMembersPromise
+      : isAttentionOnlyRoster
+        ? attentionMembersPromise
+        : db.member.count({ where })
     const [planTiers, totalMembers, attentionMembers, total] =
       await Promise.all([
         db.planTier.findMany(getPlanTiersQuery(gym.id)),
-        db.member.count({
-          where: {
-            gymId: gym.id,
-          },
-        }),
-        db.member.count({ where: attentionWhere }),
-        db.member.count({ where }),
+        totalMembersPromise,
+        attentionMembersPromise,
+        totalPromise,
       ])
     const pageCount =
       total === 0 ? 0 : Math.ceil(total / Math.max(1, pagination.pageSize))
@@ -230,9 +247,10 @@ export const loadMemberRosterPage = cache(
       page,
       pageSize: pagination.pageSize,
     })
-    const members = await db.member.findMany(
-      getMemberRosterPageQuery(where, skip, take, asOf)
-    )
+    const members =
+      total === 0
+        ? []
+        : await db.member.findMany(getMemberRosterPageQuery(where, skip, take, asOf))
 
     return {
       gym,

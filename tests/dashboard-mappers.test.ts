@@ -130,6 +130,7 @@ test("maps member, membership, payment, attendance, and drop-in rows", () => {
     gymId: "gym-1",
     visitorName: null,
     visitorContact: "guest@example.com",
+    normalizedVisitorContact: "guest@example.com",
     visitCount: 2,
     amount: 5000,
     visitedAt: paidAt,
