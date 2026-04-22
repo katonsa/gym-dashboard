@@ -9,6 +9,7 @@ import {
 } from "@/lib/dashboard/action-helpers"
 import { addBillingPeriod } from "@/lib/dashboard/billing"
 import { logMemberCheckInForGym } from "@/lib/dashboard/attendance-lifecycle"
+import { findPotentialMemberDuplicatesForGym } from "@/lib/dashboard/member-duplicate-detection"
 import { updateMemberContactForGym } from "@/lib/dashboard/member-contact-lifecycle"
 import { parseDateInput } from "@/lib/dashboard/formatters"
 import {
@@ -82,6 +83,24 @@ export async function createMember(
         return {
           success: false,
           error: "Choose an active plan for this gym.",
+        }
+      }
+
+      const duplicateMatches = await findPotentialMemberDuplicatesForGym({
+        client: db,
+        gymId,
+        input: {
+          firstName: parsed.firstName,
+          lastName: parsed.lastName,
+          email: parsed.email,
+          phone: parsed.phone,
+        },
+      })
+
+      if (duplicateMatches.length > 0 && !parsed.confirmDuplicate) {
+        return {
+          success: false,
+          duplicateMatches,
         }
       }
 

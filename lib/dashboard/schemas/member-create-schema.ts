@@ -1,11 +1,20 @@
 import * as z from "zod"
 
+import type { MemberDuplicateMatch } from "../member-duplicate-detection.ts"
 import { parseDateInput } from "../formatters.ts"
 
-export type CreateMemberActionResult = {
-  success: boolean
-  error?: string
-}
+export type CreateMemberActionResult =
+  | {
+      success: true
+    }
+  | {
+      success: false
+      error: string
+    }
+  | {
+      success: false
+      duplicateMatches: MemberDuplicateMatch[]
+    }
 
 export const memberStatusSchema = z.enum(["ACTIVE", "INACTIVE", "SUSPENDED"])
 export const billingIntervalSchema = z.enum(["MONTHLY", "ANNUAL"])
@@ -59,6 +68,7 @@ export const createMemberSchema = z
       .max(1000, "Notes must be 1000 characters or fewer.")
       .optional()
       .transform((value) => value || undefined),
+    confirmDuplicate: z.boolean().optional(),
   })
   .superRefine((value, context) => {
     if (

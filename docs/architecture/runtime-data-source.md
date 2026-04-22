@@ -27,14 +27,19 @@ so future changes keep owner scoping intact.
 
 ## Runtime Writes
 
-The current milestone supports two owner/admin submissions:
+Owner/admin submissions include:
 
 - Manual member entry through `app/(dashboard)/members/actions.ts`.
 - Drop-in entry through `app/(dashboard)/drop-ins/actions.ts`.
 
 Both server actions require the authenticated owner gym before writing records,
-return `{ success: boolean, error?: string }`, and use `revalidatePath()` so the
-affected dashboard route reloads fresh server data after mutation.
+return structured action results, and use `revalidatePath()` so the affected
+dashboard route reloads fresh server data after mutation.
+
+Manual member entry also performs duplicate detection before writing. If a
+possible duplicate exists in the same gym, the action returns duplicate matches
+instead of creating records. A confirmed resubmission with
+`confirmDuplicate: true` uses the same scoped write path.
 
 ## Mapping Layer
 

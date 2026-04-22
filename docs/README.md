@@ -38,6 +38,8 @@ requirements.
 
 - [Gym Settings](./features/gym-settings.md) - editable gym profile,
   localization, default drop-in fees, and settings actions.
+- [Member Management](./features/member-management.md) - roster actions,
+  manual member creation, duplicate detection, and member lifecycle workflows.
 - [Plan Tier Management](./features/plan-tier-management.md) - plan tier
   creation, editing, activation, deactivation, and constraints.
 - [Owner Provisioning](./features/owner-provisioning.md) - first-run setup flow
@@ -67,6 +69,7 @@ superseded.
 - [Manual Check-In](./archive/plans/manual-checkin.md)
 - [Member Renewal](./archive/plans/member-renewal.md)
 - [Edit Member Contact](./archive/plans/edit-member-contact.md)
+- [Duplicate Member Detection](./archive/plans/duplicate-member-detection.md)
 - [Refactoring](./archive/plans/refactoring.md)
 
 ### Completed Change Notes
