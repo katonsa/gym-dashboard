@@ -3,6 +3,7 @@
 import { Check, Circle } from "lucide-react"
 
 import { MemberCreateForm } from "@/app/(dashboard)/members/member-create-form"
+import { MemberCsvImportFlow } from "@/app/(dashboard)/members/member-csv-import-flow"
 import { DropInEntryForm } from "@/app/(dashboard)/drop-ins/drop-in-entry-form"
 import { SetupPlanTierForm } from "@/components/dashboard/setup-plan-tier-form"
 import type { DropInVisitorLookupOption } from "@/lib/dashboard/drop-in-visitor-lookup"
@@ -102,10 +103,19 @@ export function SetupChecklist({
               />
             ) : null}
             {step.stepNumber === 2 && step.isActive ? (
-              <MemberCreateForm
-                planTiers={planTiers}
-                initialJoinDate={initialJoinDate}
-              />
+              <div className="grid gap-4">
+                <MemberCsvImportFlow
+                  planTiers={planTiers}
+                  initialJoinDate={initialJoinDate}
+                  triggerLabel="Import member CSV"
+                />
+                <div className="border-t border-border pt-4">
+                  <MemberCreateForm
+                    planTiers={planTiers}
+                    initialJoinDate={initialJoinDate}
+                  />
+                </div>
+              </div>
             ) : null}
             {step.stepNumber === 3 && step.isActive ? (
               <DropInEntryForm

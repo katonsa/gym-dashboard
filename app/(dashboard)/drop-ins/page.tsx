@@ -1,4 +1,7 @@
+import { FileDown } from "lucide-react"
+
 import { EmptyState } from "@/components/dashboard/empty-state"
+import { Button } from "@/components/ui/button"
 import { formatDashboardDate, parsePaginationParams } from "@/lib/dashboard"
 import {
   loadDropInLogPage,
@@ -64,16 +67,24 @@ export default async function DropInsPage({ searchParams }: DropInsPageProps) {
             Day-pass cash, walk-in volume, and follow-up leads.
           </p>
         </div>
-        <div className="rounded-lg border border-border bg-card px-4 py-3 text-card-foreground">
-          <p className="text-xs font-medium text-muted-foreground uppercase">
-            Default fee
-          </p>
-          <p className="mt-1 text-2xl font-semibold">
-            {moneyFormatter.format(dropInsData.gym.defaultDropInFeeAmount)}
-          </p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            New entries start from the gym day-pass price
-          </p>
+        <div className="grid gap-3">
+          <div className="rounded-lg border border-border bg-card px-4 py-3 text-card-foreground">
+            <p className="text-xs font-medium text-muted-foreground uppercase">
+              Default fee
+            </p>
+            <p className="mt-1 text-2xl font-semibold">
+              {moneyFormatter.format(dropInsData.gym.defaultDropInFeeAmount)}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              New entries start from the gym day-pass price
+            </p>
+          </div>
+          <Button asChild size="lg" variant="outline" className="min-h-11">
+            <a href="/api/exports/drop-ins">
+              <FileDown />
+              Export drop-ins
+            </a>
+          </Button>
         </div>
       </section>
 

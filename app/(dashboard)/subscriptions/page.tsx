@@ -1,6 +1,10 @@
+import { FileDown } from "lucide-react"
+
 import { EmptyState } from "@/components/dashboard/empty-state"
+import { Button } from "@/components/ui/button"
 import { formatDashboardDate } from "@/lib/dashboard/formatters"
 import { loadSubscriptionSummary } from "@/lib/dashboard/loaders"
+import { MonthlyReportExportForm } from "./monthly-report-export-form"
 import {
   PlanComparisonChart,
   type PlanComparisonChartRow,
@@ -70,6 +74,15 @@ export default async function SubscriptionsPage() {
             "Membership billing and drop-in revenue will appear once records are created.",
         },
   ].filter((gap): gap is { title: string; detail: string } => Boolean(gap))
+  const reportMonthParts = new Intl.DateTimeFormat("en", {
+    month: "2-digit",
+    timeZone: subscriptionsData.gym.timezone,
+    year: "numeric",
+  }).formatToParts(asOf)
+  const reportMonth = `${partValue(reportMonthParts, "year")}-${partValue(
+    reportMonthParts,
+    "month"
+  )}`
 
   return (
     <div className="grid gap-5 lg:gap-6">
@@ -85,16 +98,27 @@ export default async function SubscriptionsPage() {
             Plan mix, billing intervals, and revenue movement by tier.
           </p>
         </div>
-        <div className="rounded-lg border border-border bg-card px-4 py-3 text-card-foreground">
-          <p className="text-xs font-medium text-muted-foreground uppercase">
-            Month movement
-          </p>
-          <p className="mt-1 text-2xl font-semibold">
-            {formatSignedMoney(monthOverMonthAmount, moneyFormatter)}
-          </p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            {formatSignedPercent(monthOverMonthPercent)} from prior month
-          </p>
+        <div className="grid gap-3">
+          <div className="rounded-lg border border-border bg-card px-4 py-3 text-card-foreground">
+            <p className="text-xs font-medium text-muted-foreground uppercase">
+              Month movement
+            </p>
+            <p className="mt-1 text-2xl font-semibold">
+              {formatSignedMoney(monthOverMonthAmount, moneyFormatter)}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {formatSignedPercent(monthOverMonthPercent)} from prior month
+            </p>
+          </div>
+          <div className="grid gap-2">
+            <Button asChild size="lg" variant="outline" className="min-h-11">
+              <a href="/api/exports/membership-payments">
+                <FileDown />
+                Export payments
+              </a>
+            </Button>
+            <MonthlyReportExportForm initialMonth={reportMonth} />
+          </div>
         </div>
       </section>
 
@@ -264,4 +288,11 @@ function formatSignedPercent(value: number) {
   const sign = value > 0 ? "+" : ""
 
   return `${sign}${percentFormatter.format(value)}`
+}
+
+function partValue(
+  parts: Intl.DateTimeFormatPart[],
+  type: Intl.DateTimeFormatPartTypes
+) {
+  return parts.find((part) => part.type === type)?.value ?? ""
 }

@@ -6,6 +6,7 @@ import * as React from "react"
 import {
   AlertCircle,
   CheckCircle2,
+  FileDown,
   MoreHorizontal,
   PencilLine,
   Plus,
@@ -61,6 +62,7 @@ import type {
 } from "@/lib/dashboard/member-roster"
 import { cn } from "@/lib/utils"
 import { MemberCreateForm } from "./member-create-form"
+import { MemberCsvImportFlow } from "./member-csv-import-flow"
 import { logMemberCheckIn, updateMemberStatus } from "./member-actions"
 import { MemberQuickCheckInAction } from "./member-quick-checkin-action"
 import { MemberStatusAction } from "./member-status-action"
@@ -192,28 +194,45 @@ export function MemberRoster({
             </p>
           </div>
 
-          <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-            <DialogTrigger asChild>
-              <Button size="lg" className="min-h-11 w-full">
-                <Plus />
-                Add member
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="!top-0 !right-0 !left-auto !h-dvh !max-w-full !translate-x-0 !translate-y-0 content-start overflow-y-auto rounded-none border-l border-border bg-card p-5 shadow-2xl sm:!max-w-md data-open:slide-in-from-right data-closed:slide-out-to-right">
-              <DialogHeader className="pr-8">
-                <DialogTitle>Add member</DialogTitle>
-                <DialogDescription>
-                  Create a roster record and start billing when a plan is
-                  selected.
-                </DialogDescription>
-              </DialogHeader>
-              <MemberCreateForm
-                planTiers={planTiers}
-                initialJoinDate={initialJoinDate}
-                onSaved={() => setIsCreateOpen(false)}
-              />
-            </DialogContent>
-          </Dialog>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
+            <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+              <DialogTrigger asChild>
+                <Button size="lg" className="min-h-11 w-full">
+                  <Plus />
+                  Add member
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="!top-0 !right-0 !left-auto !h-dvh !max-w-full !translate-x-0 !translate-y-0 content-start overflow-y-auto rounded-none border-l border-border bg-card p-5 shadow-2xl sm:!max-w-md data-open:slide-in-from-right data-closed:slide-out-to-right">
+                <DialogHeader className="pr-8">
+                  <DialogTitle>Add member</DialogTitle>
+                  <DialogDescription>
+                    Create a roster record and start billing when a plan is
+                    selected.
+                  </DialogDescription>
+                </DialogHeader>
+                <MemberCreateForm
+                  planTiers={planTiers}
+                  initialJoinDate={initialJoinDate}
+                  onSaved={() => setIsCreateOpen(false)}
+                />
+              </DialogContent>
+            </Dialog>
+            <MemberCsvImportFlow
+              planTiers={planTiers}
+              initialJoinDate={initialJoinDate}
+            />
+            <Button
+              asChild
+              size="lg"
+              variant="outline"
+              className="min-h-11 w-full sm:col-span-2 lg:col-span-1"
+            >
+              <a href="/api/exports/members">
+                <FileDown />
+                Export members
+              </a>
+            </Button>
+          </div>
         </div>
       </section>
 
