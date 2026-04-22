@@ -14,6 +14,8 @@ requirements.
 | Understand login, setup, and owner provisioning | [Auth & Account Provisioning](./architecture/auth-and-account-provisioning.md) |
 | Understand runtime data loading and scoping     | [Runtime Data Source](./architecture/runtime-data-source.md)                   |
 | Configure or change the Redis dashboard cache   | [Redis Dashboard Cache](./architecture/redis-dashboard-cache.md)               |
+| Plan the domain architecture refactor           | [Domain Refactor Plan](./architecture/domain-refactor-plan.md)                 |
+| Execute the domain refactor                     | [Domain Refactor Checklist](./architecture/domain-refactor-checklist.md)       |
 | Run tests and quality checks                    | [Testing And Quality](./development/testing-and-quality.md)                    |
 
 ## Product
@@ -37,6 +39,10 @@ requirements.
 - [Redis Dashboard Cache](./architecture/redis-dashboard-cache.md) - optional
   Upstash Redis configuration, cached loader coverage, key shape, TTL, and
   mutation invalidation behavior.
+- [Domain Refactor Plan](./architecture/domain-refactor-plan.md) - proposed
+  domain folder moves, server action boundaries, and migration sequence.
+- [Domain Refactor Checklist](./architecture/domain-refactor-checklist.md) -
+  task checklist for executing the proposed domain refactor.
 
 ## Features
 
