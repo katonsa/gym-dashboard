@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import { FileDown } from "lucide-react"
 
 import { EmptyState } from "@/components/dashboard/empty-state"
@@ -11,6 +12,10 @@ import {
 import { DropInEntryForm } from "./drop-in-entry-form"
 import { DropInLog } from "./drop-in-log"
 import { DropInSummarySection } from "./drop-in-summary"
+
+export const metadata: Metadata = {
+  title: "Drop-ins",
+}
 
 type DropInsPageProps = {
   searchParams: Promise<{

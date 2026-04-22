@@ -1,3 +1,5 @@
+import type { Metadata } from "next"
+
 import { EmptyState } from "@/components/dashboard/empty-state"
 import { parseMemberRosterFilters } from "@/lib/dashboard/member-roster"
 import { loadMemberRosterPage } from "@/lib/dashboard/loaders"
@@ -7,6 +9,10 @@ import {
   parsePaginationParams,
 } from "@/lib/dashboard"
 import { MemberRoster } from "./member-roster"
+
+export const metadata: Metadata = {
+  title: "Members",
+}
 
 type MembersPageProps = {
   searchParams: Promise<{

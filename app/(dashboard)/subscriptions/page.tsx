@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import { FileDown } from "lucide-react"
 
 import { EmptyState } from "@/components/dashboard/empty-state"
@@ -10,6 +11,10 @@ import {
   type PlanComparisonChartRow,
   RevenueTrendChart,
 } from "./subscription-charts"
+
+export const metadata: Metadata = {
+  title: "Subscriptions",
+}
 
 const numberFormatter = new Intl.NumberFormat("en")
 const percentFormatter = new Intl.NumberFormat("en", {

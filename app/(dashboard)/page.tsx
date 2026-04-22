@@ -1,3 +1,5 @@
+import type { Metadata } from "next"
+
 import { EmptyState } from "@/components/dashboard/empty-state"
 import { SetupChecklist } from "@/components/dashboard/setup-checklist"
 import {
@@ -13,6 +15,10 @@ import {
 } from "@/lib/dashboard/formatters"
 import { OverviewPinnedAlerts } from "./overview-pinned-alerts"
 import { OverviewStatsSection } from "./overview-stats-section"
+
+export const metadata: Metadata = {
+  title: "Overview",
+}
 
 export default async function Page() {
   const asOf = new Date()

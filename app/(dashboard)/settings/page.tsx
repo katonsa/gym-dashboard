@@ -1,3 +1,5 @@
+import type { Metadata } from "next"
+
 import { EmptyState } from "@/components/dashboard/empty-state"
 import { requireDashboardSession } from "@/lib/auth/server"
 import { db } from "@/lib/db"
@@ -5,6 +7,10 @@ import { getOwnerGym } from "@/lib/dashboard/owner-gym"
 import { getPlanTierManagementRows } from "@/lib/dashboard/plan-tier-management"
 import { PlanTierManager } from "./plan-tier-manager"
 import { SettingsForm } from "./settings-form"
+
+export const metadata: Metadata = {
+  title: "Settings",
+}
 
 export default async function SettingsPage() {
   const session = await requireDashboardSession("/settings")

@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import { connection } from "next/server"
 import { redirect } from "next/navigation"
 
@@ -6,6 +7,10 @@ import { getCurrentUserSession } from "@/lib/auth/server"
 import { getAuthPageState, AuthFallbackState } from "@/lib/auth/page-state"
 import { SignInForm } from "./sign-in-form"
 import { SetupWizard } from "./setup-wizard"
+
+export const metadata: Metadata = {
+  title: "Sign In",
+}
 
 type SignInPageProps = {
   searchParams: Promise<{

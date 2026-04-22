@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import Link from "next/link"
 
 import { RiskBadge, StatusBadge } from "@/components/dashboard/badges"
@@ -38,6 +39,23 @@ type MemberDetailPageProps = {
     pp?: string | string[]
     ap?: string | string[]
   }>
+}
+
+export async function generateMetadata({
+  params,
+}: Pick<MemberDetailPageProps, "params">): Promise<Metadata> {
+  const { id } = await params
+  const data = await loadMemberDetailData(id)
+
+  if (!data) {
+    return {
+      title: "Member Not Found",
+    }
+  }
+
+  return {
+    title: formatMemberName(data.member),
+  }
 }
 
 export default async function MemberDetailPage({
