@@ -3,7 +3,7 @@ import { expect, test } from "vitest"
 import {
   buildDropInVisitorLookupOptions,
   type DropInVisitorLookupRow,
-} from "../lib/dashboard/drop-in-visitor-lookup.ts"
+} from "../lib/drop-ins/visitor-lookup.ts"
 
 test("builds lookup options for identified drop-in visitors", () => {
   const rows: DropInVisitorLookupRow[] = [

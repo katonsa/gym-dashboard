@@ -13,7 +13,8 @@ import {
 
 import { SignOutButton } from "@/components/auth/sign-out-button"
 import { ThemeToggle } from "@/components/theme-toggle"
-import { dashboardRoutes, type DashboardRouteHref } from "@/lib/dashboard"
+import type { DashboardRouteHref } from "@/lib/application/dashboard-routes"
+import { dashboardRoutes } from "@/lib/dashboard/navigation"
 import { cn } from "@/lib/utils"
 
 const routeIcons: Record<

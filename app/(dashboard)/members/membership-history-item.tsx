@@ -3,7 +3,7 @@ import {
   formatBillingInterval,
   formatCurrency,
   formatDate,
-} from "@/lib/dashboard"
+} from "@/lib/dashboard/formatters"
 import type { MemberDetailMembership } from "@/lib/dashboard/loaders"
 
 export function MembershipHistoryItem({

@@ -1,6 +1,6 @@
 import { expect, test } from "vitest"
 
-import { updateMemberContactSchema } from "../lib/dashboard/schemas/update-member-contact-schema.ts"
+import { updateMemberContactSchema } from "../lib/members/schemas/update-contact-schema.ts"
 
 const validValues = {
   memberId: "member-1",

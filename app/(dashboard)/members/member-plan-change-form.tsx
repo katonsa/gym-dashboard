@@ -27,14 +27,13 @@ import {
   formatCurrency,
   formatDateInputForDisplay,
   titleCase,
-  type BillingInterval,
-  type PlanTier,
-} from "@/lib/dashboard"
+} from "@/lib/dashboard/formatters"
+import type { BillingInterval, PlanTier } from "@/lib/domain/types"
 import { changeMemberPlan } from "./membership-actions"
 import {
   changePlanSchema,
   type ChangeMemberPlanValues,
-} from "@/lib/dashboard/schemas/change-plan-schema"
+} from "@/lib/memberships/schemas/change-plan-schema"
 
 type CurrentPlan = {
   planName: string

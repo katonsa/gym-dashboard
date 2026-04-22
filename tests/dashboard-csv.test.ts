@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest"
 
-import { escapeCsvCell, toCsv } from "../lib/dashboard/csv.ts"
-import { getMonthlyReportCsv } from "../lib/dashboard/export-csv.ts"
+import { escapeCsvCell, toCsv } from "../lib/reports/csv.ts"
+import { getMonthlyReportCsv } from "../lib/reports/export-csv.ts"
 
 describe("dashboard CSV helpers", () => {
   test("escapes commas, quotes, and newlines", () => {

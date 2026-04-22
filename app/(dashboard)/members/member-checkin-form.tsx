@@ -28,7 +28,7 @@ import { logMemberCheckIn } from "./member-actions"
 import {
   logCheckInSchema,
   type LogCheckInValues,
-} from "@/lib/dashboard/schemas/log-checkin-schema"
+} from "@/lib/attendance/schemas/log-checkin-schema"
 
 export function MemberCheckInForm({
   memberId,

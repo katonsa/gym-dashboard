@@ -3,7 +3,7 @@ import { expect, test } from "vitest"
 import {
   createPlanTierSchema,
   updatePlanTierSchema,
-} from "../lib/dashboard/schemas/plan-tier-schema.ts"
+} from "../lib/plans/schemas/plan-tier-schema.ts"
 
 const validValues = {
   name: "Pro",

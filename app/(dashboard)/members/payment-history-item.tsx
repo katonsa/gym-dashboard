@@ -1,9 +1,6 @@
 import { PaymentBadge } from "@/components/dashboard/badges"
-import {
-  formatCurrency,
-  formatDate,
-  type MembershipPayment,
-} from "@/lib/dashboard"
+import { formatCurrency, formatDate } from "@/lib/dashboard/formatters"
+import type { MembershipPayment } from "@/lib/domain/types"
 import { PaymentActions } from "./payment-actions"
 
 export function PaymentHistoryItem({

@@ -17,7 +17,7 @@ import { Textarea } from "@/components/ui/textarea"
 import {
   createPlanTierSchema,
   type CreatePlanTierValues,
-} from "@/lib/dashboard/schemas/plan-tier-schema"
+} from "@/lib/plans/schemas/plan-tier-schema"
 import { createPlanTier } from "@/app/(dashboard)/settings/actions"
 
 export function SetupPlanTierForm({

@@ -15,7 +15,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
-import type { PaymentStatus } from "@/lib/dashboard"
+import type { PaymentStatus } from "@/lib/domain/types"
 import {
   markPaymentPaid,
   voidPayment,

@@ -6,32 +6,32 @@ import * as z from "zod"
 import {
   type ActionResult,
   withGymAction,
-} from "@/lib/dashboard/action-helpers"
+} from "@/lib/application/owner-gym-action"
 import { invalidateDashboardCache } from "@/lib/cache/redis"
-import { addBillingPeriod } from "@/lib/dashboard/billing"
-import { logMemberCheckInForGym } from "@/lib/dashboard/attendance-lifecycle"
-import { findPotentialMemberDuplicatesForGym } from "@/lib/dashboard/member-duplicate-detection"
-import { updateMemberContactForGym } from "@/lib/dashboard/member-contact-lifecycle"
-import { parseDateInput } from "@/lib/dashboard/formatters"
+import { logMemberCheckInForGym } from "@/lib/attendance/check-in-service"
+import { updateMemberContactForGym } from "@/lib/members/contact-service"
+import { createMemberForGym } from "@/lib/members/create-member-service"
+import { updateMemberStatusForGym } from "@/lib/members/status-service"
+import { parseDateInput } from "@/lib/domain/date-input"
 import {
   createMemberSchema,
   type CreateMemberActionResult,
   type CreateMemberValues,
-} from "@/lib/dashboard/schemas/member-create-schema"
+} from "@/lib/members/schemas/create-member-schema"
 import {
   logCheckInSchema,
   type LogCheckInActionResult,
   type LogCheckInValues,
-} from "@/lib/dashboard/schemas/log-checkin-schema"
+} from "@/lib/attendance/schemas/log-checkin-schema"
 import {
   updateMemberContactSchema,
   type UpdateMemberContactActionResult,
   type UpdateMemberContactValues,
-} from "@/lib/dashboard/schemas/update-member-contact-schema"
-import type { BillingInterval, MemberStatus } from "@/lib/dashboard"
+} from "@/lib/members/schemas/update-contact-schema"
+import type { MemberStatus } from "@/lib/domain/types"
 import { db } from "@/lib/db"
 
-export type { ActionResult } from "@/lib/dashboard/action-helpers"
+export type { ActionResult } from "@/lib/application/owner-gym-action"
 
 export type UpdateMemberStatusValues = {
   memberId: string
@@ -56,106 +56,29 @@ export async function createMember(
     failureError:
       "The member could not be saved. Check the details and try again.",
     handler: async ({ parsed, gymId }) => {
-      const joinDate = parseDateInput(parsed.joinDate)
+      const result = await createMemberForGym({
+        client: db,
+        gymId,
+        values: parsed,
+      })
 
-      if (!joinDate) {
+      if (result.status === "invalid-join-date") {
         return { success: false, error: "Choose a valid join date." }
       }
 
-      const billingInterval = parsed.billingInterval as
-        | BillingInterval
-        | undefined
-      const planTier = parsed.planTierId
-        ? await db.planTier.findFirst({
-            where: {
-              id: parsed.planTierId,
-              gymId,
-              isActive: true,
-            },
-            select: {
-              id: true,
-              monthlyPriceAmount: true,
-              annualPriceAmount: true,
-            },
-          })
-        : null
-
-      if (parsed.planTierId && !planTier) {
+      if (result.status === "plan-not-found") {
         return {
           success: false,
           error: "Choose an active plan for this gym.",
         }
       }
 
-      const duplicateMatches = await findPotentialMemberDuplicatesForGym({
-        client: db,
-        gymId,
-        input: {
-          firstName: parsed.firstName,
-          lastName: parsed.lastName,
-          email: parsed.email,
-          phone: parsed.phone,
-        },
-      })
-
-      if (duplicateMatches.length > 0 && !parsed.confirmDuplicate) {
+      if (result.status === "duplicate") {
         return {
           success: false,
-          duplicateMatches,
+          duplicateMatches: result.duplicateMatches,
         }
       }
-
-      await db.$transaction(async (tx) => {
-        const member = await tx.member.create({
-          data: {
-            gymId,
-            firstName: parsed.firstName,
-            lastName: parsed.lastName,
-            email: parsed.email,
-            phone: parsed.phone,
-            status: parsed.status,
-            joinDate,
-            notes: parsed.notes,
-          },
-          select: { id: true },
-        })
-
-        if (!planTier || !billingInterval) {
-          return
-        }
-
-        const priceAmount =
-          billingInterval === "ANNUAL"
-            ? planTier.annualPriceAmount
-            : planTier.monthlyPriceAmount
-        const nextBillingDate = addBillingPeriod(joinDate, billingInterval)
-
-        const membership = await tx.membership.create({
-          data: {
-            memberId: member.id,
-            planTierId: planTier.id,
-            billingInterval,
-            status: "ACTIVE",
-            priceAmount,
-            startedAt: joinDate,
-            currentPeriodEndsAt: nextBillingDate,
-            nextBillingDate,
-          },
-          select: { id: true },
-        })
-
-        await tx.membershipPayment.create({
-          data: {
-            gymId,
-            memberId: member.id,
-            membershipId: membership.id,
-            amount: priceAmount,
-            status: "PENDING",
-            dueAt: joinDate,
-            notes: "Initial membership payment.",
-          },
-        })
-      })
 
       await invalidateDashboardCache(gymId)
       revalidatePath("/members")
@@ -179,39 +102,13 @@ export async function updateMemberStatus(
       "Connect a gym to this owner account before changing members.",
     failureError: "The member status could not be changed. Try again.",
     handler: async ({ parsed, gymId }) => {
-      const result = await db.$transaction(async (tx) => {
-        const member = await tx.member.findFirst({
-          where: {
-            id: parsed.memberId,
-            gymId,
-          },
-          select: { id: true },
-        })
-
-        if (!member) {
-          return { found: false }
-        }
-
-        await tx.member.update({
-          where: { id: member.id },
-          data: { status: parsed.status },
-          select: { id: true },
-        })
-
-        if (parsed.status === "SUSPENDED") {
-          await tx.membership.updateMany({
-            where: {
-              memberId: member.id,
-              status: "ACTIVE",
-            },
-            data: { status: "PAST_DUE" },
-          })
-        }
-
-        return { found: true }
+      const result = await updateMemberStatusForGym({
+        client: db,
+        gymId,
+        values: parsed,
       })
 
-      if (!result.found) {
+      if (result.status === "not-found") {
         return {
           success: false,
           error: "This member does not exist or belongs to a different gym.",

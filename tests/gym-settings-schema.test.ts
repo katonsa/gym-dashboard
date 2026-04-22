@@ -3,7 +3,7 @@ import { expect, test } from "vitest"
 import {
   normalizeGymSettingsValues,
   updateGymSettingsSchema,
-} from "../lib/dashboard/schemas/gym-settings-schema.ts"
+} from "../lib/gyms/schemas/settings-schema.ts"
 
 const validValues = {
   name: "Jakarta Strength Club",

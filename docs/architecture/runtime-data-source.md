@@ -5,6 +5,10 @@ Status: Active — applies to the database-backed dashboard milestone.
 The dashboard routes use authenticated, owner-scoped database reads at runtime.
 Mock dashboard data is no longer used as a runtime or test fixture.
 
+When deciding whether a new helper belongs in `lib/domain/*`,
+`lib/dashboard/read-models/*`, or a feature folder under `lib/*`, use
+`docs/architecture/code-ownership.md` alongside this document.
+
 ## Runtime Reads
 
 Dashboard pages load data through route-specific server loaders in
@@ -22,13 +26,15 @@ is selected through `Gym.ownerId`, and all route data is scoped to that gym.
 Membership queries scope through the owning member because `Membership` does not
 have a direct `gymId` field.
 
-The shared query shapes live in `lib/dashboard/query-scopes.ts`. They are tested
-so future changes keep owner scoping intact.
+The shared query shapes live in
+`lib/dashboard/read-models/query-scopes.ts`. They are tested so future changes
+keep owner scoping intact.
 
 Several read paths now rely on performance-sensitive SQL and index choices:
 
 - `/subscriptions` uses a set-based gym-local revenue trend query in
-  `lib/dashboard/subscription-aggregates.ts` instead of a per-month loop.
+  `lib/dashboard/read-models/subscription-aggregates.ts` instead of a per-month
+  loop.
 - `/members` keeps the same substring search semantics while relying on
   Postgres trigram indexes plus supporting membership/payment indexes for the
   heavier roster filters.
@@ -41,11 +47,13 @@ the cache key shape, stable `"current"` key behavior, TTL, and invalidation
 rules.
 
 Owner-scoped export routes also read runtime data directly from Postgres. The
-monthly report export in `lib/dashboard/export-csv.ts` reuses the shared
-subscription revenue-trend helper so exports and the `/subscriptions` page stay
-aligned on gym-local month boundaries and overlap-based membership revenue.
-This shared path also avoids reintroducing a second copy of the expensive
-membership-overlap SQL logic.
+monthly report export in `lib/reports/export-csv.ts` intentionally reuses
+dashboard read-model helpers from
+`lib/dashboard/read-models/subscription-aggregates.ts` and
+`lib/dashboard/read-models/aggregate-queries.ts` so exports and the
+`/subscriptions` page stay aligned on gym-local month boundaries and
+overlap-based membership revenue. This shared path avoids reintroducing a
+second copy of the expensive membership-overlap SQL logic.
 
 ## Runtime Writes
 
@@ -58,9 +66,10 @@ Owner/admin submissions include:
 - Gym settings and plan tier changes through
   `app/(dashboard)/settings/actions.ts`.
 
-Both server actions require the authenticated owner gym before writing records,
-return structured action results, invalidate the gym-scoped Redis cache when it
-is configured, and use `revalidatePath()` so the affected dashboard route reloads
+These `"use server"` files are thin wrappers around application/domain helpers.
+They require the authenticated owner gym before writing records, return
+structured action results, invalidate the gym-scoped Redis cache when it is
+configured, and use `revalidatePath()` so the affected dashboard route reloads
 fresh server data after mutation.
 
 Drop-in writes also persist a conservative normalized contact key
@@ -79,10 +88,10 @@ instead of creating records. A confirmed resubmission with
 
 ## Mapping Layer
 
-Database rows are converted to dashboard types in `lib/dashboard/mappers.ts`.
-This keeps the UI on stable dashboard types while Prisma models remain the
-database contract. Date values are serialized to ISO strings before reaching
-client components.
+Database rows are converted to domain types in `lib/domain/mappers.ts`. The
+dashboard loaders and read-model helpers then assemble page-specific summaries
+and view models on top of those shared types. Date values are serialized to ISO
+strings before reaching client components.
 
 ## Empty States
 
@@ -98,6 +107,8 @@ Use the seed data for local runtime verification. See
 
 ## Related Handoff Docs
 
+- `docs/architecture/code-ownership.md` documents which folders own shared
+  domain logic, dashboard read models, reports, and application helpers.
 - `docs/architecture/auth-and-account-provisioning.md` documents auth assumptions, owner provisioning,
   and member account scope.
 - `docs/architecture/redis-dashboard-cache.md` documents optional Upstash Redis

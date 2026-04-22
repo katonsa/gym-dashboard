@@ -16,12 +16,12 @@ import { Input } from "@/components/ui/input"
 import {
   gymCurrencyOptions,
   gymTimezoneOptions,
-} from "@/lib/dashboard/gym-settings-options"
-import type { OwnerGym } from "@/lib/dashboard/owner-gym"
+} from "@/lib/gyms/settings-options"
+import type { OwnerGym } from "@/lib/gyms/owner-gym"
 import {
   updateGymSettingsSchema,
   type UpdateGymSettingsValues,
-} from "@/lib/dashboard/schemas/gym-settings-schema"
+} from "@/lib/gyms/schemas/settings-schema"
 import { updateGymSettings } from "./actions"
 
 export function SettingsForm({ gym }: { gym: OwnerGym }) {

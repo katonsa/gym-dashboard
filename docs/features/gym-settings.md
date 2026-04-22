@@ -27,7 +27,7 @@ database migration was required because the fields already existed in
   `react-hook-form`, Zod, inline error, pending button, and Sonner success toast
   pattern.
 - Added an owner-scoped server action that updates only the authenticated
-  owner's gym.
+  owner's gym and delegates the write to `lib/gyms/settings-service.ts`.
 - Revalidated `/settings`, `/drop-ins`, `/`, and the root layout after saving
   so the app shell name, currency formatting, timezone-sensitive dates, and
   default drop-in fee can refresh.
@@ -35,7 +35,7 @@ database migration was required because the fields already existed in
 ## Validation
 
 The settings schema lives in
-`lib/dashboard/schemas/gym-settings-schema.ts`.
+`lib/gyms/schemas/settings-schema.ts`.
 
 Validation rules:
 
@@ -47,7 +47,7 @@ Validation rules:
   `10,000,000`, normalized to a number before persistence.
 
 Supported timezone and currency options are shared by the schema and form from
-`lib/dashboard/gym-settings-options.ts`.
+`lib/gyms/settings-options.ts`.
 
 ## Behavior Notes
 
@@ -71,7 +71,7 @@ boundaries for non-UTC gyms.
 The follow-up was implemented with a TDD pass:
 
 - Added gym-local day and month window helpers in
-  `lib/dashboard/date-boundaries.ts`.
+  `lib/domain/date-boundaries.ts`.
 - Threaded `gym.timezone` through the overview, drop-in, and subscription
   loaders.
 - Updated overview monthly metrics so new sign-ups, drop-in revenue, and

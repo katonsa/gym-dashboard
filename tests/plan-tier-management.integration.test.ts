@@ -6,7 +6,7 @@ import {
   getPlanTierManagementRows,
   normalizePlanTierName,
   updatePlanTierForGym,
-} from "../lib/dashboard/plan-tier-management.ts"
+} from "../lib/plans/plan-tier-service.ts"
 import { db } from "../lib/db.ts"
 
 const planValues = {

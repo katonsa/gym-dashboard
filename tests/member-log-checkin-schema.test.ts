@@ -1,6 +1,6 @@
 import { expect, test } from "vitest"
 
-import { logCheckInSchema } from "../lib/dashboard/schemas/log-checkin-schema.ts"
+import { logCheckInSchema } from "../lib/attendance/schemas/log-checkin-schema.ts"
 
 const validValues = {
   memberId: "member-1",

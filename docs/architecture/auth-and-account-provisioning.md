@@ -90,5 +90,5 @@ Members **do not** have login accounts. Member records are data managed by the a
 - [lib/auth/next-path.ts](../../lib/auth/next-path.ts) — Safe `next` query param validation for post-login redirect.
 - [app/(auth)/sign-in/page.tsx](<../../app/(auth)/sign-in/page.tsx>) — Sign-in page (renders wizard or sign-in form).
 - [app/(auth)/sign-in/setup-wizard.tsx](<../../app/(auth)/sign-in/setup-wizard.tsx>) — First-run setup wizard component.
-- [lib/dashboard/gym-create-action.ts](../../lib/dashboard/gym-create-action.ts) — Server action for gym creation.
+- [lib/gyms/create-gym-action.ts](../../lib/gyms/create-gym-action.ts) — Server action for gym creation.
 - [prisma/seed.ts](../../prisma/seed.ts) — Seed script that creates the demo owner.

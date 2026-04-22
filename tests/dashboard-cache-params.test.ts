@@ -4,22 +4,18 @@ import {
   CURRENT_DASHBOARD_CACHE_WINDOW_MS,
   getAggregateCacheParams,
   getDashboardTimeCacheParam,
-} from "../lib/dashboard/cache-params.ts"
+} from "../lib/dashboard/read-models/cache-params.ts"
 
 test("uses a stable current cache key for near-now dashboard reads", () => {
   const now = new Date("2026-04-22T10:00:00.000Z")
-  const asOf = new Date(
-    now.getTime() - CURRENT_DASHBOARD_CACHE_WINDOW_MS + 500
-  )
+  const asOf = new Date(now.getTime() - CURRENT_DASHBOARD_CACHE_WINDOW_MS + 500)
 
   expect(getDashboardTimeCacheParam(asOf, now)).toBe("current")
 })
 
 test("keeps historical dashboard reads keyed by exact timestamp", () => {
   const now = new Date("2026-04-22T10:00:00.000Z")
-  const asOf = new Date(
-    now.getTime() - CURRENT_DASHBOARD_CACHE_WINDOW_MS - 1
-  )
+  const asOf = new Date(now.getTime() - CURRENT_DASHBOARD_CACHE_WINDOW_MS - 1)
 
   expect(getDashboardTimeCacheParam(asOf, now)).toBe(asOf.toISOString())
 })

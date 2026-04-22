@@ -3,21 +3,20 @@
 import { revalidatePath } from "next/cache"
 
 import { invalidateDashboardCache } from "@/lib/cache/redis"
-import { withGymAction } from "@/lib/dashboard/action-helpers"
-import { addBillingPeriod } from "@/lib/dashboard/billing"
-import { parseDateInput } from "@/lib/dashboard/formatters"
-import { renewMembershipForGym } from "@/lib/dashboard/renewal-lifecycle"
+import { withGymAction } from "@/lib/application/owner-gym-action"
+import { parseDateInput } from "@/lib/domain/date-input"
+import { changeMemberPlanForGym } from "@/lib/memberships/plan-change-service"
+import { renewMembershipForGym } from "@/lib/memberships/renewal-service"
 import {
   changePlanSchema,
   type ChangeMemberPlanValues,
   type ChangePlanActionResult,
-} from "@/lib/dashboard/schemas/change-plan-schema"
+} from "@/lib/memberships/schemas/change-plan-schema"
 import {
   renewMembershipSchema,
   type RenewMembershipActionResult,
   type RenewMembershipValues,
-} from "@/lib/dashboard/schemas/renew-membership-schema"
-import type { BillingInterval } from "@/lib/dashboard"
+} from "@/lib/memberships/schemas/renew-membership-schema"
 import { db } from "@/lib/db"
 
 export async function changeMemberPlan(
@@ -33,90 +32,15 @@ export async function changeMemberPlan(
     failureError:
       "The plan could not be changed. Check the details and try again.",
     handler: async ({ parsed, gymId }) => {
-      const effectiveDate = parseDateInput(parsed.effectiveDate)
+      const result = await changeMemberPlanForGym({
+        client: db,
+        gymId,
+        values: parsed,
+      })
 
-      if (!effectiveDate) {
+      if (result.status === "invalid-effective-date") {
         return { success: false, error: "Choose a valid effective date." }
       }
-
-      const result = await db.$transaction(async (tx) => {
-        const member = await tx.member.findFirst({
-          where: {
-            id: parsed.memberId,
-            gymId,
-          },
-          select: { id: true },
-        })
-
-        if (!member) {
-          return { status: "member-not-found" as const }
-        }
-
-        const planTier = await tx.planTier.findFirst({
-          where: {
-            id: parsed.planTierId,
-            gymId,
-            isActive: true,
-          },
-          select: {
-            id: true,
-            monthlyPriceAmount: true,
-            annualPriceAmount: true,
-          },
-        })
-
-        if (!planTier) {
-          return { status: "plan-not-found" as const }
-        }
-
-        await tx.membership.updateMany({
-          where: {
-            memberId: member.id,
-            status: "ACTIVE",
-          },
-          data: {
-            status: "EXPIRED",
-            canceledAt: effectiveDate,
-            currentPeriodEndsAt: effectiveDate,
-            nextBillingDate: effectiveDate,
-          },
-        })
-
-        const billingInterval = parsed.billingInterval as BillingInterval
-        const priceAmount =
-          billingInterval === "ANNUAL"
-            ? planTier.annualPriceAmount
-            : planTier.monthlyPriceAmount
-        const nextBillingDate = addBillingPeriod(effectiveDate, billingInterval)
-
-        const membership = await tx.membership.create({
-          data: {
-            memberId: member.id,
-            planTierId: planTier.id,
-            billingInterval,
-            status: "ACTIVE",
-            priceAmount,
-            startedAt: effectiveDate,
-            currentPeriodEndsAt: nextBillingDate,
-            nextBillingDate,
-          },
-          select: { id: true },
-        })
-
-        await tx.membershipPayment.create({
-          data: {
-            gymId,
-            memberId: member.id,
-            membershipId: membership.id,
-            amount: priceAmount,
-            status: "PENDING",
-            dueAt: effectiveDate,
-            notes: "First payment after plan change.",
-          },
-        })
-
-        return { status: "changed" as const }
-      })
 
       if (result.status === "member-not-found") {
         return {

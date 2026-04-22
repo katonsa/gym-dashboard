@@ -1,8 +1,12 @@
 # Domain Refactor Plan
 
-Status: Proposed. This plan prepares the dashboard codebase for a broader gym
-management system without changing product behavior or database schema in the
-first phase.
+Status: Completed refactor record. This document captures the target
+architecture and the migration sequence that was executed without changing
+product behavior or database schema.
+
+For current placement decisions, use
+`docs/architecture/code-ownership.md`. This document is the historical record
+of the refactor, not the primary day-to-day ownership guide.
 
 ## Goal
 
@@ -28,6 +32,46 @@ This refactor separates:
 - Do not add staff roles, member accounts, scheduling, or payment provider
   integration during this refactor.
 - Do not rewrite all loaders or actions at once.
+
+## Current State Snapshot
+
+The repository now matches the post-refactor layout:
+
+- `lib/dashboard/` contains only dashboard-owned loaders, display helpers,
+  navigation, and read models.
+- Shared types, date helpers, mappers, and pagination utilities live under
+  `lib/domain/`.
+- Auth-aware action helpers and route revalidation helpers live under
+  `lib/application/`.
+- Reusable business workflows and schemas live under their domain folders in
+  `lib/gyms`, `lib/plans`, `lib/members`, `lib/memberships`, `lib/billing`,
+  `lib/attendance`, and `lib/drop-ins`.
+- Route action files under `app/(dashboard)/*` remain thin `"use server"`
+  wrappers around those application/domain helpers.
+- `lib/reports/export-csv.ts` intentionally depends on dashboard read-model
+  helpers so the monthly report export stays aligned with subscriptions-page
+  revenue math.
+- `lib/dashboard/index.ts` and the temporary compatibility shims have been
+  removed.
+
+The migration sequence below is retained as an implementation record.
+
+## Architectural Constraints
+
+These constraints follow from the current codebase and should guide every phase:
+
+- Auth code must stop depending on `lib/dashboard` before the final cleanup
+  phase. `DashboardRouteHref` belongs in `lib/application/dashboard-routes.ts`.
+- The setup wizard is part of account provisioning, not the dashboard shell.
+  `createGym` may remain a lib-level Server Action after the move, but it
+  should live under `lib/gyms`.
+- CSV response helpers are shared by API routes and should move early to
+  `lib/reports`, with shims left in place until imports are migrated.
+- Dashboard read-model files should remain dashboard-owned even if they query
+  many domain tables. Their job is still page-oriented aggregation.
+- Inline Prisma writes inside route action files should be extracted only after
+  the current service and schema moves have stabilized. Otherwise the refactor
+  couples namespace changes with behavioral rewrites.
 
 ## Target Folder Shape
 
@@ -125,6 +169,13 @@ lib/application/revalidation.ts
 
 This should centralize common route revalidation groups such as member,
 subscription, overview, drop-in, and settings invalidation.
+
+Decision: add this during the refactor, not in a follow-up cleanup PR.
+Revalidation calls are already duplicated across `gym-create-action.ts`,
+`app/(dashboard)/settings/actions.ts`, `app/(dashboard)/members/*`, and
+`app/(dashboard)/drop-ins/actions.ts`. Introducing `lib/application/revalidation.ts`
+as the namespace moves happen keeps thin Server Action wrappers consistent and
+prevents duplication from being copied into the new domain layout.
 
 ### Shared Domain
 
@@ -428,6 +479,32 @@ Shell note:
   errors such as `command not found` for text that was meant to be searched
   literally.
 
+## Recommended First Increment
+
+The safest first implementation PR is narrower than the full Phase 2 list. Land
+the new folder structure plus the least-coupled pure moves first:
+
+1. Create target folders from Phase 1.
+2. Move `lib/dashboard/csv.ts` to `lib/reports/csv.ts` with a re-export shim.
+3. Move `lib/dashboard/export-csv.ts` to `lib/reports/export-csv.ts` with a
+   re-export shim.
+4. Move `lib/dashboard/billing.ts` to `lib/billing/periods.ts` with a
+   re-export shim.
+5. Move `lib/dashboard/pagination.ts` to `lib/domain/pagination.ts` with a
+   re-export shim.
+6. Run `npm test`, `npm run typecheck`, and `npm run lint`.
+
+Why this slice first:
+
+- these files are pure utilities or report helpers
+- they have limited dependency fan-out compared with `types.ts` and
+  action-bound services
+- they establish the folder pattern and shim pattern without forcing auth,
+  navigation, or read-model rewiring yet
+
+Defer `types.ts`, `mappers.ts`, and `formatters.ts` until after the team has
+confirmed the shim approach is stable in the first PR.
+
 ### Step 0: Baseline
 
 Run and record:
@@ -478,6 +555,26 @@ For each old path, leave a temporary re-export file:
 ```ts
 export * from "@/lib/new/path"
 ```
+
+Suggested implementation order inside this step:
+
+1. `csv.ts`
+2. `export-csv.ts`
+3. `billing.ts`
+4. `pagination.ts`
+5. `date-boundaries.ts`
+6. `mappers.ts`
+7. `calculations.ts`
+8. split `formatters.ts`
+
+Rationale:
+
+- report helpers and pagination are low-risk and mostly self-contained
+- `date-boundaries.ts` is still simple, but used by loaders and detail pages
+- `mappers.ts` and `calculations.ts` depend on shared types and have wider blast
+  radius
+- splitting `formatters.ts` is easy to get wrong because it currently mixes
+  display formatting and date parsing used by Server Actions
 
 Verification:
 
@@ -553,7 +650,27 @@ Move dashboard-only reporting/read-model types to
 
 Keep `lib/dashboard/index.ts` only as a temporary compatibility barrel during
 the migration. It must be deleted in Step 9 instead of surviving as a public
-import surface.
+import surface. This temporary barrel has now been removed.
+
+This step should be treated as a dependency-unblock phase, not a cosmetic file
+move. Complete these moves together before deleting old exports:
+
+- move dashboard route href constants first so auth stops importing from
+  `lib/dashboard`
+- move dashboard navigation labels next so app shell imports stay dashboard-only
+- move shared entity/value types next so mappers and services can point at
+  `lib/domain/types`
+- move dashboard-only alert and summary types last into
+  `lib/dashboard/read-models/types.ts`
+
+Decision: keep `lib/dashboard/index.ts` only through the import-migration
+window, then delete it in Step 9. Do not enforce explicit imports immediately
+in Step 6. The current app and component surface still has many
+`@/lib/dashboard` barrel imports, so forcing explicit-import cleanup at the same
+time as the `types.ts` split would make Step 6 larger and riskier than needed.
+The split should unblock safer imports first; Step 8 should convert remaining
+barrel usage to explicit paths; Step 9 should remove the barrel entirely. This
+cleanup is complete in the current repo state.
 
 Verification:
 
@@ -581,6 +698,14 @@ lib/gyms/settings-service.ts
 
 After extraction, action files should contain no Prisma transaction logic except
 where the action itself is intentionally just an orchestration boundary.
+
+Decision: move `normalizeDropInVisitorContact` in this step, together with
+`lib/drop-ins/create-visit-service.ts`, not during the read-model move. Today
+the helper lives in `lib/dashboard/drop-in-aggregates.ts` but is used by the
+drop-in write path in `app/(dashboard)/drop-ins/actions.ts`. Keeping it in the
+read-model move would preserve a cross-boundary dependency from write code back
+into dashboard-owned aggregation code. Extracting it in Step 7 cleanly places it
+next to the drop-in write workflow it serves.
 
 Verification:
 
@@ -662,7 +787,7 @@ Update:
 - `docs/architecture/runtime-data-source.md`
 - feature docs that reference old file paths
 
-Move this document to `docs/archive/plans/` only after the refactor is complete.
+This document can remain in place as the completed refactor record.
 
 ## Completion Criteria
 

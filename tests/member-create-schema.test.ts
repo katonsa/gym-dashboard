@@ -1,6 +1,6 @@
 import { expect, test } from "vitest"
 
-import { createMemberSchema } from "../lib/dashboard/schemas/member-create-schema.ts"
+import { createMemberSchema } from "../lib/members/schemas/create-member-schema.ts"
 
 const validValues = {
   firstName: "Ari",

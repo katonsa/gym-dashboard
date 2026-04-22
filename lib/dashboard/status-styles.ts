@@ -1,10 +1,10 @@
+import type { DashboardAlertSeverity } from "@/lib/dashboard/read-models/types"
 import type {
-  DashboardAlertSeverity,
   MemberStatus,
   MembershipStatus,
   PaymentStatus,
-} from "@/lib/dashboard/types"
-import type { MembershipDisplayStatus } from "@/lib/dashboard/calculations"
+} from "@/lib/domain/types"
+import type { MembershipDisplayStatus } from "@/lib/memberships/calculations"
 
 export type BillingRisk = "clear" | "expired" | "expiring" | "overdue"
 

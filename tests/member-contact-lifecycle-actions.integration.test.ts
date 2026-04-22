@@ -1,6 +1,6 @@
 import { expect, test } from "vitest"
 
-import { updateMemberContactForGym } from "../lib/dashboard/member-contact-lifecycle.ts"
+import { updateMemberContactForGym } from "../lib/members/contact-service.ts"
 import { db } from "../lib/db.ts"
 
 test("updating member contact changes scoped member fields", async () => {

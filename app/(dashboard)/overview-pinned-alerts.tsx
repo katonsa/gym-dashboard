@@ -1,7 +1,7 @@
 import Link from "next/link"
 
 import { EmptyState } from "@/components/dashboard/empty-state"
-import type { DashboardAlert } from "@/lib/dashboard"
+import type { DashboardAlert } from "@/lib/dashboard/read-models/types"
 import { formatCurrency } from "@/lib/dashboard/formatters"
 import { severityClasses } from "@/lib/dashboard/status-styles"
 import { OverviewMarkPaidAction } from "./overview-mark-paid-action"

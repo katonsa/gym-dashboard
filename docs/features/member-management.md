@@ -31,6 +31,10 @@ one transaction.
 After a successful create, the action revalidates `/members` and `/` so the
 roster and dashboard summary reload fresh server data.
 
+The member action files remain App Router `"use server"` entrypoints, but the
+write workflows now delegate to focused services under `lib/members`,
+`lib/memberships`, `lib/billing`, and `lib/attendance`.
+
 ## Duplicate Detection
 
 Manual member creation warns before saving when an existing member in the same
@@ -44,7 +48,7 @@ details or intentionally duplicated historical records.
 The duplicate check runs after schema validation and active-plan validation, but
 before the database transaction that creates the member.
 
-Matching rules live in `lib/dashboard/member-duplicate-detection.ts` and are
+Matching rules live in `lib/members/duplicate-detection.ts` and are
 shared so future import flows can reuse the same behavior.
 
 The current rules are:

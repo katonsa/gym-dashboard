@@ -38,9 +38,10 @@ Export routes:
 
 Shared helpers:
 
-- `lib/dashboard/member-import.ts`
-- `lib/dashboard/export-csv.ts`
-- `lib/dashboard/csv.ts`
+- `lib/members/import.ts`
+- `lib/members/import-service.ts`
+- `lib/reports/export-csv.ts`
+- `lib/reports/csv.ts`
 
 ## Member Import Flow
 
@@ -128,7 +129,7 @@ Warnings do not block member creation:
 ## Duplicate Handling
 
 Import duplicate detection reuses the same matching rules as manual member
-creation in `lib/dashboard/member-duplicate-detection.ts`.
+creation in `lib/members/duplicate-detection.ts`.
 
 Duplicate matches are scoped to the owner gym and show reason badges:
 
@@ -166,6 +167,10 @@ historical payment state for old rosters.
 
 The import write path runs in a single database transaction. If an unexpected
 write error occurs, no partial subset of that confirmation is committed.
+
+The `previewMemberImport` and `confirmMemberImport` server actions stay in
+`app/(dashboard)/members/import-actions.ts`, but they now act as thin wrappers
+over `lib/members/import-service.ts`.
 
 ## Import Summary
 
@@ -242,6 +247,8 @@ Implementation note:
 - the export reuses the shared subscription revenue-trend helper instead of
   maintaining a separate overlap query
 - this keeps gym-local month boundaries aligned with `/subscriptions`
+- the reuse is intentional even though `lib/reports/export-csv.ts` depends on
+  dashboard read-model helpers under `lib/dashboard/read-models/*`
 - changes to revenue-trend math should be verified against both the export route
   and the subscriptions page
 

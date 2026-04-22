@@ -2,8 +2,7 @@ import type {
   MemberStatus,
   MembershipStatus,
   PaymentStatus,
-} from "@/lib/dashboard"
-import type { MembershipDisplayStatus } from "@/lib/dashboard/calculations"
+} from "@/lib/domain/types"
 import { titleCase } from "@/lib/dashboard/formatters"
 import {
   membershipClasses,
@@ -13,6 +12,7 @@ import {
   statusClasses,
   type BillingRisk,
 } from "@/lib/dashboard/status-styles"
+import type { MembershipDisplayStatus } from "@/lib/memberships/calculations"
 import { cn } from "@/lib/utils"
 
 const badgeClassName =

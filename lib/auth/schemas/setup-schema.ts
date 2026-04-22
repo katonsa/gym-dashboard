@@ -4,7 +4,7 @@ import {
   wholeNumberString,
   supportedCurrencies,
   supportedTimezones,
-} from "@/lib/dashboard/schemas/gym-settings-schema"
+} from "@/lib/gyms/schemas/settings-schema"
 
 export const setupSchema = z.object({
   name: z

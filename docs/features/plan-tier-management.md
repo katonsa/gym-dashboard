@@ -24,9 +24,9 @@ case-insensitive plan-name uniqueness is enforced by the database.
 - Added create, edit, and deactivate server actions in
   `app/(dashboard)/settings/actions.ts`.
 - Added owner-scoped lifecycle helpers in
-  `lib/dashboard/plan-tier-management.ts`.
+  `lib/plans/plan-tier-service.ts`.
 - Added plan validation and normalization in
-  `lib/dashboard/schemas/plan-tier-schema.ts`.
+  `lib/plans/schemas/plan-tier-schema.ts`.
 - Added active/past-due membership counts to the settings plan list so
   deactivate confirmations can explain the impact.
 - Revalidated `/settings`, `/members`, `/members/[id]`, `/subscriptions`, and
@@ -62,7 +62,8 @@ The plan schema accepts:
 - `isActive`: boolean.
 
 Create and update actions parse values through the schema before persistence.
-The lifecycle helpers expect already-parsed values and enforce owner gym scope.
+The settings action file remains a thin wrapper; the lifecycle helpers expect
+already-parsed values and enforce owner gym scope.
 
 ## Regression Coverage
 

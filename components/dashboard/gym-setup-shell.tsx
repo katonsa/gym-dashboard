@@ -20,12 +20,12 @@ import { ThemeToggle } from "@/components/theme-toggle"
 import {
   gymCurrencyOptions,
   gymTimezoneOptions,
-} from "@/lib/dashboard/gym-settings-options"
-import { createGym } from "@/lib/dashboard/gym-create-action"
+} from "@/lib/gyms/settings-options"
+import { createGym } from "@/lib/gyms/create-gym-action"
 import {
   createGymSchema,
   type CreateGymValues,
-} from "@/lib/dashboard/schemas/gym-create-schema"
+} from "@/lib/gyms/schemas/create-gym-schema"
 
 const selectClassName =
   "min-h-11 rounded-lg border border-foreground/10 bg-input/30 px-3 text-sm font-normal text-foreground shadow-inner shadow-foreground/5 outline-none focus-visible:ring-3 focus-visible:ring-ring/40 disabled:opacity-70"

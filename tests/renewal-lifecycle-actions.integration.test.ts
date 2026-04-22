@@ -3,11 +3,11 @@ import { expect, test } from "vitest"
 import {
   getRenewalSubmissionNote,
   renewMembershipForGym,
-} from "../lib/dashboard/renewal-lifecycle.ts"
+} from "../lib/memberships/renewal-service.ts"
 import {
   getMembershipMrr,
   type DashboardDb,
-} from "../lib/dashboard/aggregates.ts"
+} from "../lib/dashboard/read-models/aggregates.ts"
 import { db } from "../lib/db.ts"
 
 test("renewing a current active membership advances from its period end", async () => {

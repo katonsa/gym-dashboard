@@ -89,7 +89,9 @@ explicitly about seed coverage.
 
 Prefer the smallest test surface that proves the behavior:
 
-- Put pure data rules in `lib/dashboard` and cover them with fast tests.
+- Put shared pure logic in `lib/domain/*`, the relevant domain folder under
+  `lib/*`, or `lib/dashboard/read-models/*` depending on ownership, and cover
+  it with fast tests.
 - Keep Prisma read ownership in query helpers or loaders and test the owner
   scoping contract.
 - Use integration tests when the behavior depends on database constraints,
@@ -98,6 +100,9 @@ Prefer the smallest test surface that proves the behavior:
   assembly unless you specifically need planner-visible or DB-backed behavior.
 - Test edge states that the UI depends on, such as empty results, expired
   memberships, overdue payments, and anonymous drop-ins.
+
+When deciding where the production code should live first, use
+`docs/architecture/code-ownership.md` before adding the test.
 
 ## Manual Checks
 

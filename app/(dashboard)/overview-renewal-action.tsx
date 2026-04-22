@@ -6,9 +6,9 @@ import * as React from "react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
-import type { MembershipStatus } from "@/lib/dashboard"
+import type { MembershipStatus } from "@/lib/domain/types"
+import type { RenewMembershipActionResult } from "@/lib/memberships/schemas/renew-membership-schema"
 import { renewMembership } from "./members/membership-actions"
-import type { RenewMembershipActionResult } from "@/lib/dashboard/schemas/renew-membership-schema"
 
 type OverviewRenewalActionProps = {
   membershipId: string

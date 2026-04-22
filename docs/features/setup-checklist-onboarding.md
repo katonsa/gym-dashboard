@@ -106,8 +106,8 @@ so it adds no sequential latency.
 | ----------------------------------------------- | ------------------------------------------------ |
 | `components/dashboard/setup-checklist.tsx`      | 3-step guided checklist client component         |
 | `components/dashboard/setup-plan-tier-form.tsx` | Simplified inline plan tier creation form        |
-| `lib/dashboard/aggregate-types.ts`              | `OverviewSetupState` with `hasPlanTiers`         |
-| `lib/dashboard/aggregate-queries.ts`            | `getOverviewSetupState()` with plan tier count   |
+| `lib/dashboard/read-models/aggregate-types.ts`  | `OverviewSetupState` with `hasPlanTiers`         |
+| `lib/dashboard/read-models/aggregate-queries.ts` | `getOverviewSetupState()` with plan tier count  |
 | `lib/dashboard/loaders.ts`                      | `loadSetupChecklistData()` loader                |
 | `app/(dashboard)/page.tsx`                      | Integration point: checklist replaces setup gaps |
 

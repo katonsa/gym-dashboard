@@ -95,6 +95,10 @@ then continue to call `revalidatePath()` for the affected App Router routes.
 Invalidation increments the gym cache version, so later reads use a new key and
 old entries expire naturally.
 
+Those `"use server"` entrypoints remain thin wrappers around the application
+helper in `lib/application/owner-gym-action.ts` and focused services under the
+domain folders in `lib/*`.
+
 Current invalidation points include:
 
 - Gym creation and gym settings updates.

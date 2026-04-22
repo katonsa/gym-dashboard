@@ -24,8 +24,9 @@ import {
   type MemberImportMapping,
   type MemberImportMappedRow,
   type MemberImportValidatedRow,
-} from "@/lib/dashboard/member-import"
-import { type PlanTier, titleCase } from "@/lib/dashboard"
+} from "@/lib/members/import"
+import { titleCase } from "@/lib/dashboard/formatters"
+import type { PlanTier } from "@/lib/domain/types"
 import { cn } from "@/lib/utils"
 import {
   confirmMemberImport,

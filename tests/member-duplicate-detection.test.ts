@@ -4,7 +4,7 @@ import {
   findPotentialMemberDuplicatesForGym,
   getMemberDuplicateReasons,
   isSimilarMemberName,
-} from "../lib/dashboard/member-duplicate-detection.ts"
+} from "../lib/members/duplicate-detection.ts"
 
 const input = {
   firstName: "Ari",

@@ -1,12 +1,28 @@
 import { cache } from "react"
 
 import { requireDashboardSession } from "@/lib/auth/server"
+import type { DashboardRouteHref } from "@/lib/application/dashboard-routes"
 import { getCachedDashboardData } from "@/lib/cache/redis"
 import { db } from "@/lib/db"
+import { getGymLocalDayBoundary } from "@/lib/domain/date-boundaries"
+import {
+  mapAttendanceRecord,
+  mapDropInVisit,
+  mapGymProfile,
+  mapMember,
+  mapMembership,
+  mapMembershipPayment,
+  mapPlanTier,
+} from "@/lib/domain/mappers"
+import {
+  getPrismaOffsetArgs,
+  type PaginatedResult,
+  type PaginationParams,
+} from "@/lib/domain/pagination"
 import {
   getAggregateCacheParams,
   getDashboardTimeCacheParam,
-} from "@/lib/dashboard/cache-params"
+} from "@/lib/dashboard/read-models/cache-params"
 import {
   getDropInSummary,
   getOverdueAgingSummary,
@@ -19,31 +35,21 @@ import {
   type OverviewAggregateOptions,
   type OverviewSetupState,
   type SubscriptionSummary,
-} from "@/lib/dashboard/aggregates"
-import {
-  mapAttendanceRecord,
-  mapDropInVisit,
-  mapGymProfile,
-  mapMember,
-  mapMembership,
-  mapMembershipPayment,
-  mapPlanTier,
-} from "@/lib/dashboard/mappers"
+} from "@/lib/dashboard/read-models/aggregates"
+import type {
+  DashboardAlert,
+  DashboardSummary,
+} from "@/lib/dashboard/read-models/types"
 import {
   buildMemberRosterPageRows,
   type MemberRosterFilters,
   type MemberRosterRow,
-} from "@/lib/dashboard/member-roster"
+} from "@/lib/dashboard/read-models/member-roster"
 import {
   buildDropInVisitorLookupOptions,
   type DropInVisitorLookupOption,
-} from "@/lib/dashboard/drop-in-visitor-lookup"
-import {
-  getPrismaOffsetArgs,
-  type PaginatedResult,
-  type PaginationParams,
-} from "@/lib/dashboard/pagination"
-import { getOwnerGym } from "@/lib/dashboard/owner-gym"
+} from "@/lib/drop-ins/visitor-lookup"
+import { getOwnerGym } from "@/lib/gyms/owner-gym"
 import {
   getDropInVisitsPageQuery,
   getMemberRosterPageQuery,
@@ -51,20 +57,16 @@ import {
   getMemberAttendancePageQuery,
   getMemberPaymentsPageQuery,
   getPlanTiersQuery,
-} from "@/lib/dashboard/query-scopes"
-import { getGymLocalDayBoundary } from "@/lib/dashboard/date-boundaries"
+} from "@/lib/dashboard/read-models/query-scopes"
 import type {
   AttendanceRecord,
-  DashboardAlert,
-  DashboardRouteHref,
-  DashboardSummary,
   DropInVisit,
   GymProfile,
   Member,
   Membership,
   MembershipPayment,
   PlanTier,
-} from "@/lib/dashboard/types"
+} from "@/lib/domain/types"
 
 const aggregateDb = db as unknown as DashboardDb
 
@@ -250,7 +252,9 @@ export const loadMemberRosterPage = cache(
     const members =
       total === 0
         ? []
-        : await db.member.findMany(getMemberRosterPageQuery(where, skip, take, asOf))
+        : await db.member.findMany(
+            getMemberRosterPageQuery(where, skip, take, asOf)
+          )
 
     return {
       gym,

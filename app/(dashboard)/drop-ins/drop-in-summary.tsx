@@ -2,7 +2,7 @@ import { toneClasses } from "@/lib/dashboard/status-styles"
 import type {
   DropInConversionLead,
   DropInSummary,
-} from "@/lib/dashboard/aggregates"
+} from "@/lib/dashboard/read-models/aggregates"
 
 const numberFormatter = new Intl.NumberFormat("en")
 

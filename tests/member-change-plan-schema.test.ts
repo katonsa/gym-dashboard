@@ -1,6 +1,6 @@
 import { expect, test } from "vitest"
 
-import { changePlanSchema } from "../lib/dashboard/schemas/change-plan-schema.ts"
+import { changePlanSchema } from "../lib/memberships/schemas/change-plan-schema.ts"
 
 const validValues = {
   memberId: "member-1",

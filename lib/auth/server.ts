@@ -4,7 +4,7 @@ import { redirect } from "next/navigation"
 
 import { getDashboardSignInPath } from "@/lib/auth/next-path"
 import { getSessionFromHeaders } from "@/lib/auth/session"
-import type { DashboardRouteHref } from "@/lib/dashboard/types"
+import type { DashboardRouteHref } from "@/lib/application/dashboard-routes"
 
 export { getSessionFromHeaders }
 

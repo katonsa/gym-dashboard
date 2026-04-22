@@ -33,14 +33,14 @@ import {
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { formatCurrency } from "@/lib/dashboard"
-import type { PlanTierManagementRow } from "@/lib/dashboard/plan-tier-management"
+import { formatCurrency } from "@/lib/dashboard/formatters"
+import type { PlanTierManagementRow } from "@/lib/plans/plan-tier-service"
 import {
   createPlanTierSchema,
   updatePlanTierSchema,
   type CreatePlanTierValues,
   type UpdatePlanTierValues,
-} from "@/lib/dashboard/schemas/plan-tier-schema"
+} from "@/lib/plans/schemas/plan-tier-schema"
 import { createPlanTier, deactivatePlanTier, updatePlanTier } from "./actions"
 
 type PlanTierFormValues = CreatePlanTierValues | UpdatePlanTierValues

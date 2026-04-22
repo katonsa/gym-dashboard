@@ -8,12 +8,14 @@ import {
   formatCurrency,
   formatDate,
   formatDateInput,
+} from "@/lib/dashboard/formatters"
+import type { MemberDetailMembership } from "@/lib/dashboard/loaders"
+import {
   getDaysBetween,
   getExpiringMembershipPeriodText,
   getMembershipDisplayStatus,
-} from "@/lib/dashboard"
-import type { MembershipDisplayStatus } from "@/lib/dashboard/calculations"
-import type { MemberDetailMembership } from "@/lib/dashboard/loaders"
+  type MembershipDisplayStatus,
+} from "@/lib/memberships/calculations"
 import { MemberRenewalAction } from "./member-renewal-action"
 
 export function CurrentMembershipSummary({

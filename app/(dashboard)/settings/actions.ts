@@ -1,17 +1,19 @@
 "use server"
 
-import { revalidatePath } from "next/cache"
-
+import {
+  revalidateGymSettingsPaths,
+  revalidatePlanTierManagementPaths,
+} from "@/lib/application/revalidation"
 import { invalidateDashboardCache } from "@/lib/cache/redis"
 import {
   type ActionResult,
   withGymAction,
-} from "@/lib/dashboard/action-helpers"
+} from "@/lib/application/owner-gym-action"
 import {
-  normalizeGymSettingsValues,
   updateGymSettingsSchema,
   type UpdateGymSettingsValues,
-} from "@/lib/dashboard/schemas/gym-settings-schema"
+} from "@/lib/gyms/schemas/settings-schema"
+import { updateGymSettingsForGym } from "@/lib/gyms/settings-service"
 import {
   createPlanTierSchema,
   deactivatePlanTierSchema,
@@ -20,12 +22,12 @@ import {
   type DeactivatePlanTierValues,
   type PlanTierActionResult,
   type UpdatePlanTierValues,
-} from "@/lib/dashboard/schemas/plan-tier-schema"
+} from "@/lib/plans/schemas/plan-tier-schema"
 import {
   createPlanTierForGym,
   deactivatePlanTierForGym,
   updatePlanTierForGym,
-} from "@/lib/dashboard/plan-tier-management"
+} from "@/lib/plans/plan-tier-service"
 import { db } from "@/lib/db"
 
 export async function updateGymSettings(
@@ -40,17 +42,14 @@ export async function updateGymSettings(
       "Connect a gym to this owner account before changing settings.",
     failureError: "The gym settings could not be saved. Try again.",
     handler: async ({ parsed, gymId }) => {
-      await db.gym.update({
-        where: { id: gymId },
-        data: normalizeGymSettingsValues(parsed),
-        select: { id: true },
+      await updateGymSettingsForGym({
+        client: db,
+        gymId,
+        values: parsed,
       })
 
       await invalidateDashboardCache(gymId)
-      revalidatePath("/settings")
-      revalidatePath("/drop-ins")
-      revalidatePath("/")
-      revalidatePath("/", "layout")
+      revalidateGymSettingsPaths()
 
       return { success: true }
     },
@@ -162,9 +161,5 @@ export async function deactivatePlanTier(
 
 async function revalidatePlanTierPaths(gymId: string) {
   await invalidateDashboardCache(gymId)
-  revalidatePath("/settings")
-  revalidatePath("/members")
-  revalidatePath("/members/[id]", "page")
-  revalidatePath("/subscriptions")
-  revalidatePath("/")
+  revalidatePlanTierManagementPaths()
 }

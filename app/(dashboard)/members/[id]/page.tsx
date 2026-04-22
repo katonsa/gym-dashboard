@@ -10,17 +10,19 @@ import {
   formatDateInput,
   formatMemberName,
   formatPageRange,
-  getCurrentDisplayMembership,
-  getMembershipDisplayStatus,
-  parsePaginationParams,
-} from "@/lib/dashboard"
-import { getGymLocalDayBoundary } from "@/lib/dashboard/date-boundaries"
+} from "@/lib/dashboard/formatters"
 import {
   loadMemberAttendancePage,
   loadMemberDetailData,
   loadMemberPaymentsPage,
   type MemberDetailMembership,
 } from "@/lib/dashboard/loaders"
+import { getGymLocalDayBoundary } from "@/lib/domain/date-boundaries"
+import { parsePaginationParams } from "@/lib/domain/pagination"
+import {
+  getCurrentDisplayMembership,
+  getMembershipDisplayStatus,
+} from "@/lib/memberships/calculations"
 import type { BillingRisk } from "@/lib/dashboard/status-styles"
 import { AttendanceLogItem } from "../attendance-log-item"
 import { CurrentMembershipSummary } from "../current-membership-summary"

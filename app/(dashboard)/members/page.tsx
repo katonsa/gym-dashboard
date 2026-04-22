@@ -1,13 +1,13 @@
 import type { Metadata } from "next"
 
 import { EmptyState } from "@/components/dashboard/empty-state"
-import { parseMemberRosterFilters } from "@/lib/dashboard/member-roster"
-import { loadMemberRosterPage } from "@/lib/dashboard/loaders"
 import {
   formatDashboardDate,
   formatDateInput,
-  parsePaginationParams,
-} from "@/lib/dashboard"
+} from "@/lib/dashboard/formatters"
+import { parseMemberRosterFilters } from "@/lib/dashboard/read-models/member-roster"
+import { loadMemberRosterPage } from "@/lib/dashboard/loaders"
+import { parsePaginationParams } from "@/lib/domain/pagination"
 import { MemberRoster } from "./member-roster"
 
 export const metadata: Metadata = {

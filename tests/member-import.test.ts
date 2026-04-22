@@ -5,8 +5,8 @@ import {
   detectMemberImportMapping,
   mapCsvObjectsToMemberImportRows,
   validateMemberImportRows,
-} from "../lib/dashboard/member-import.ts"
-import type { PlanTier } from "../lib/dashboard/types.ts"
+} from "../lib/members/import.ts"
+import type { PlanTier } from "../lib/domain/types.ts"
 
 const plans: PlanTier[] = [
   {

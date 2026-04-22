@@ -24,20 +24,20 @@ import {
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import {
-  titleCase,
   type BillingInterval,
   type MemberStatus,
   type PlanTier,
-} from "@/lib/dashboard"
+} from "@/lib/domain/types"
+import { titleCase } from "@/lib/dashboard/formatters"
 import type {
   MemberDuplicateMatch,
   MemberDuplicateReason,
-} from "@/lib/dashboard/member-duplicate-detection"
+} from "@/lib/members/duplicate-detection"
 import { createMember } from "./member-actions"
 import {
   createMemberSchema,
   type CreateMemberValues,
-} from "@/lib/dashboard/schemas/member-create-schema"
+} from "@/lib/members/schemas/create-member-schema"
 
 const memberStatuses: MemberStatus[] = ["ACTIVE", "INACTIVE", "SUSPENDED"]
 const billingIntervals: BillingInterval[] = ["MONTHLY", "ANNUAL"]

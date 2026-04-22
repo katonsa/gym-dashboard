@@ -18,18 +18,20 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { addBillingPeriod } from "@/lib/dashboard/billing"
-import { getDaysBetween } from "@/lib/dashboard/calculations"
-import type { MembershipDisplayStatus } from "@/lib/dashboard/calculations"
+import { addBillingPeriod } from "@/lib/billing/periods"
+import { parseDateInput } from "@/lib/domain/date-input"
 import {
   formatDate,
   formatDateInputForDisplay,
-  parseDateInput,
   titleCase,
 } from "@/lib/dashboard/formatters"
-import type { BillingInterval, MembershipStatus } from "@/lib/dashboard/types"
+import type { BillingInterval, MembershipStatus } from "@/lib/domain/types"
+import {
+  getDaysBetween,
+  type MembershipDisplayStatus,
+} from "@/lib/memberships/calculations"
+import type { RenewMembershipActionResult } from "@/lib/memberships/schemas/renew-membership-schema"
 import { renewMembership } from "./membership-actions"
-import type { RenewMembershipActionResult } from "@/lib/dashboard/schemas/renew-membership-schema"
 
 type MemberRenewalActionProps = {
   membershipId: string

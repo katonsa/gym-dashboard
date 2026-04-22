@@ -3,7 +3,7 @@ import { expect, test } from "vitest"
 import {
   getPrismaOffsetArgs,
   parsePaginationParams,
-} from "../lib/dashboard/pagination.ts"
+} from "../lib/domain/pagination.ts"
 
 test("parses a valid page value from search params", async () => {
   expect(

@@ -49,17 +49,16 @@ import {
 import { PaginationNav } from "@/components/ui/pagination-nav"
 import {
   formatMembershipStatus,
-  type MemberStatus,
   titleCase,
-  type PlanTier,
-} from "@/lib/dashboard"
+} from "@/lib/dashboard/formatters"
+import type { MemberStatus, PlanTier } from "@/lib/domain/types"
 import type {
   MemberRosterRow,
   MemberRosterFilters,
   PlanFilter,
   RiskFilter,
   StatusFilter,
-} from "@/lib/dashboard/member-roster"
+} from "@/lib/dashboard/read-models/member-roster"
 import { cn } from "@/lib/utils"
 import { MemberCreateForm } from "./member-create-form"
 import { MemberCsvImportFlow } from "./member-csv-import-flow"

@@ -12,10 +12,11 @@ requirements.
 | Understand the product and scope                | [Project Brief](./product/project-brief.md)                                    |
 | Run the app locally with demo data              | [Local Database And Seed Data](./setup/local-database-and-seed.md)             |
 | Understand login, setup, and owner provisioning | [Auth & Account Provisioning](./architecture/auth-and-account-provisioning.md) |
+| Decide where new code belongs                   | [Code Ownership Map](./architecture/code-ownership.md)                         |
 | Understand runtime data loading and scoping     | [Runtime Data Source](./architecture/runtime-data-source.md)                   |
 | Configure or change the Redis dashboard cache   | [Redis Dashboard Cache](./architecture/redis-dashboard-cache.md)               |
-| Plan the domain architecture refactor           | [Domain Refactor Plan](./architecture/domain-refactor-plan.md)                 |
-| Execute the domain refactor                     | [Domain Refactor Checklist](./architecture/domain-refactor-checklist.md)       |
+| Review the completed domain refactor            | [Domain Refactor Plan](./architecture/domain-refactor-plan.md)                 |
+| See the completed execution checklist           | [Domain Refactor Checklist](./architecture/domain-refactor-checklist.md)       |
 | Run tests and quality checks                    | [Testing And Quality](./development/testing-and-quality.md)                    |
 
 ## Product
@@ -31,6 +32,9 @@ requirements.
 
 ## Architecture
 
+- [Code Ownership Map](./architecture/code-ownership.md) - where new
+  application, domain, dashboard, report, and feature code should live after
+  the refactor.
 - [Auth & Account Provisioning](./architecture/auth-and-account-provisioning.md)
   - first-run setup wizard, seed owner, auth page states, member account scope,
     and related files.
@@ -39,10 +43,10 @@ requirements.
 - [Redis Dashboard Cache](./architecture/redis-dashboard-cache.md) - optional
   Upstash Redis configuration, cached loader coverage, key shape, TTL, and
   mutation invalidation behavior.
-- [Domain Refactor Plan](./architecture/domain-refactor-plan.md) - proposed
-  domain folder moves, server action boundaries, and migration sequence.
+- [Domain Refactor Plan](./architecture/domain-refactor-plan.md) - completed
+  architecture refactor plan, final target layout, and migration record.
 - [Domain Refactor Checklist](./architecture/domain-refactor-checklist.md) -
-  task checklist for executing the proposed domain refactor.
+  completed execution checklist and final acceptance record.
 
 ## Features
 

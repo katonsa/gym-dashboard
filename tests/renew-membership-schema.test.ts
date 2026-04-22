@@ -1,6 +1,6 @@
 import { expect, test } from "vitest"
 
-import { renewMembershipSchema } from "../lib/dashboard/schemas/renew-membership-schema.ts"
+import { renewMembershipSchema } from "../lib/memberships/schemas/renew-membership-schema.ts"
 
 const validValues = {
   membershipId: "membership-1",

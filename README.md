@@ -29,7 +29,7 @@ local demo data.
 | Data   | PostgreSQL, Prisma 7, optional Upstash Redis cache              |
 | Auth   | Better Auth email/password                                      |
 | Charts | Recharts                                                        |
-| Tests  | Node's TypeScript strip-types runner plus focused test modules  |
+| Tests  | Vitest for unit and integration tests                           |
 
 ## Quick Start
 
@@ -107,8 +107,18 @@ components/           Shared UI and app components
 components/ui/        shadcn-style primitives
 docs/                 Product, setup, architecture, feature, and archive docs
 lib/
+  application/        Dashboard routes, owner-gym action helper, revalidation
   auth/               Better Auth setup, sessions, page-state helpers
-  dashboard/          Loaders, mappers, schemas, calculations, mutations
+  attendance/         Check-in workflows and schemas
+  billing/            Billing periods, payment workflows, schemas
+  dashboard/          Dashboard-only loaders, display helpers, read-models
+  domain/             Shared types, date helpers, mappers, pagination
+  drop-ins/           Drop-in workflows, visitor lookup/contact, schemas
+  gyms/               Gym provisioning, settings options/service, schemas
+  members/            Member workflows, import helpers/service, schemas
+  memberships/        Membership calculations, renewal/plan-change, schemas
+  plans/              Plan tier service and schemas
+  reports/            CSV helpers and owner-scoped export builders
 prisma/               Schema, migrations, seed data
 tests/                Custom TypeScript test modules and runners
 ```
@@ -118,6 +128,7 @@ tests/                Custom TypeScript test modules and runners
 Start with the organized documentation index:
 
 - [Documentation Index](docs/README.md)
+- [Code Ownership Map](docs/architecture/code-ownership.md)
 - [Project Brief](docs/product/project-brief.md)
 - [Local Database And Seed Data](docs/setup/local-database-and-seed.md)
 - [Auth & Account Provisioning](docs/architecture/auth-and-account-provisioning.md)
@@ -131,10 +142,14 @@ historical context.
 
 - Prefer React Server Components. Add client components only for browser APIs,
   state, or event handlers.
+- Use `docs/architecture/code-ownership.md` when deciding whether new logic
+  belongs in `lib/application`, `lib/domain`, a feature folder under `lib/*`,
+  or dashboard-only read-model code.
 - Runtime dashboard reads should go through authenticated, owner-scoped loaders
-  in `lib/dashboard/loaders.ts`.
-- Keep Prisma-to-UI conversion in the dashboard mapper layer.
-- Add focused tests for pure logic in `lib/dashboard` and integration tests for
-  server actions that change database state.
+  in `lib/dashboard/loaders.ts` and `lib/dashboard/read-models/*`.
+- Keep Prisma-to-domain conversion in `lib/domain/mappers.ts`. Keep
+  page-oriented aggregation in `lib/dashboard/read-models/*`.
+- Add focused tests for pure logic in `lib/domain`, the domain folders under
+  `lib/*`, and dashboard read-model helpers where appropriate.
 - Do not commit real secrets. Use `.env.example` as the local configuration
   template.

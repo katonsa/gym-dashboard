@@ -27,12 +27,12 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
-import type { DropInVisitorLookupOption } from "@/lib/dashboard/drop-in-visitor-lookup"
+import type { DropInVisitorLookupOption } from "@/lib/drop-ins/visitor-lookup"
 import { createDropInVisit } from "./actions"
 import {
   createDropInSchema,
   type CreateDropInValues,
-} from "@/lib/dashboard/schemas/drop-in-create-schema"
+} from "@/lib/drop-ins/schemas/create-drop-in-schema"
 
 export function DropInEntryForm({
   defaultAmount,

@@ -3,24 +3,24 @@
 import { revalidatePath } from "next/cache"
 
 import { invalidateDashboardCache } from "@/lib/cache/redis"
-import { withGymAction } from "@/lib/dashboard/action-helpers"
+import { withGymAction } from "@/lib/application/owner-gym-action"
 import {
   markPaymentPaidForGym,
   voidPaymentForGym,
-} from "@/lib/dashboard/payment-lifecycle"
+} from "@/lib/billing/payment-service"
 import {
   markPaidSchema,
   type MarkPaidActionResult,
   type MarkPaidValues,
-} from "@/lib/dashboard/schemas/mark-paid-schema"
+} from "@/lib/billing/schemas/mark-paid-schema"
 import {
   voidPaymentSchema,
   type VoidPaymentActionResult,
   type VoidPaymentValues,
-} from "@/lib/dashboard/schemas/void-payment-schema"
+} from "@/lib/billing/schemas/void-payment-schema"
 import { db } from "@/lib/db"
 
-export type { ActionResult } from "@/lib/dashboard/action-helpers"
+export type { ActionResult } from "@/lib/application/owner-gym-action"
 
 export async function markPaymentPaid(
   values: MarkPaidValues

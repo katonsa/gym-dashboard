@@ -3,7 +3,7 @@ import { expect, test } from "vitest"
 import {
   markPaymentPaidForGym,
   voidPaymentForGym,
-} from "../lib/dashboard/payment-lifecycle.ts"
+} from "../lib/billing/payment-service.ts"
 import { db } from "../lib/db.ts"
 
 test("marking the last unpaid payment paid reactivates the membership", async () => {

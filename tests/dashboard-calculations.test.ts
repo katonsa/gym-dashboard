@@ -6,12 +6,12 @@ import {
   getExpiringMembershipPeriodText,
   getMembershipDisplayStatus,
   isExpired,
-} from "../lib/dashboard/calculations.ts"
+} from "../lib/memberships/calculations.ts"
 import {
   buildMemberRosterPageRows,
   parseMemberRosterFilters,
-} from "../lib/dashboard/member-roster.ts"
-import type { Membership } from "../lib/dashboard/types.ts"
+} from "../lib/dashboard/read-models/member-roster.ts"
+import type { Membership } from "../lib/domain/types.ts"
 
 const asOf = new Date("2026-04-16T09:00:00.000+07:00")
 

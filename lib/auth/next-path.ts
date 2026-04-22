@@ -1,8 +1,6 @@
-import { dashboardRoutes } from "../dashboard/types.ts"
+import { dashboardRouteHrefs } from "@/lib/application/dashboard-routes"
 
-const dashboardRouteHrefs = new Set<string>(
-  dashboardRoutes.map((route) => route.href)
-)
+const safeDashboardRouteHrefs = new Set<string>(dashboardRouteHrefs)
 
 export function getSafeDashboardNextPath(next: string | string[] | undefined) {
   const candidate = Array.isArray(next) ? next[0] : next
@@ -14,7 +12,7 @@ export function getSafeDashboardNextPath(next: string | string[] | undefined) {
   try {
     const parsed = new URL(candidate, "http://app.local")
 
-    if (!dashboardRouteHrefs.has(parsed.pathname)) {
+    if (!safeDashboardRouteHrefs.has(parsed.pathname)) {
       return "/"
     }
 

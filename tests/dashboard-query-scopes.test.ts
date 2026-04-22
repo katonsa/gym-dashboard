@@ -8,7 +8,7 @@ import {
   getMemberRosterPageWhere,
   getOwnerGymQuery,
   getPlanTiersQuery,
-} from "../lib/dashboard/query-scopes.ts"
+} from "../lib/dashboard/read-models/query-scopes.ts"
 
 test("selects the authenticated owner's first gym only", () => {
   expect(getOwnerGymQuery("owner-1")).toStrictEqual({

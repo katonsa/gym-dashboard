@@ -93,8 +93,8 @@ No Prisma schema changes. The wizard creates:
 | -------------------------------------------- | -------------------------------------------- |
 | `lib/auth/page-state.tsx`                    | `getAuthPageState()` and `AuthFallbackState` |
 | `lib/auth/schemas/setup-schema.ts`           | Zod schema for the setup wizard form         |
-| `lib/dashboard/schemas/gym-create-schema.ts` | Zod schema for gym-only creation             |
-| `lib/dashboard/gym-create-action.ts`         | Server action for gym creation               |
+| `lib/gyms/schemas/create-gym-schema.ts`      | Zod schema for gym-only creation             |
+| `lib/gyms/create-gym-action.ts`              | Server action for gym creation               |
 | `app/(auth)/sign-in/setup-wizard.tsx`        | Setup wizard client component                |
 | `components/dashboard/gym-setup-shell.tsx`   | Inline gym setup for edge case               |
 

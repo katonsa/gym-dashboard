@@ -6,9 +6,9 @@ import { MemberCreateForm } from "@/app/(dashboard)/members/member-create-form"
 import { MemberCsvImportFlow } from "@/app/(dashboard)/members/member-csv-import-flow"
 import { DropInEntryForm } from "@/app/(dashboard)/drop-ins/drop-in-entry-form"
 import { SetupPlanTierForm } from "@/components/dashboard/setup-plan-tier-form"
-import type { DropInVisitorLookupOption } from "@/lib/dashboard/drop-in-visitor-lookup"
-import type { OverviewSetupState } from "@/lib/dashboard/aggregate-types"
-import type { PlanTier } from "@/lib/dashboard/types"
+import type { DropInVisitorLookupOption } from "@/lib/drop-ins/visitor-lookup"
+import type { OverviewSetupState } from "@/lib/dashboard/read-models/aggregate-types"
+import type { PlanTier } from "@/lib/domain/types"
 
 type SetupChecklistStep = {
   stepNumber: number

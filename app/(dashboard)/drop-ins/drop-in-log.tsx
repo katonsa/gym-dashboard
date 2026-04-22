@@ -1,7 +1,7 @@
 import { DetailField } from "@/components/dashboard/detail-field"
 import { EmptyState } from "@/components/dashboard/empty-state"
 import { PaginationNav } from "@/components/ui/pagination-nav"
-import type { DropInVisit } from "@/lib/dashboard"
+import type { DropInVisit } from "@/lib/domain/types"
 
 const numberFormatter = new Intl.NumberFormat("en")
 const dateFormatter = new Intl.DateTimeFormat("en", {

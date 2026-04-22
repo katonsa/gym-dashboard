@@ -18,9 +18,9 @@ import {
   getPlanBreakdownAggregates,
   getRevenueTrend,
   getSubscriptionSummary,
-  normalizeDropInVisitorContact,
-} from "../lib/dashboard/aggregates.ts"
-import type { PlanTier } from "../lib/dashboard/types.ts"
+} from "../lib/dashboard/read-models/aggregates.ts"
+import { normalizeDropInVisitorContact } from "../lib/drop-ins/visitor-contact.ts"
+import type { PlanTier } from "../lib/domain/types.ts"
 
 test("groups member counts by status for one gym", async () => {
   const db = mockDb({
@@ -463,7 +463,9 @@ test("loads conversion leads with case-insensitive raw SQL parameters", async ()
   expect(rawCalls[0]?.strings.join(" ")).toMatch(
     /GROUP BY "normalizedVisitorContact"/
   )
-  expect(rawCalls[0]?.strings.join(" ")).not.toMatch(/LOWER\("visitorContact"\)/)
+  expect(rawCalls[0]?.strings.join(" ")).not.toMatch(
+    /LOWER\("visitorContact"\)/
+  )
 })
 
 test("aggregates drop-in totals for a scoped date window", async () => {
@@ -672,7 +674,9 @@ test("maps plan breakdown aggregate rows onto sorted plan tiers", async () => {
   expect(rawCalls[0]?.strings.join(" ")).toMatch(/INNER JOIN "Member" member/)
   expect(rawCalls[0]?.strings.join(" ")).toMatch(/"status" = 'ACTIVE'/)
   expect(rawCalls[0]?.strings.join(" ")).toMatch(/"currentPeriodEndsAt" >=/)
-  expect(rawCalls[0]?.strings.join(" ")).not.toMatch(/IN \(SELECT id FROM "Member"/)
+  expect(rawCalls[0]?.strings.join(" ")).not.toMatch(
+    /IN \(SELECT id FROM "Member"/
+  )
   expect(rawCalls[1]?.values[0]).toBe("gym-1")
   expect(rawCalls[1]?.strings.join(" ")).toMatch(/SELECT DISTINCT/)
   expect(rawCalls[1]?.strings.join(" ")).toMatch(/INNER JOIN "Member" member/)

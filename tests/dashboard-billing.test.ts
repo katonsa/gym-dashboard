@@ -1,6 +1,6 @@
 import { expect, test } from "vitest"
 
-import { addBillingPeriod, addMonthsClamped } from "../lib/dashboard/billing.ts"
+import { addBillingPeriod, addMonthsClamped } from "../lib/billing/periods.ts"
 
 test("adds a monthly billing period and clamps to February in a leap year", () => {
   expect(isoDate(addBillingPeriod(utcDate(2024, 1, 31), "MONTHLY"))).toBe(

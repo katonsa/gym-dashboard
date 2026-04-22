@@ -5,7 +5,7 @@ import {
   getGymLocalDayBoundary,
   getGymLocalDayWindow,
   getGymLocalMonthWindow,
-} from "../lib/dashboard/date-boundaries.ts"
+} from "../lib/domain/date-boundaries.ts"
 
 test("normalizes an instant to the start of the gym-local day", () => {
   expect(

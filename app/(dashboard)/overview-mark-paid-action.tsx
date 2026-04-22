@@ -7,7 +7,7 @@ import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { markPaymentPaid } from "./members/payment-actions.server"
-import type { MarkPaidActionResult } from "@/lib/dashboard/schemas/mark-paid-schema"
+import type { MarkPaidActionResult } from "@/lib/billing/schemas/mark-paid-schema"
 
 type OverviewMarkPaidActionProps = {
   paymentId: string

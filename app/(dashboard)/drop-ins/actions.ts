@@ -3,15 +3,14 @@
 import { revalidatePath } from "next/cache"
 
 import { invalidateDashboardCache } from "@/lib/cache/redis"
-import { withGymAction } from "@/lib/dashboard/action-helpers"
-import { normalizeDropInVisitorContact } from "@/lib/dashboard/drop-in-aggregates"
+import { withGymAction } from "@/lib/application/owner-gym-action"
+import { createDropInVisitForGym } from "@/lib/drop-ins/create-visit-service"
 import { db } from "@/lib/db"
 import {
   createDropInSchema,
-  normalizeCreateDropInValues,
   type CreateDropInActionResult,
   type CreateDropInValues,
-} from "@/lib/dashboard/schemas/drop-in-create-schema"
+} from "@/lib/drop-ins/schemas/create-drop-in-schema"
 
 export async function createDropInVisit(
   values: CreateDropInValues
@@ -27,26 +26,11 @@ export async function createDropInVisit(
       "The drop-in could not be saved. Check the details and try again.",
     gymSelect: { id: true, defaultDropInFeeAmount: true },
     handler: async ({ parsed, gym, gymId }) => {
-      const dropInValues = normalizeCreateDropInValues(parsed)
-      const defaultAmount = gym.defaultDropInFeeAmount
-      const normalizedVisitorContact = normalizeDropInVisitorContact(
-        dropInValues.visitorContact
-      )
-
-      if (defaultAmount === undefined) {
-        throw new Error("Default drop-in amount was not selected.")
-      }
-
-      await db.dropInVisit.create({
-        data: {
-          gymId,
-          visitorName: dropInValues.visitorName,
-          visitorContact: dropInValues.visitorContact,
-          normalizedVisitorContact,
-          visitCount: dropInValues.visitCount,
-          amount: dropInValues.amount ?? defaultAmount,
-          notes: dropInValues.notes,
-        },
+      await createDropInVisitForGym({
+        client: db,
+        gymId,
+        defaultAmount: gym.defaultDropInFeeAmount,
+        values: parsed,
       })
 
       await invalidateDashboardCache(gymId)

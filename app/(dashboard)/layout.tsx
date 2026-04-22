@@ -4,7 +4,7 @@ import { AppShell } from "@/components/dashboard/app-shell"
 import { DashboardShellFallback } from "@/components/dashboard/dashboard-shell-fallback"
 import { GymSetupShell } from "@/components/dashboard/gym-setup-shell"
 import { requireDashboardSession } from "@/lib/auth/server"
-import { getOwnerGym } from "@/lib/dashboard/owner-gym"
+import { getOwnerGym } from "@/lib/gyms/owner-gym"
 
 export default function DashboardLayout({
   children,

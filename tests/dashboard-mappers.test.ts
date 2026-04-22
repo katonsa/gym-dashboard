@@ -15,7 +15,7 @@ import {
   mapMembership,
   mapMembershipPayment,
   mapPlanTier,
-} from "../lib/dashboard/mappers.ts"
+} from "../lib/domain/mappers.ts"
 
 const createdAt = new Date("2026-04-16T01:00:00.000Z")
 const updatedAt = new Date("2026-04-16T02:00:00.000Z")

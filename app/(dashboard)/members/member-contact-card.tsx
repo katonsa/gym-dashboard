@@ -20,7 +20,7 @@ import { updateMemberContact } from "./member-actions"
 import {
   updateMemberContactSchema,
   type UpdateMemberContactValues,
-} from "@/lib/dashboard/schemas/update-member-contact-schema"
+} from "@/lib/members/schemas/update-contact-schema"
 
 type MemberContactCardProps = {
   member: {

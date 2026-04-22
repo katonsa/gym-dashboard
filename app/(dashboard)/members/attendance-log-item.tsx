@@ -1,8 +1,8 @@
 import {
   formatAttendanceSource,
   formatDate,
-  type AttendanceRecord,
-} from "@/lib/dashboard"
+} from "@/lib/dashboard/formatters"
+import type { AttendanceRecord } from "@/lib/domain/types"
 
 export function AttendanceLogItem({
   record,

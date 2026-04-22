@@ -17,8 +17,8 @@ import { authClient } from "@/lib/auth/client"
 import {
   gymCurrencyOptions,
   gymTimezoneOptions,
-} from "@/lib/dashboard/gym-settings-options"
-import { createGym } from "@/lib/dashboard/gym-create-action"
+} from "@/lib/gyms/settings-options"
+import { createGym } from "@/lib/gyms/create-gym-action"
 import { setupSchema, type SetupValues } from "@/lib/auth/schemas/setup-schema"
 
 const selectClassName =

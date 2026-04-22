@@ -1,7 +1,7 @@
 import { expect, test } from "vitest"
 
-import { markPaidSchema } from "../lib/dashboard/schemas/mark-paid-schema.ts"
-import { voidPaymentSchema } from "../lib/dashboard/schemas/void-payment-schema.ts"
+import { markPaidSchema } from "../lib/billing/schemas/mark-paid-schema.ts"
+import { voidPaymentSchema } from "../lib/billing/schemas/void-payment-schema.ts"
 
 test("validates mark-paid payment ids", () => {
   expect(markPaidSchema.parse({ paymentId: " payment-1 " })).toStrictEqual({

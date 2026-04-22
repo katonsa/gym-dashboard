@@ -1,11 +1,11 @@
 import { headers } from "next/headers"
 
 import { getSessionFromHeaders } from "@/lib/auth/server"
-import { csvResponse } from "@/lib/dashboard/csv"
 import {
   getMembershipPaymentsCsv,
   getPaymentExportFilename,
-} from "@/lib/dashboard/export-csv"
+} from "@/lib/reports/export-csv"
+import { csvResponse } from "@/lib/reports/csv"
 import { db } from "@/lib/db"
 
 export async function GET() {
