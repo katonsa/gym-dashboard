@@ -7,6 +7,7 @@ import {
   type ActionResult,
   withGymAction,
 } from "@/lib/dashboard/action-helpers"
+import { invalidateDashboardCache } from "@/lib/cache/redis"
 import { addBillingPeriod } from "@/lib/dashboard/billing"
 import { logMemberCheckInForGym } from "@/lib/dashboard/attendance-lifecycle"
 import { findPotentialMemberDuplicatesForGym } from "@/lib/dashboard/member-duplicate-detection"
@@ -156,6 +157,7 @@ export async function createMember(
         })
       })
 
+      await invalidateDashboardCache(gymId)
       revalidatePath("/members")
       revalidatePath("/")
 
@@ -215,6 +217,7 @@ export async function updateMemberStatus(
         }
       }
 
+      await invalidateDashboardCache(gymId)
       revalidatePath("/members")
       revalidatePath(`/members/${parsed.memberId}`)
       revalidatePath("/")
@@ -254,6 +257,7 @@ export async function updateMemberContact(
         }
       }
 
+      await invalidateDashboardCache(gymId)
       revalidatePath("/members")
       revalidatePath(`/members/${parsed.memberId}`)
       revalidatePath("/")
@@ -296,6 +300,7 @@ export async function logMemberCheckIn(
         }
       }
 
+      await invalidateDashboardCache(gymId)
       revalidatePath("/members")
       revalidatePath(`/members/${parsed.memberId}`)
       revalidatePath("/")

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 
+import { invalidateDashboardCache } from "@/lib/cache/redis"
 import { withGymAction } from "@/lib/dashboard/action-helpers"
 import {
   markPaymentPaidForGym,
@@ -54,6 +55,7 @@ export async function markPaymentPaid(
         }
       }
 
+      await invalidateDashboardCache(gymId)
       revalidatePath("/members")
       revalidatePath(`/members/${result.memberId}`)
       revalidatePath("/")
@@ -112,6 +114,7 @@ export async function voidPayment(
         }
       }
 
+      await invalidateDashboardCache(gymId)
       revalidatePath("/members")
       revalidatePath(`/members/${result.memberId}`)
       revalidatePath("/")

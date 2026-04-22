@@ -26,7 +26,7 @@ local demo data.
 | ------ | --------------------------------------------------------------- |
 | App    | Next.js 16 App Router, React 19, TypeScript                     |
 | UI     | Tailwind CSS 4, shadcn-style components, Radix UI, lucide-react |
-| Data   | PostgreSQL, Prisma 7                                            |
+| Data   | PostgreSQL, Prisma 7, optional Upstash Redis cache              |
 | Auth   | Better Auth email/password                                      |
 | Charts | Recharts                                                        |
 | Tests  | Node's TypeScript strip-types runner plus focused test modules  |
@@ -86,6 +86,14 @@ wizard and creates the owner account plus gym in one flow.
 | `npm run format`           | Format TypeScript and TSX files with Prettier.         |
 
 Integration tests require Postgres to be running and migrated.
+
+## Optional Redis Cache
+
+Set `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` in `.env` to enable
+the shared dashboard cache. When those variables are absent, reads go directly
+to Postgres. The cache stores owner-scoped dashboard summaries and lookup data
+with a short TTL, and server actions invalidate the gym's cache version after
+mutations.
 
 ## Project Layout
 

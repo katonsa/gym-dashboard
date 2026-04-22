@@ -22,6 +22,8 @@ BETTER_AUTH_URL="http://localhost:3000"
 ```
 
 The `DATABASE_URL` above matches the default values in `compose.yaml`.
+The Upstash Redis variables in `.env.example` are optional for local
+development. Leave them blank to run without the shared dashboard cache.
 
 ## Start Postgres
 

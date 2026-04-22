@@ -13,6 +13,7 @@ requirements.
 | Run the app locally with demo data              | [Local Database And Seed Data](./setup/local-database-and-seed.md)             |
 | Understand login, setup, and owner provisioning | [Auth & Account Provisioning](./architecture/auth-and-account-provisioning.md) |
 | Understand runtime data loading and scoping     | [Runtime Data Source](./architecture/runtime-data-source.md)                   |
+| Configure or change the Redis dashboard cache   | [Redis Dashboard Cache](./architecture/redis-dashboard-cache.md)               |
 | Run tests and quality checks                    | [Testing And Quality](./development/testing-and-quality.md)                    |
 
 ## Product
@@ -33,6 +34,9 @@ requirements.
     and related files.
 - [Runtime Data Source](./architecture/runtime-data-source.md) - owner-scoped
   loaders, runtime writes, mapper responsibilities, and empty-state behavior.
+- [Redis Dashboard Cache](./architecture/redis-dashboard-cache.md) - optional
+  Upstash Redis configuration, cached loader coverage, key shape, TTL, and
+  mutation invalidation behavior.
 
 ## Features
 

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 
+import { invalidateDashboardCache } from "@/lib/cache/redis"
 import {
   type ActionResult,
   withGymAction,
@@ -45,6 +46,7 @@ export async function updateGymSettings(
         select: { id: true },
       })
 
+      await invalidateDashboardCache(gymId)
       revalidatePath("/settings")
       revalidatePath("/drop-ins")
       revalidatePath("/")
@@ -79,7 +81,7 @@ export async function createPlanTier(
         }
       }
 
-      revalidatePlanTierPaths()
+      await revalidatePlanTierPaths(gymId)
 
       return { success: true }
     },
@@ -119,7 +121,7 @@ export async function updatePlanTier(
         }
       }
 
-      revalidatePlanTierPaths()
+      await revalidatePlanTierPaths(gymId)
 
       return { success: true }
     },
@@ -151,14 +153,15 @@ export async function deactivatePlanTier(
         }
       }
 
-      revalidatePlanTierPaths()
+      await revalidatePlanTierPaths(gymId)
 
       return { success: true }
     },
   })
 }
 
-function revalidatePlanTierPaths() {
+async function revalidatePlanTierPaths(gymId: string) {
+  await invalidateDashboardCache(gymId)
   revalidatePath("/settings")
   revalidatePath("/members")
   revalidatePath("/members/[id]", "page")

@@ -25,16 +25,25 @@ have a direct `gymId` field.
 The shared query shapes live in `lib/dashboard/query-scopes.ts`. They are tested
 so future changes keep owner scoping intact.
 
+Some summary and lookup loaders can use the optional Upstash Redis cache before
+falling back to Postgres. See `docs/architecture/redis-dashboard-cache.md` for
+the cache key shape, TTL, and invalidation rules.
+
 ## Runtime Writes
 
 Owner/admin submissions include:
 
-- Manual member entry through `app/(dashboard)/members/actions.ts`.
+- Member actions through `app/(dashboard)/members/member-actions.ts`,
+  `membership-actions.ts`, `payment-actions.server.ts`, and
+  `import-actions.ts`.
 - Drop-in entry through `app/(dashboard)/drop-ins/actions.ts`.
+- Gym settings and plan tier changes through
+  `app/(dashboard)/settings/actions.ts`.
 
 Both server actions require the authenticated owner gym before writing records,
-return structured action results, and use `revalidatePath()` so the affected
-dashboard route reloads fresh server data after mutation.
+return structured action results, invalidate the gym-scoped Redis cache when it
+is configured, and use `revalidatePath()` so the affected dashboard route reloads
+fresh server data after mutation.
 
 Manual member entry also performs duplicate detection before writing. If a
 possible duplicate exists in the same gym, the action returns duplicate matches
@@ -64,6 +73,8 @@ Use the seed data for local runtime verification. See
 
 - `docs/architecture/auth-and-account-provisioning.md` documents auth assumptions, owner provisioning,
   and member account scope.
+- `docs/architecture/redis-dashboard-cache.md` documents optional Upstash Redis
+  caching and invalidation behavior.
 - `docs/setup/local-database-and-seed.md` documents local Postgres setup, demo
   owner credentials, and seed coverage.
 - `docs/archive/changes/runtime-performance-cleanup.md` documents the removed legacy

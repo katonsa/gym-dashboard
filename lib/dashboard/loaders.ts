@@ -1,6 +1,7 @@
 import { cache } from "react"
 
 import { requireDashboardSession } from "@/lib/auth/server"
+import { getCachedDashboardData } from "@/lib/cache/redis"
 import { db } from "@/lib/db"
 import {
   getDropInSummary,
@@ -111,12 +112,19 @@ export const loadOverviewSummary = cache(
 
     const asOf = options.asOf ?? new Date()
     const membershipAsOf = getGymLocalDayBoundary(asOf, gym.timezone)
-    const result = await getOverviewSummary(
-      gym.id,
-      gym.currencyCode,
-      { ...options, asOf, membershipAsOf, timeZone: gym.timezone },
-      aggregateDb
-    )
+
+    const result = await getCachedDashboardData({
+      gymId: gym.id,
+      segment: "overview-summary",
+      params: getAggregateCacheParams(options),
+      load: () =>
+        getOverviewSummary(
+          gym.id,
+          gym.currencyCode,
+          { ...options, asOf, membershipAsOf, timeZone: gym.timezone },
+          aggregateDb
+        ),
+    })
 
     return {
       gym,
@@ -138,12 +146,18 @@ export const loadOverviewAlerts = cache(
     const asOf = options.asOf ?? new Date()
     const membershipAsOf = getGymLocalDayBoundary(asOf, gym.timezone)
 
-    return getOverviewAlerts(
-      gym.id,
-      gym.currencyCode,
-      { ...options, asOf, membershipAsOf, timeZone: gym.timezone },
-      aggregateDb
-    )
+    return getCachedDashboardData({
+      gymId: gym.id,
+      segment: "overview-alerts",
+      params: getAggregateCacheParams(options),
+      load: () =>
+        getOverviewAlerts(
+          gym.id,
+          gym.currencyCode,
+          { ...options, asOf, membershipAsOf, timeZone: gym.timezone },
+          aggregateDb
+        ),
+    })
   }
 )
 
@@ -159,7 +173,12 @@ export const loadOverdueAgingSummary = cache(
 
     const asOf = options.asOf ?? new Date()
 
-    return getOverdueAgingSummary(gym.id, asOf, aggregateDb)
+    return getCachedDashboardData({
+      gymId: gym.id,
+      segment: "overdue-aging-summary",
+      params: { asOf: options.asOf ? asOf.toISOString() : "current" },
+      load: () => getOverdueAgingSummary(gym.id, asOf, aggregateDb),
+    })
   }
 )
 
@@ -227,28 +246,37 @@ export const loadMemberRosterPage = cache(
   }
 )
 
-export const loadSubscriptionSummary = cache(async (asOf = new Date()) => {
+export const loadSubscriptionSummary = cache(async (asOf?: Date) => {
   const gym = await requireOwnerGym("/subscriptions")
 
   if (!gym) {
     return null
   }
 
-  const planTiers = await db.planTier.findMany(getPlanTiersQuery(gym.id))
-  const mappedPlanTiers = planTiers.map(mapPlanTier)
-  const revenueAsOf = getGymLocalDayBoundary(asOf, gym.timezone)
+  const effectiveAsOf = asOf ?? new Date()
 
-  return {
-    gym,
-    subscriptionSummary: await getSubscriptionSummary(
-      gym.id,
-      mappedPlanTiers,
-      asOf,
-      revenueAsOf,
-      aggregateDb,
-      gym.timezone
-    ),
-  } satisfies SubscriptionsSummaryDashboardData
+  return getCachedDashboardData({
+    gymId: gym.id,
+    segment: "subscription-summary",
+    params: { asOf: asOf ? effectiveAsOf.toISOString() : "current" },
+    load: async () => {
+      const planTiers = await db.planTier.findMany(getPlanTiersQuery(gym.id))
+      const mappedPlanTiers = planTiers.map(mapPlanTier)
+      const revenueAsOf = getGymLocalDayBoundary(effectiveAsOf, gym.timezone)
+
+      return {
+        gym,
+        subscriptionSummary: await getSubscriptionSummary(
+          gym.id,
+          mappedPlanTiers,
+          effectiveAsOf,
+          revenueAsOf,
+          aggregateDb,
+          gym.timezone
+        ),
+      } satisfies SubscriptionsSummaryDashboardData
+    },
+  })
 })
 
 export const loadDropInSummary = cache(
@@ -261,14 +289,19 @@ export const loadDropInSummary = cache(
       return null
     }
 
-    return {
-      gym,
-      dropInSummary: await getDropInSummary(
-        gym.id,
-        { ...options, timeZone: gym.timezone },
-        aggregateDb
-      ),
-    }
+    return getCachedDashboardData({
+      gymId: gym.id,
+      segment: "drop-in-summary",
+      params: getAggregateCacheParams(options),
+      load: async () => ({
+        gym,
+        dropInSummary: await getDropInSummary(
+          gym.id,
+          { ...options, timeZone: gym.timezone },
+          aggregateDb
+        ),
+      }),
+    })
   }
 )
 
@@ -317,21 +350,30 @@ export const loadDropInVisitorLookupOptions = cache(
       return null
     }
 
-    const dropIns = await db.dropInVisit.findMany({
-      where: {
-        gymId: gym.id,
-        OR: [{ visitorName: { not: null } }, { visitorContact: { not: null } }],
-      },
-      orderBy: [{ visitedAt: "desc" }, { id: "desc" }],
-      take: 250,
-      select: {
-        visitorName: true,
-        visitorContact: true,
-        visitedAt: true,
+    return getCachedDashboardData({
+      gymId: gym.id,
+      segment: "drop-in-visitor-lookup",
+      load: async () => {
+        const dropIns = await db.dropInVisit.findMany({
+          where: {
+            gymId: gym.id,
+            OR: [
+              { visitorName: { not: null } },
+              { visitorContact: { not: null } },
+            ],
+          },
+          orderBy: [{ visitedAt: "desc" }, { id: "desc" }],
+          take: 250,
+          select: {
+            visitorName: true,
+            visitorContact: true,
+            visitedAt: true,
+          },
+        })
+
+        return buildDropInVisitorLookupOptions(dropIns)
       },
     })
-
-    return buildDropInVisitorLookupOptions(dropIns)
   }
 )
 
@@ -527,37 +569,55 @@ export const loadSetupChecklistData = cache(
       return null
     }
 
-    const [planTiers, dropIns] = await Promise.all([
-      db.planTier.findMany(getPlanTiersQuery(gym.id)),
-      db.dropInVisit.findMany({
-        where: {
-          gymId: gym.id,
-          OR: [
-            { visitorName: { not: null } },
-            { visitorContact: { not: null } },
-          ],
-        },
-        orderBy: [{ visitedAt: "desc" }, { id: "desc" }],
-        take: 250,
-        select: {
-          visitorName: true,
-          visitorContact: true,
-          visitedAt: true,
-        },
-      }),
-    ])
+    return getCachedDashboardData({
+      gymId: gym.id,
+      segment: "setup-checklist",
+      load: async () => {
+        const [planTiers, dropIns] = await Promise.all([
+          db.planTier.findMany(getPlanTiersQuery(gym.id)),
+          db.dropInVisit.findMany({
+            where: {
+              gymId: gym.id,
+              OR: [
+                { visitorName: { not: null } },
+                { visitorContact: { not: null } },
+              ],
+            },
+            orderBy: [{ visitedAt: "desc" }, { id: "desc" }],
+            take: 250,
+            select: {
+              visitorName: true,
+              visitorContact: true,
+              visitedAt: true,
+            },
+          }),
+        ])
 
-    return {
-      gym,
-      planTiers: planTiers.map(mapPlanTier),
-      nextSortOrder:
-        planTiers.length === 0
-          ? 1
-          : Math.max(...planTiers.map((p) => p.sortOrder)) + 1,
-      visitorLookupOptions: buildDropInVisitorLookupOptions(dropIns),
-    }
+        return {
+          gym,
+          planTiers: planTiers.map(mapPlanTier),
+          nextSortOrder:
+            planTiers.length === 0
+              ? 1
+              : Math.max(...planTiers.map((p) => p.sortOrder)) + 1,
+          visitorLookupOptions: buildDropInVisitorLookupOptions(dropIns),
+        }
+      },
+    })
   }
 )
+
+function getAggregateCacheParams(options: OverviewAggregateOptions) {
+  return {
+    asOf: options.asOf?.toISOString() ?? "current",
+    membershipAsOf: options.membershipAsOf?.toISOString() ?? null,
+    expiringMonthlyWindowDays: options.expiringMonthlyWindowDays ?? null,
+    expiringAnnualWindowDays: options.expiringAnnualWindowDays ?? null,
+    inactiveWindowDays: options.inactiveWindowDays ?? null,
+    conversionVisitThreshold: options.conversionVisitThreshold ?? null,
+    alertLimit: options.alertLimit ?? null,
+  }
+}
 
 async function requireOwnerGym(
   nextPath: DashboardRouteHref

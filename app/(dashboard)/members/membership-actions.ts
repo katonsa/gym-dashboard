@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 
+import { invalidateDashboardCache } from "@/lib/cache/redis"
 import { withGymAction } from "@/lib/dashboard/action-helpers"
 import { addBillingPeriod } from "@/lib/dashboard/billing"
 import { parseDateInput } from "@/lib/dashboard/formatters"
@@ -131,6 +132,7 @@ export async function changeMemberPlan(
         }
       }
 
+      await invalidateDashboardCache(gymId)
       revalidatePath("/members")
       revalidatePath(`/members/${parsed.memberId}`)
       revalidatePath("/subscriptions")
@@ -212,6 +214,7 @@ export async function renewMembership(
         }
       }
 
+      await invalidateDashboardCache(gymId)
       revalidatePath("/members")
       revalidatePath(`/members/${result.memberId}`)
       revalidatePath("/subscriptions")

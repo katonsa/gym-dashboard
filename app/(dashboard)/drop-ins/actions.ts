@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 
+import { invalidateDashboardCache } from "@/lib/cache/redis"
 import { withGymAction } from "@/lib/dashboard/action-helpers"
 import { db } from "@/lib/db"
 import {
@@ -43,6 +44,7 @@ export async function createDropInVisit(
         },
       })
 
+      await invalidateDashboardCache(gymId)
       revalidatePath("/drop-ins")
       revalidatePath("/")
 

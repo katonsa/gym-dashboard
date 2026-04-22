@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 
 import { requireDashboardSession } from "@/lib/auth/server"
+import { invalidateDashboardCache } from "@/lib/cache/redis"
 import { db } from "@/lib/db"
 import { createGymSchema } from "@/lib/dashboard/schemas/gym-create-schema"
 
@@ -32,11 +33,12 @@ export async function createGym(
   })
 
   if (existing) {
+    await invalidateDashboardCache(existing.id)
     revalidatePath("/", "layout")
     return { success: true }
   }
 
-  await db.gym.create({
+  const gym = await db.gym.create({
     data: {
       name: parsed.data.gymName,
       timezone: parsed.data.timezone,
@@ -44,8 +46,10 @@ export async function createGym(
       defaultDropInFeeAmount: Number(parsed.data.defaultDropInFeeAmount),
       ownerId: session.user.id,
     },
+    select: { id: true },
   })
 
+  await invalidateDashboardCache(gym.id)
   revalidatePath("/", "layout")
   revalidatePath("/")
   revalidatePath("/settings")
