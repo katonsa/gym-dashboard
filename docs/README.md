@@ -50,6 +50,8 @@ requirements.
 
 ## Features
 
+- [Account Settings](./features/account-settings.md) - planned personal
+  email/password management and session revocation.
 - [CSV Import And Export](./features/csv-import-export.md) - member import,
   export routes, monthly report behavior, and verification notes.
 - [Gym Settings](./features/gym-settings.md) - editable gym profile,
