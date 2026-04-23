@@ -20,6 +20,11 @@ export function revalidateGymSettingsPaths() {
   revalidatePath("/", "layout")
 }
 
+export function revalidateAccountSettingsPaths() {
+  revalidatePath("/account")
+  revalidatePath("/", "layout")
+}
+
 export function revalidatePlanTierManagementPaths() {
   revalidatePath("/settings")
   revalidatePath("/members")

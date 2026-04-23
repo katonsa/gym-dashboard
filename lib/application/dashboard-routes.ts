@@ -1,5 +1,6 @@
 export const dashboardRouteHrefs = [
   "/",
+  "/account",
   "/members",
   "/subscriptions",
   "/drop-ins",

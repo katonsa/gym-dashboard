@@ -1,6 +1,6 @@
 # Account Settings
 
-Status: Planned.
+Status: Implemented.
 
 ## Goal
 
@@ -16,9 +16,9 @@ Account settings belong to the signed-in user, not to the gym owner role.
 - `/settings` stays focused on gym administration, such as gym profile defaults
   and plan tiers.
 
-## Scope
+## Current Scope
 
-The first version should support:
+The current version supports:
 
 - viewing the current account email
 - changing the current user's email address immediately
@@ -26,7 +26,7 @@ The first version should support:
 - requiring the current password for both changes
 - revoking all other sessions after either change
 
-The first version should not add:
+The current version does not add:
 
 - email verification
 - transactional email
@@ -67,45 +67,44 @@ Validation rules:
 Validation rules:
 
 - `currentPassword` is required.
-- `newPassword` is required and should use the same app-level length range as
-  setup: at least 8 characters and 128 characters or fewer.
+- `newPassword` is required and uses the same app-level length range as setup:
+  at least 8 characters and 128 characters or fewer.
 - `confirmPassword` must match `newPassword`.
-- The form should show a generic invalid-password message for failed
-  confirmation.
+- The form shows a generic invalid-password message for failed confirmation.
 
 ## Security Model
 
 The current password is the required proof of account control. This replaces
-email verification for the initial version because the product does not yet
-include a transactional email layer.
+email verification because the product does not yet include a transactional
+email layer.
 
-Implementation should use better-auth where it owns credential security:
+The implementation uses better-auth where it owns credential security:
 
 - Use better-auth `verifyPassword` before changing email.
 - Use better-auth `changePassword` for password updates.
-- Use better-auth `revokeOtherSessions` after successful immediate email
-  updates.
+- For email updates, revoke other active sessions by deleting the other session
+  rows in the same Prisma transaction as the `User.email` update.
 - Pass `revokeOtherSessions: true` to better-auth password changes.
 - Pass the current request headers to every better-auth server API call that
   depends on the active session.
 
-The email update is app-owned for this milestone because better-auth's built-in
-email change route expects a verification-capable flow unless specific
-verification conditions are configured. That conflicts with the current product
-decision to accept email changes immediately without email sending.
+The email update is app-owned because better-auth's built-in email change route
+expects a verification-capable flow unless specific verification conditions are
+configured. That conflicts with the current product decision to accept email
+changes immediately without email sending.
 
-For password length, the app schema should mirror the setup form's current
+For password length, the app schema mirrors the setup form's current
 8-to-128-character range for immediate user feedback. better-auth remains the
 source of truth for credential verification, password hashing, and any provider
 errors returned during `changePassword`.
 
 ## UX Placement
 
-Add a new dashboard route:
+The feature lives at:
 
 - `app/(dashboard)/account/page.tsx`
 
-Recommended page sections:
+Current page sections:
 
 - **Account email**
   - show current email
@@ -116,87 +115,84 @@ Recommended page sections:
   - form fields: current password, new password, confirm password
   - submit label: `Change password`
 
-Navigation can be handled in one of two ways:
-
-- Add `Account` to the primary dashboard navigation if discoverability is more
-  important.
-- Add `Account` near the sign-out/theme controls if the primary nav should stay
-  focused on gym workflows.
-
-The first implementation should prefer the lower-risk option that best matches
-the current shell layout. Add `/account` to `dashboardRouteHrefs` regardless of
-navigation placement so `requireDashboardSession("/account")` is type-safe and
-sign-in redirects can safely return to the page.
+Navigation is handled by adding `Account` near the sign-out and theme controls
+so the primary nav stays focused on gym workflows. `/account` is also included
+in `dashboardRouteHrefs` so `requireDashboardSession("/account")` is type-safe
+and sign-in redirects can safely return to the page.
 
 ## Code Ownership
 
-Recommended files:
+Current files:
 
-| File                                          | Responsibility                                                             |
-| --------------------------------------------- | -------------------------------------------------------------------------- |
-| `app/(dashboard)/account/page.tsx`            | Server page, session guard, current email display props.                   |
-| `app/(dashboard)/account/actions.ts`          | Account update server actions.                                             |
-| `app/(dashboard)/account/email-form.tsx`      | Client form for email changes.                                             |
-| `app/(dashboard)/account/password-form.tsx`   | Client form for password changes.                                          |
-| `lib/auth/schemas/account-settings-schema.ts` | Zod schemas and normalized values.                                         |
-| `lib/auth/account-service.ts`                 | Email uniqueness checks and user email update helper, if the action grows. |
-| `lib/application/dashboard-routes.ts`         | Add `/account` as a safe dashboard route.                                  |
-| `lib/dashboard/navigation.ts`                 | Add account navigation only if it is in the primary nav.                   |
+| File                                          | Responsibility                                              |
+| --------------------------------------------- | ----------------------------------------------------------- |
+| `app/(dashboard)/account/page.tsx`            | Server page, session guard, current email display props.    |
+| `app/(dashboard)/account/actions.ts`          | Account update server actions.                              |
+| `app/(dashboard)/account/email-form.tsx`      | Client form for email changes.                              |
+| `app/(dashboard)/account/password-form.tsx`   | Client form for password changes.                           |
+| `lib/auth/schemas/account-settings-schema.ts` | Zod schemas and normalized values.                          |
+| `lib/auth/account-service.ts`                 | Email uniqueness checks and account mutation orchestration. |
+| `lib/application/dashboard-routes.ts`         | Safe dashboard route typing for `/account`.                 |
+| `components/dashboard/app-shell.tsx`          | Account link near theme and sign-out controls in the shell. |
 
-Keep the first version thin. If the server actions become mostly orchestration,
-move reusable email-change logic into `lib/auth/account-service.ts`.
+The first implementation stays thin. Reusable email and password orchestration
+lives in `lib/auth/account-service.ts`.
 
-## Server Action Shape
+## Server Action Behavior
 
-The account actions must authenticate and authorize inside the action. Next.js
-Server Actions are reachable by direct POST requests, so the UI cannot be the
-only boundary.
+The account actions authenticate and authorize inside the action. Next.js
+Server Actions are reachable by direct POST requests, so the UI is not the only
+boundary.
 
-Recommended email action behavior:
+Current email action behavior:
 
 1. `requireDashboardSession("/account")`.
 2. Parse with `changeEmailSchema`.
 3. Read `const requestHeaders = await headers()`.
-4. Call `auth.api.verifyPassword` with `headers: requestHeaders`.
+4. Call `auth.api.verifyPassword` with `body.password` and
+   `headers: requestHeaders`.
 5. If the password is invalid, return a generic invalid-password error.
 6. Check for an existing user with the normalized email.
-7. Update only `User` where `id === session.user.id`.
+7. In one Prisma transaction, update only `User` where
+   `id === session.user.id` and delete active `Session` rows for the same user
+   where `token !== session.session.token`.
 8. Catch the Prisma unique-email constraint error and return the same duplicate
    email result used by the preflight check.
-9. Call `auth.api.revokeOtherSessions` with `headers: requestHeaders`.
-10. Revalidate `/account` and the dashboard layout if user email is displayed
-    there later.
-11. Return the existing `ActionResult` shape used by dashboard forms.
+9. Revalidate `/account` and the dashboard layout.
+10. Return the existing success/error action result shape used by dashboard
+    forms.
 
-Recommended password action behavior:
+Current password action behavior:
 
 1. `requireDashboardSession("/account")`.
 2. Parse with `changePasswordSchema`.
 3. Read `const requestHeaders = await headers()`.
-4. Call better-auth `changePassword` with `headers: requestHeaders` and
-   `revokeOtherSessions: true`.
-5. Revalidate `/account` if needed.
-6. Return the existing `ActionResult` shape used by dashboard forms.
+4. Call better-auth `changePassword` with `body.currentPassword`,
+   `body.newPassword`, `body.revokeOtherSessions: true`, and
+   `headers: requestHeaders`.
+5. Revalidate `/account` and the dashboard layout.
+6. Return the existing success/error action result shape used by dashboard
+   forms.
 
-Email uniqueness needs both a preflight check and write-time error handling:
+Email uniqueness uses both a preflight check and write-time error handling:
 
 1. The preflight check gives the user a friendly duplicate-email error.
-2. The unique constraint catch handles concurrent requests where another account
-   claims the same email between the check and update.
+2. The unique constraint catch handles concurrent requests where another
+   account claims the same email between the check and update.
 
 ## Boundary Notes
 
-This plan is limited to personal account settings. It should not introduce staff
-tables, staff routes, role checks, permissions, invitations, or gym membership
-models.
+This feature is limited to personal account settings. It does not introduce
+staff tables, staff routes, role checks, permissions, invitations, or gym
+membership models.
 
-The only future-facing design constraint is that account settings should remain
-scoped to `session.user.id`, so later role work does not need to move personal
+The future-facing design constraint is that account settings remain scoped to
+`session.user.id`, so later role work does not need to move personal
 email/password management out of `/account`.
 
-## Testing Plan
+## Verification
 
-Add focused tests for:
+Focused tests cover:
 
 - account settings schema normalization and validation
 - rejecting duplicate email addresses
@@ -209,20 +205,26 @@ Add focused tests for:
 - calling better-auth password change with session revocation
 - accepting `/account` as a safe dashboard next path
 
-Run before merging:
+Current verification commands:
 
 - `npm test`
 - `npm run typecheck`
 - `npm run lint`
 
-For UI implementation, also verify `/account` in browser automation after
-signing in with the seeded owner account.
+Browser verification should also cover `/account` after signing in with the
+seeded owner account.
 
 ## Related Files
 
 - [lib/auth/index.ts](../../lib/auth/index.ts) - better-auth server instance.
 - [lib/auth/client.ts](../../lib/auth/client.ts) - better-auth browser client.
 - [lib/auth/server.ts](../../lib/auth/server.ts) - dashboard session helpers.
+- [app/(dashboard)/account/page.tsx](<../../app/(dashboard)/account/page.tsx>)
+  - account settings page.
+- [app/(dashboard)/account/actions.ts](<../../app/(dashboard)/account/actions.ts>)
+  - account update server actions.
+- [lib/auth/account-service.ts](../../lib/auth/account-service.ts) - account
+  email and password orchestration.
 - [app/(dashboard)/settings/page.tsx](<../../app/(dashboard)/settings/page.tsx>)
   - existing gym settings route to keep separate from account settings.
 - [docs/architecture/auth-and-account-provisioning.md](../architecture/auth-and-account-provisioning.md)

@@ -8,6 +8,7 @@ import {
   CircleDollarSign,
   Dumbbell,
   Settings,
+  UserRound,
   Users,
 } from "lucide-react"
 
@@ -22,6 +23,7 @@ const routeIcons: Record<
   React.ComponentType<{ className?: string }>
 > = {
   "/": Dumbbell,
+  "/account": UserRound,
   "/members": Users,
   "/subscriptions": CircleDollarSign,
   "/drop-ins": BadgeDollarSign,
@@ -70,6 +72,7 @@ export function AppShell({
           </nav>
 
           <div className="grid gap-2 border-t border-sidebar-border pt-4">
+            <UtilityLink href="/account" label="Account" />
             <ThemeToggle />
             <SignOutButton />
           </div>
@@ -105,6 +108,7 @@ export function AppShell({
               </div>
 
               <div className="flex items-center gap-2">
+                <UtilityLink href="/account" label="Account" compact />
                 <ThemeToggle compact />
                 <SignOutButton compact />
               </div>
@@ -133,6 +137,35 @@ export function AppShell({
         </div>
       </nav>
     </div>
+  )
+}
+
+function UtilityLink({
+  href,
+  label,
+  compact = false,
+}: {
+  href: "/account"
+  label: string
+  compact?: boolean
+}) {
+  const pathname = usePathname()
+  const active = pathname === href
+
+  return (
+    <Link
+      href={href}
+      aria-current={active ? "page" : undefined}
+      aria-label={label}
+      className={cn(
+        "inline-flex min-h-11 items-center rounded-lg border border-border bg-background/70 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
+        compact ? "min-w-11 justify-center px-0" : "w-full gap-2 px-3",
+        active && "border-primary/30 bg-primary/10 text-foreground"
+      )}
+    >
+      <UserRound className="size-4 shrink-0" />
+      {!compact ? <span>{label}</span> : null}
+    </Link>
   )
 }
 

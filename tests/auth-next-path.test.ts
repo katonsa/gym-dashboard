@@ -7,6 +7,7 @@ import {
 
 test("allows known dashboard routes as safe return paths", () => {
   expect(getSafeDashboardNextPath("/")).toBe("/")
+  expect(getSafeDashboardNextPath("/account")).toBe("/account")
   expect(getSafeDashboardNextPath("/members")).toBe("/members")
   expect(getSafeDashboardNextPath("/drop-ins?source=nav#entry")).toBe(
     "/drop-ins?source=nav#entry"
