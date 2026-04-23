@@ -1,3 +1,5 @@
+import { Clock3, ReceiptText, UserRound } from "lucide-react"
+
 import { DetailField } from "@/components/dashboard/detail-field"
 import { EmptyState } from "@/components/dashboard/empty-state"
 import { PaginationNav } from "@/components/ui/pagination-nav"
@@ -48,23 +50,25 @@ export function DropInLog({
   return (
     <section
       aria-labelledby="drop-in-log"
-      className="grid min-w-0 content-start gap-3"
+      className="grid min-w-0 content-start gap-4"
     >
-      <div>
-        <h2 id="drop-in-log" className="text-base font-semibold">
-          Drop-in log
-        </h2>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Visitor details, visit counts, payment, and notes.
-        </p>
-        {dropInLogPage.total > 0 ? (
-          <p className="mt-2 text-xs text-muted-foreground">
-            Showing {getPageRangeLabel(dropInLogPage)}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div className="min-w-0">
+          <h2 id="drop-in-log" className="text-base font-semibold">
+            Recent walk-ins
+          </h2>
+          <p className="mt-1 text-xs leading-5 text-muted-foreground">
+            Visitor details, visit counts, payment, and notes.
           </p>
-        ) : null}
+        </div>
+        <div className="min-h-7 w-fit rounded-lg border border-border bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+          {dropInLogPage.total > 0
+            ? `Showing ${getPageRangeLabel(dropInLogPage)}`
+            : "No records"}
+        </div>
       </div>
 
-      <div className="grid gap-3 md:hidden">
+      <div className="grid gap-3 2xl:hidden">
         {dropInRows.length > 0 ? (
           dropInRows.map((dropIn) => (
             <DropInCard key={dropIn.id} dropIn={dropIn} />
@@ -79,7 +83,7 @@ export function DropInLog({
 
       {dropInRows.length > 0 ? (
         <div className="grid gap-3">
-          <div className="hidden overflow-hidden rounded-lg border border-border bg-card text-card-foreground md:block">
+          <div className="hidden overflow-hidden rounded-lg border border-border bg-card text-card-foreground 2xl:block">
             <table className="w-full table-fixed text-left text-sm">
               <thead className="border-b border-border bg-muted/60 text-xs text-muted-foreground uppercase">
                 <tr>
@@ -106,7 +110,7 @@ export function DropInLog({
           />
         </div>
       ) : (
-        <div className="hidden md:block">
+        <div className="hidden 2xl:block">
           <EmptyState
             title="No drop-ins yet."
             detail="Saved walk-ins will appear in this log."
@@ -121,15 +125,20 @@ function DropInCard({ dropIn }: { dropIn: DropInRow }) {
   return (
     <article className="rounded-lg border border-border bg-card p-4 text-card-foreground">
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h3 className="truncate text-base font-semibold">
-            {dropIn.visitorLabel}
-          </h3>
-          <p className="mt-1 truncate text-xs text-muted-foreground">
-            {dropIn.contactLabel}
-          </p>
+        <div className="flex min-w-0 gap-3">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+            <UserRound className="size-4" />
+          </span>
+          <div className="min-w-0">
+            <h3 className="truncate text-base font-semibold">
+              {dropIn.visitorLabel}
+            </h3>
+            <p className="mt-1 truncate text-xs text-muted-foreground">
+              {dropIn.contactLabel}
+            </p>
+          </div>
         </div>
-        <span className="shrink-0 rounded-lg bg-muted px-2 py-1 text-xs font-medium text-muted-foreground">
+        <span className="shrink-0 rounded-lg border border-border bg-muted px-2 py-1 text-xs font-medium text-muted-foreground">
           {dropIn.identified ? "Identified" : "Anonymous"}
         </span>
       </div>
@@ -141,9 +150,12 @@ function DropInCard({ dropIn }: { dropIn: DropInRow }) {
         <DetailField label="Paid" value={dropIn.amountLabel} truncate />
       </div>
 
-      <p className="mt-4 text-xs leading-5 text-muted-foreground">
-        {dropIn.notesLabel}
-      </p>
+      <div className="mt-4 flex gap-2 rounded-lg bg-muted px-3 py-2">
+        <ReceiptText className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+        <p className="text-xs leading-5 text-muted-foreground">
+          {dropIn.notesLabel}
+        </p>
+      </div>
     </article>
   )
 }
@@ -153,7 +165,10 @@ function DropInTableRow({ dropIn }: { dropIn: DropInRow }) {
     <tr>
       <td className="px-4 py-3 align-top">
         <p className="font-medium">{dropIn.dateLabel}</p>
-        <p className="mt-1 text-xs text-muted-foreground">{dropIn.timeLabel}</p>
+        <p className="mt-1 inline-flex items-center gap-1 text-xs text-muted-foreground">
+          <Clock3 className="size-3" />
+          {dropIn.timeLabel}
+        </p>
       </td>
       <td className="px-4 py-3 align-top">
         <p className="truncate font-medium">{dropIn.visitorLabel}</p>

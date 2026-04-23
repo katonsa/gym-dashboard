@@ -1,7 +1,12 @@
 "use client"
 
 import { zodResolver } from "@hookform/resolvers/zod"
-import { ChevronsUpDown } from "lucide-react"
+import {
+  ChevronsUpDown,
+  CircleDollarSign,
+  Save,
+  UserSearch,
+} from "lucide-react"
 import * as React from "react"
 import { Controller, useForm, useWatch } from "react-hook-form"
 import { toast } from "sonner"
@@ -27,6 +32,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { Textarea } from "@/components/ui/textarea"
 import type { DropInVisitorLookupOption } from "@/lib/drop-ins/visitor-lookup"
 import { createDropInVisit } from "./actions"
 import {
@@ -126,24 +132,35 @@ export function DropInEntryForm({
   return (
     <aside
       aria-labelledby="drop-in-entry"
-      className="rounded-lg border border-border bg-card p-4 text-card-foreground"
+      className="order-first rounded-lg border border-border bg-card p-4 text-card-foreground xl:sticky xl:top-24 xl:order-last"
     >
-      <div>
-        <p className="text-xs font-semibold text-primary uppercase">
-          Owner entry
-        </p>
-        <h2 id="drop-in-entry" className="mt-2 text-base font-semibold">
-          Add drop-in
-        </h2>
-        <p className="mt-1 text-xs leading-5 text-muted-foreground">
-          Log anonymous walk-ins or identified visitors for follow-up.
-        </p>
+      <div className="flex items-start gap-3">
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+          <CircleDollarSign className="size-5" />
+        </span>
+        <div className="min-w-0">
+          <p className="text-xs font-semibold text-primary uppercase">
+            Owner entry
+          </p>
+          <h2 id="drop-in-entry" className="mt-1 text-base font-semibold">
+            Add drop-in
+          </h2>
+          <p className="mt-1 text-xs leading-5 text-muted-foreground">
+            Built for quick front-desk logging on phone or tablet.
+          </p>
+        </div>
       </div>
 
       <form onSubmit={form.handleSubmit(onSubmit)} className="mt-4 grid gap-4">
         <FieldGroup>
           <Field>
-            <FieldLabel htmlFor="visitor-lookup">Visitor lookup</FieldLabel>
+            <div className="flex items-center justify-between gap-3">
+              <FieldLabel htmlFor="visitor-lookup">Visitor lookup</FieldLabel>
+              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                <UserSearch className="size-3.5" />
+                Optional
+              </span>
+            </div>
             <Popover open={isLookupOpen} onOpenChange={setIsLookupOpen}>
               <PopoverTrigger asChild>
                 <Button
@@ -214,7 +231,7 @@ export function DropInEntryForm({
                   {...field}
                   id={field.name}
                   autoComplete="name"
-                  placeholder="Optional"
+                  placeholder="Walk-in name"
                   aria-invalid={fieldState.invalid}
                   disabled={isSubmitting}
                   className="min-h-11"
@@ -235,7 +252,7 @@ export function DropInEntryForm({
                 <Input
                   {...field}
                   id={field.name}
-                  placeholder="Phone, email, or other"
+                  placeholder="Phone or email"
                   aria-invalid={fieldState.invalid}
                   disabled={isSubmitting}
                   className="min-h-11"
@@ -306,14 +323,14 @@ export function DropInEntryForm({
             render={({ field, fieldState }) => (
               <Field data-invalid={fieldState.invalid}>
                 <FieldLabel htmlFor={field.name}>Notes</FieldLabel>
-                <textarea
+                <Textarea
                   {...field}
                   id={field.name}
                   rows={4}
                   placeholder="Interest, class time, referral source"
                   aria-invalid={fieldState.invalid}
                   disabled={isSubmitting}
-                  className="min-h-24 w-full min-w-0 resize-none rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-3 focus-visible:ring-ring/40 disabled:opacity-70"
+                  className="min-h-24 resize-none bg-background text-sm"
                 />
                 {fieldState.invalid ? (
                   <FieldError errors={[fieldState.error]} />
@@ -323,9 +340,12 @@ export function DropInEntryForm({
           />
         </FieldGroup>
 
-        <p className="rounded-lg bg-muted px-3 py-2 text-xs text-muted-foreground">
-          Default amount: {formattedDefaultAmount}
-        </p>
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-muted px-3 py-2 text-xs">
+          <span className="text-muted-foreground">Default amount</span>
+          <span className="font-semibold text-foreground">
+            {formattedDefaultAmount}
+          </span>
+        </div>
 
         {form.formState.errors.root?.message ? (
           <p
@@ -343,6 +363,7 @@ export function DropInEntryForm({
             className="min-h-11"
             disabled={isSubmitting}
           >
+            <Save />
             {isSubmitting ? "Saving drop-in" : "Save drop-in"}
           </Button>
         </div>

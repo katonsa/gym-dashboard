@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { FileDown } from "lucide-react"
+import { BadgeDollarSign, FileDown } from "lucide-react"
 
 import { EmptyState } from "@/components/dashboard/empty-state"
 import { Button } from "@/components/ui/button"
@@ -61,36 +61,49 @@ export default async function DropInsPage({ searchParams }: DropInsPageProps) {
 
   return (
     <div className="grid gap-5 lg:gap-6">
-      <section className="grid gap-4 lg:grid-cols-[1fr_20rem] lg:items-end">
+      <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-end">
         <div className="min-w-0">
-          <p className="text-xs font-semibold text-primary uppercase">
+          <p className="inline-flex min-h-7 items-center rounded-lg border border-primary/25 bg-primary/10 px-2.5 text-xs font-semibold text-primary uppercase">
             {formatDashboardDate(asOf, dropInsData.gym.timezone)}
           </p>
           <h1 className="mt-2 text-2xl font-semibold tracking-normal text-balance sm:text-3xl">
-            Drop-ins
+            Drop-in desk
           </h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-            Day-pass cash, walk-in volume, and follow-up leads.
+            Log walk-ins fast, watch day-pass cash, and surface returning
+            visitors before they leave.
           </p>
         </div>
-        <div className="grid gap-3">
-          <div className="rounded-lg border border-border bg-card px-4 py-3 text-card-foreground">
-            <p className="text-xs font-medium text-muted-foreground uppercase">
-              Default fee
-            </p>
-            <p className="mt-1 text-2xl font-semibold">
-              {moneyFormatter.format(dropInsData.gym.defaultDropInFeeAmount)}
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              New entries start from the gym day-pass price
-            </p>
+        <div className="grid gap-3 rounded-lg border border-border bg-card p-4 text-card-foreground">
+          <div className="flex items-start gap-3">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+              <BadgeDollarSign className="size-5" />
+            </span>
+            <div className="min-w-0">
+              <p className="text-xs font-medium text-muted-foreground uppercase">
+                Default day pass
+              </p>
+              <p className="mt-1 text-2xl leading-8 font-semibold break-words">
+                {moneyFormatter.format(dropInsData.gym.defaultDropInFeeAmount)}
+              </p>
+            </div>
           </div>
-          <Button asChild size="lg" variant="outline" className="min-h-11">
-            <a href="/api/exports/drop-ins">
-              <FileDown />
-              Export drop-ins
-            </a>
-          </Button>
+          <div className="flex flex-col gap-2 border-t border-border pt-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs leading-5 text-muted-foreground">
+              Used as the starting amount for every new drop-in.
+            </p>
+            <Button
+              asChild
+              size="lg"
+              variant="outline"
+              className="min-h-11 sm:w-fit"
+            >
+              <a href="/api/exports/drop-ins">
+                <FileDown />
+                Export
+              </a>
+            </Button>
+          </div>
         </div>
       </section>
 
@@ -116,19 +129,20 @@ export default async function DropInsPage({ searchParams }: DropInsPageProps) {
         </section>
       ) : null}
 
-      <DropInSummarySection
-        dropInSummary={dropInSummary}
-        frequentDropIns={frequentDropIns}
-        moneyFormatter={moneyFormatter}
-      />
+      <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_23rem] xl:items-start">
+        <div className="grid min-w-0 gap-5 lg:gap-6">
+          <DropInSummarySection
+            dropInSummary={dropInSummary}
+            frequentDropIns={frequentDropIns}
+            moneyFormatter={moneyFormatter}
+          />
 
-      <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_22rem] xl:items-start">
-        <DropInLog
-          asOf={asOf}
-          dropInLogPage={dropInLogPage}
-          moneyFormatter={moneyFormatter}
-        />
-
+          <DropInLog
+            asOf={asOf}
+            dropInLogPage={dropInLogPage}
+            moneyFormatter={moneyFormatter}
+          />
+        </div>
         <DropInEntryForm
           defaultAmount={dropInsData.gym.defaultDropInFeeAmount}
           formattedDefaultAmount={moneyFormatter.format(
